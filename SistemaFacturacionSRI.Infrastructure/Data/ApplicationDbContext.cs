@@ -21,10 +21,21 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
 
         // DbSets - Cada DbSet<T> representa una tabla en la base de datos
         
-        /// <summary>
-        /// Tabla de Productos en la base de datos.
-        /// </summary>
-        public DbSet<Producto> Productos { get; set; }
+    /// <summary>
+    /// Tabla de Productos en la base de datos.
+    /// </summary>
+    public DbSet<Producto> Productos { get; set; }
+
+    // Nuevas tablas
+    public DbSet<Rol> Roles { get; set; }
+    public DbSet<Usuario> Usuarios { get; set; }
+    public DbSet<TipoIdentificacion> TiposIdentificacion { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<TipoIVACatalogo> TiposIVA { get; set; }
+    public DbSet<Categoria> Categorias { get; set; }
+    public DbSet<Lote> Lotes { get; set; }
+    public DbSet<Factura> Facturas { get; set; }
+    public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
 
         /// <summary>
         /// Configura el modelo de la base de datos.
@@ -46,6 +57,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
 
             // Aplicar configuraciones Fluent API
             modelBuilder.ApplyConfiguration(new ProductoConfiguration());
+            modelBuilder.ApplyConfiguration(new RolConfiguration());
+            modelBuilder.ApplyConfiguration(new UsuarioConfiguration());
+            modelBuilder.ApplyConfiguration(new TipoIdentificacionConfiguration());
+            modelBuilder.ApplyConfiguration(new ClienteConfiguration());
+            modelBuilder.ApplyConfiguration(new TipoIVACatalogoConfiguration());
+            modelBuilder.ApplyConfiguration(new CategoriaConfiguration());
+            modelBuilder.ApplyConfiguration(new LoteConfiguration());
+            modelBuilder.ApplyConfiguration(new FacturaConfiguration());
+            modelBuilder.ApplyConfiguration(new FacturaDetalleConfiguration());
         }
 
         /// <summary>

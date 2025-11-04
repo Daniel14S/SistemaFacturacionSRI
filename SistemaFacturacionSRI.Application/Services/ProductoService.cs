@@ -134,14 +134,42 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         // Métodos que se implementarán en siguientes tareas
-        public Task<ProductoDto> ActualizarAsync(ActualizarProductoDto dto)
+        public async Task<ProductoDto> ActualizarAsync(ActualizarProductoDto dto)
         {
-            throw new NotImplementedException("Se implementará en T-21");
+            // Validar existencia
+            var existente = await _productoRepository.ObtenerPorIdAsync(dto.Id);
+            if (existente == null)
+            {
+                throw new KeyNotFoundException($"No existe un producto con Id {dto.Id}");
+            }
+
+            // Validar unicidad de código si cambió
+            if (!string.Equals(existente.Codigo, dto.Codigo, StringComparison.OrdinalIgnoreCase))
+            {
+                var codigoOcupado = await _productoRepository.ExisteAsync(p => p.Codigo == dto.Codigo && p.Id != dto.Id);
+                if (codigoOcupado)
+                {
+                    throw new InvalidOperationException($"Ya existe un producto con el código '{dto.Codigo}'");
+                }
+            }
+
+            // Mapear cambios sobre la entidad existente
+            _mapper.Map(dto, existente);
+
+            // Actualizar y retornar
+            await _productoRepository.ActualizarAsync(existente);
+            return _mapper.Map<ProductoDto>(existente);
         }
 
-        public Task EliminarAsync(int id)
+        public async Task EliminarAsync(int id)
         {
-            throw new NotImplementedException("Se implementará en T-22");
+            var existente = await _productoRepository.ObtenerPorIdAsync(id);
+            if (existente == null)
+            {
+                throw new KeyNotFoundException($"No existe un producto con Id {id}");
+            }
+
+            await _productoRepository.EliminarAsync(id);
         }
     }
 }
