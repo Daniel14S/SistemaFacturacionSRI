@@ -65,12 +65,21 @@ app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
 
 // ===========================
-// MIGRACIÓN AUTOMÁTICA
+// INICIALIZACIÓN DE BASE DE DATOS
 // ===========================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    if (app.Environment.IsDevelopment())
+    {
+        // En desarrollo: crea el esquema si no existe, sin requerir archivos de migración
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        // En otros entornos: aplica migraciones si existen
+        db.Database.Migrate();
+    }
 }
 
 // ===========================

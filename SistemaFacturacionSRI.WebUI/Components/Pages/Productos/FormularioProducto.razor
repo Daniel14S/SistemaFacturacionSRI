@@ -60,8 +60,8 @@
 
                     <!-- Descripción -->
                     <div class="col-12">
-                        <label class="form-label">Descripción</label>
-                        <InputTextArea class="form-control" @bind-Value="modelo.Descripcion" rows="3" placeholder="Descripción detallada del producto (opcional)" />
+                        <label class="form-label">Descripción <span class="text-danger">*</span></label>
+                        <InputTextArea class="form-control" @bind-Value="modelo.Descripcion" rows="3" placeholder="Describe el producto" />
                         <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
                     </div>
 
@@ -161,7 +161,7 @@
                     Id = producto.Id,
                     Codigo = producto.Codigo,
                     Nombre = producto.Nombre,
-                    Descripcion = producto.Descripcion,
+                    Descripcion = producto.Descripcion ?? string.Empty,
                     Precio = producto.Precio,
                     TipoIVA = producto.TipoIVA,
                     Stock = producto.Stock,
@@ -171,7 +171,7 @@
                 // Copiar al modelo de visualización
                 modelo.Codigo = producto.Codigo;
                 modelo.Nombre = producto.Nombre;
-                modelo.Descripcion = producto.Descripcion;
+                modelo.Descripcion = producto.Descripcion ?? string.Empty;
                 modelo.Precio = producto.Precio;
                 modelo.TipoIVA = producto.TipoIVA;
                 modelo.Stock = producto.Stock;

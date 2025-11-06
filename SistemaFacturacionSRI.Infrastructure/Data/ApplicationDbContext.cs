@@ -27,8 +27,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         /// </summary>
         public DbSet<Producto> Productos { get; set; }
 
-        // TODO: Descomentar en próximos Sprints cuando se implementen estas entidades
-        /*
+        
         public DbSet<Rol> Roles { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<TipoIdentificacion> TiposIdentificacion { get; set; }
@@ -38,7 +37,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         public DbSet<Lote> Lotes { get; set; }
         public DbSet<Factura> Facturas { get; set; }
         public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
-        */
+   
 
         /// <summary>
         /// Configura el modelo de la base de datos.
@@ -60,9 +59,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
 
             // SPRINT 1: Solo aplicar configuración de Producto
             modelBuilder.ApplyConfiguration(new ProductoConfiguration());
-            
-            // TODO: Descomentar en próximos Sprints
-            /*
             modelBuilder.ApplyConfiguration(new RolConfiguration());
             modelBuilder.ApplyConfiguration(new UsuarioConfiguration());
             modelBuilder.ApplyConfiguration(new TipoIdentificacionConfiguration());
@@ -72,7 +68,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
             modelBuilder.ApplyConfiguration(new LoteConfiguration());
             modelBuilder.ApplyConfiguration(new FacturaConfiguration());
             modelBuilder.ApplyConfiguration(new FacturaDetalleConfiguration());
-            */
         }
 
         /// <summary>

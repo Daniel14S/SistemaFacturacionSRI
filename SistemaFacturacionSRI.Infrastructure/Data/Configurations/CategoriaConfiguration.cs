@@ -13,6 +13,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             builder.Property(c => c.Nombre).IsRequired().HasMaxLength(100);
             builder.Property(c => c.Descripcion).HasMaxLength(250);
+
+            // Seed categoría genérica si aún no existe.
+            builder.HasData(new Categoria { CategoriaId = 1, Nombre = "General", Descripcion = "Categoría por defecto" });
         }
     }
 }

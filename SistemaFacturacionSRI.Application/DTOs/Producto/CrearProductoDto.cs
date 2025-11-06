@@ -28,10 +28,12 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         public string Nombre { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción del producto (opcional).
-        /// </summary>
-        [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
-        public string? Descripcion { get; set; }
+    /// Descripción del producto.
+    /// Obligatoria.
+    /// </summary>
+    [Required(ErrorMessage = "La descripción del producto es obligatoria")]
+    [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
+    public string Descripcion { get; set; } = string.Empty;
 
         /// <summary>
         /// Precio unitario sin IVA.

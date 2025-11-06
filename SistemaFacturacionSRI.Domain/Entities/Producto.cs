@@ -27,11 +27,12 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public string Nombre { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción detallada del producto (opcional).
-        /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
-        /// </summary>
-        [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
-        public string? Descripcion { get; set; }
+    /// Descripción detallada del producto.
+    /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
+    /// </summary>
+    [Required(ErrorMessage = "La descripción del producto es obligatoria")]
+    [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
+    public string Descripcion { get; set; } = string.Empty;
 
         /// <summary>
         /// Precio unitario del producto sin IVA.
@@ -42,12 +43,24 @@ namespace SistemaFacturacionSRI.Domain.Entities
         [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
         public decimal Precio { get; set; }
 
-        /// <summary>
-        /// Tipo de IVA aplicable al producto.
-        /// Valores posibles: IVA_0 (0%), IVA_12 (12%), IVA_15 (15%)
-        /// </summary>
-        [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-        public TipoIVA TipoIVA { get; set; }
+    /// <summary>
+    /// Tipo de IVA aplicable al producto (Enum usado por la UI actual).
+    /// Valores posibles: IVA_0 (0%), IVA_12 (12%), IVA_15 (15%)
+    /// </summary>
+    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
+    public TipoIVA TipoIVA { get; set; }
+
+    /// <summary>
+    /// Clave foránea opcional al catálogo de Tipos de IVA almacenado en BD.
+    /// Nota: Se mantiene la propiedad enum 'TipoIVA' para compatibilidad;
+    /// esta FK permite relacionar con la tabla TiposIVA.
+    /// </summary>
+    public int? TipoIVAId { get; set; }
+
+    /// <summary>
+    /// Navegación al catálogo de Tipos de IVA.
+    /// </summary>
+    public TipoIVACatalogo? TipoIVACatalogo { get; set; }
 
         /// <summary>
         /// Cantidad disponible en inventario.
@@ -63,6 +76,16 @@ namespace SistemaFacturacionSRI.Domain.Entities
         /// </summary>
         [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
         public string UnidadMedida { get; set; } = "Unidad";
+
+    /// <summary>
+    /// Clave foránea opcional a Categoría del producto.
+    /// </summary>
+    public int? CategoriaId { get; set; }
+
+    /// <summary>
+    /// Navegación a Categoría.
+    /// </summary>
+    public Categoria? Categoria { get; set; }
 
         // Propiedades calculadas (no se guardan en la BD, solo se calculan en memoria)
 

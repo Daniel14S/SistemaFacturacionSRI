@@ -31,7 +31,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(p => p.Descripcion)
                 .HasMaxLength(1000)
                 .HasColumnType("NVARCHAR")
-                .IsRequired(false);
+                .IsRequired();
 
             builder.Property(p => p.Precio)
                 .IsRequired()
@@ -49,6 +49,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .HasMaxLength(20)
                 .HasColumnType("NVARCHAR")
                 .HasDefaultValue("Unidad");
+
+            // Relaciones: FK opcional a TiposIVA (catálogo) y Categorias
+            builder.HasOne(p => p.TipoIVACatalogo)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoIVAId)
+                .HasConstraintName("FK_Productos_TiposIVA")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
+                .HasConstraintName("FK_Productos_Categorias")
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Ignore(p => p.ValorIVA);
             builder.Ignore(p => p.PrecioConIVA);
