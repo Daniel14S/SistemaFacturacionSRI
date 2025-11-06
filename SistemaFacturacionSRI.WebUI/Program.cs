@@ -6,6 +6,7 @@ using SistemaFacturacionSRI.Infrastructure.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
+using SistemaFacturacionSRI.WebUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+
+// ✅ NUEVO: Cliente HTTP para consumir la API desde Blazor (T-31)
+builder.Services.AddScoped<ProductoHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293") // Ajusta según tu puerto
+    };
+    return new ProductoHttpService(httpClient);
+});
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();

@@ -1,31 +1,53 @@
 @page "/productos"
+@rendermode InteractiveServer
 @using SistemaFacturacionSRI.Application.DTOs.Producto
-@using SistemaFacturacionSRI.Application.Interfaces.Services
-@inject IProductoService ProductoService
+@using SistemaFacturacionSRI.WebUI.Services
+@inject ProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
 <PageTitle>Productos</PageTitle>
 
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="mb-0">Gestión de Productos</h3>
-    <NavLink class="btn btn-sm btn-primary" href="/productos/nuevo">
-        <i class="bi bi-plus-circle"></i> Nuevo producto
-    </NavLink>
+        <h3 class="mb-0">Gestión de Productos</h3>
+        <NavLink class="btn btn-sm btn-primary" href="/productos/nuevo">
+            Nuevo producto
+        </NavLink>
     </div>
 
+    @* T-42: Mensajes de éxito/error *@
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Éxito:</strong> @mensajeExito
+            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
+        </div>
+    }
 
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Error:</strong> @mensajeError
+            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+        </div>
+    }
 
     <!-- Filtros de búsqueda -->
     <div class="card mb-3">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Buscar por nombre:</label>
-                    <input type="text" class="form-control" @bind="textoBusqueda" @bind:event="oninput" placeholder="Ingrese el nombre del producto...">
+                    <label class="form-label fw-bold">Buscar por nombre o código:</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" @bind="textoBusqueda" @bind:event="oninput" 
+                               placeholder="Ingrese el nombre o código del producto...">
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Filtrar por stock:</label>
+                    <label class="form-label fw-bold">Filtrar por stock:</label>
                     <select class="form-select" @bind="filtroStock">
                         <option value="todos">Todos</option>
                         <option value="conStock">Con Stock</option>
@@ -33,7 +55,7 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Ordenar por:</label>
+                    <label class="form-label fw-bold">Ordenar por:</label>
                     <select class="form-select" @bind="ordenamiento">
                         <option value="nombre">Nombre</option>
                         <option value="codigo">Código</option>
@@ -45,18 +67,27 @@
         </div>
     </div>
 
-    @if (productos == null)
+    @if (cargando)
     {
-        <div class="text-center">
-            <div class="spinner-border" role="status">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Cargando...</span>
             </div>
+            <p class="mt-3 text-muted">Cargando productos...</p>
+        </div>
+    }
+    else if (productos == null || !productos.Any())
+    {
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle fs-1"></i>
+            <p class="mb-0 mt-2">No hay productos registrados. ¡Crea tu primer producto!</p>
         </div>
     }
     else if (!ProductosFiltrados.Any())
     {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No se encontraron productos con los filtros aplicados.
+        <div class="alert alert-warning text-center">
+            <i class="bi bi-exclamation-triangle fs-1"></i>
+            <p class="mb-0 mt-2">No se encontraron productos con los filtros aplicados.</p>
         </div>
     }
     else
@@ -66,39 +97,83 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
+            <table class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-                        <th>Precio</th>
-                        <th>IVA</th>
-                        <th>Precio con IVA</th>
-                        <th>Stock</th>
-                        <th>Acciones</th>
+                        <th style="width: 10%;">Código</th>
+                        <th style="width: 18%;">Nombre</th>
+                        <th style="width: 22%;">Descripción</th>
+                        <th style="width: 10%;">Precio</th>
+                        <th style="width: 8%;">IVA</th>
+                        <th style="width: 10%;">Precio c/IVA</th>
+                        <th style="width: 7%;">Stock</th>
+                        <th style="width: 7%;">Unidad</th>
+                        <th style="width: 8%;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var producto in ProductosFiltrados)
                     {
                         <tr>
-                            <td>@producto.Codigo</td>
-                            <td>@producto.Nombre</td>
-                            <td>$@producto.Precio.ToString("N2")</td>
-                            <td>@producto.TipoIVADescripcion</td>
-                            <td>$@producto.PrecioConIVA.ToString("N2")</td>
+                            <!-- Código -->
+                            <td><code class="text-primary">@producto.Codigo</code></td>
+                            
+                            <!-- Nombre -->
+                            <td><strong>@producto.Nombre</strong></td>
+                            
+                            <!-- Descripción -->
+                            <td>
+                                @if (!string.IsNullOrEmpty(producto.Descripcion))
+                                {
+                                    <small class="text-muted">
+                                        @(producto.Descripcion.Length > 60 
+                                            ? producto.Descripcion.Substring(0, 60) + "..." 
+                                            : producto.Descripcion)
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted fst-italic">Sin descripción</small>
+                                }
+                            </td>
+                            
+                            <!-- Precio -->
+                            <td><strong>$@producto.Precio.ToString("N2")</strong></td>
+                            
+                            <!-- IVA -->
+                            <td>
+                                <span class="badge bg-info">@producto.TipoIVADescripcion</span>
+                            </td>
+                            
+                            <!-- Precio con IVA -->
+                            <td>
+                                <strong class="text-success">$@producto.PrecioConIVA.ToString("N2")</strong>
+                            </td>
+                            
+                            <!-- Stock -->
                             <td>
                                 <span class="badge @(producto.TieneStock ? "bg-success" : "bg-danger")">
                                     @producto.Stock
                                 </span>
                             </td>
-                            <td>
-                                <button class="btn btn-sm btn-warning" @onclick="() => EditarProducto(producto.Id)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger" @onclick="() => EliminarProducto(producto.Id)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            
+                            <!-- Unidad de Medida -->
+                            <td><small>@producto.UnidadMedida</small></td>
+                            
+                            <!-- Acciones -->
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button class="btn btn-outline-primary" 
+                                            @onclick="() => EditarProducto(producto.Id)"
+                                            title="Editar producto">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" 
+                                            @onclick="() => MostrarConfirmacionEliminar(producto)"
+                                            title="Eliminar producto">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -108,11 +183,72 @@
     }
 </div>
 
+@* T-40: Modal de confirmación para eliminar *@
+@if (mostrarModalEliminar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarEliminar"></button>
+                </div>
+                <div class="modal-body">
+                    @if (productoAEliminar != null)
+                    {
+                        <p class="mb-3">¿Está seguro que desea eliminar el siguiente producto?</p>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-1"><strong>Código:</strong> @productoAEliminar.Codigo</p>
+                                <p class="mb-1"><strong>Nombre:</strong> @productoAEliminar.Nombre</p>
+                                <p class="mb-1"><strong>Precio:</strong> $@productoAEliminar.Precio.ToString("N2")</p>
+                                <p class="mb-0"><strong>Stock:</strong> @productoAEliminar.Stock @productoAEliminar.UnidadMedida</p>
+                            </div>
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarEliminar" disabled="@eliminando">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminar" disabled="@eliminando">
+                        @if (eliminando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Eliminando...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash"></i>
+                            <span> Eliminar</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<ProductoDto>? productos;
     private string textoBusqueda = string.Empty;
     private string filtroStock = "todos";
     private string ordenamiento = "nombre";
+    private bool cargando = true;
+    private string mensajeExito = string.Empty;
+    private string mensajeError = string.Empty;
+
+    // T-40: Variables para el modal de confirmación
+    private bool mostrarModalEliminar = false;
+    private bool eliminando = false;
+    private ProductoDto? productoAEliminar = null;
 
     private IEnumerable<ProductoDto> ProductosFiltrados
     {
@@ -123,10 +259,10 @@
 
             var resultado = productos.AsEnumerable();
 
-            // Filtro por texto de búsqueda
+            // Filtro por texto de búsqueda (nombre o código)
             if (!string.IsNullOrWhiteSpace(textoBusqueda))
             {
-                resultado = resultado.Where(p => 
+                resultado = resultado.Where(p =>
                     p.Nombre.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ||
                     p.Codigo.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase)
                 );
@@ -160,13 +296,21 @@
 
     private async Task CargarProductos()
     {
-        var resultado = await ProductoService.ObtenerTodosAsync();
-        productos = resultado.ToList();
-    }
-
-    private void NuevoProducto()
-    {
-        Navigation.NavigateTo("/productos/nuevo");
+        try
+        {
+            cargando = true;
+            mensajeError = string.Empty;
+            var resultado = await ProductoService.ObtenerTodosAsync();
+            productos = resultado.ToList();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar productos: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
     }
 
     private void EditarProducto(int id)
@@ -174,10 +318,52 @@
         Navigation.NavigateTo($"/productos/editar/{id}");
     }
 
-    private async Task EliminarProducto(int id)
+    // T-40: Mostrar modal de confirmación
+    private void MostrarConfirmacionEliminar(ProductoDto producto)
     {
-        // TODO: Implementar confirmación antes de eliminar
-        await ProductoService.EliminarAsync(id);
-        await CargarProductos();
+        productoAEliminar = producto;
+        mostrarModalEliminar = true;
+    }
+
+    // T-40: Cancelar eliminación
+    private void CancelarEliminar()
+    {
+        mostrarModalEliminar = false;
+        productoAEliminar = null;
+    }
+
+    // T-40: Confirmar y ejecutar eliminación
+    private async Task ConfirmarEliminar()
+    {
+        if (productoAEliminar == null) return;
+
+        try
+        {
+            eliminando = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            await ProductoService.EliminarAsync(productoAEliminar.Id);
+            
+            // T-42: Mensaje de éxito
+            mensajeExito = $"Producto '{productoAEliminar.Nombre}' eliminado exitosamente";
+            
+            // Cerrar modal
+            mostrarModalEliminar = false;
+            productoAEliminar = null;
+            
+            // Recargar lista
+            await CargarProductos();
+        }
+        catch (Exception ex)
+        {
+            // T-42: Mensaje de error
+            mensajeError = $"No se pudo eliminar el producto: {ex.Message}";
+            mostrarModalEliminar = false;
+        }
+        finally
+        {
+            eliminando = false;
+        }
     }
 }
