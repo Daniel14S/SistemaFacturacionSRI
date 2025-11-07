@@ -156,9 +156,9 @@
                                     @producto.Stock
                                 </span>
                             </td>
-                            
-                            <!-- Unidad de Medida -->
-                            <td><small>@producto.UnidadMedida</small></td>
+
+                            <!-- Categoría -->
+                            <td><small>@producto.CategoriaNombre</small></td>
                             
                             <!-- Acciones -->
                             <td class="text-center">
@@ -205,7 +205,7 @@
                                 <p class="mb-1"><strong>Código:</strong> @productoAEliminar.Codigo</p>
                                 <p class="mb-1"><strong>Nombre:</strong> @productoAEliminar.Nombre</p>
                                 <p class="mb-1"><strong>Precio:</strong> $@productoAEliminar.Precio.ToString("N2")</p>
-                                <p class="mb-0"><strong>Stock:</strong> @productoAEliminar.Stock @productoAEliminar.UnidadMedida</p>
+                                <p class="mb-0"><strong>Stock:</strong> @productoAEliminar.Stock @productoAEliminar.CategoriaNombre</p>
                             </div>
                         </div>
                         <div class="alert alert-warning mt-3 mb-0">

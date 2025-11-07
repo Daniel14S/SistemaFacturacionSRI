@@ -30,6 +30,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
+builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
 
 // ✅ NUEVO: Cliente HTTP para consumir la API desde Blazor (T-31)
 builder.Services.AddScoped<ProductoHttpService>(sp =>
@@ -76,11 +80,12 @@ app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
 
 // ===========================
-// MIGRACIÓN AUTOMÁTICA
+// INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
 // ===========================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // Aplica migraciones pendientes en cualquier entorno
     db.Database.Migrate();
 }
 

@@ -418,3 +418,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# EF Core migrations (keep local, do not commit)
+SistemaFacturacionSRI.Infrastructure/Migrations/

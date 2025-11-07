@@ -31,24 +31,40 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(p => p.Descripcion)
                 .HasMaxLength(1000)
                 .HasColumnType("NVARCHAR")
-                .IsRequired(false);
+                .IsRequired();
 
             builder.Property(p => p.Precio)
                 .IsRequired()
                 .HasColumnType("DECIMAL(18,2)");
 
-            builder.Property(p => p.TipoIVA)
-                .IsRequired()
-                .HasConversion<int>();
+            // El TipoIVA (enum) ya no se usa; se reemplaza por FK requerida TipoIVAId.
 
             builder.Property(p => p.Stock)
                 .IsRequired()
                 .HasDefaultValue(0);
 
-            builder.Property(p => p.UnidadMedida)
-                .HasMaxLength(20)
-                .HasColumnType("NVARCHAR")
-                .HasDefaultValue("Unidad");
+            // UnidadMedida eliminada del modelo
+
+            // Relaciones: FK requerida a TiposIVA (catálogo) y Categorias
+            builder.HasOne(p => p.TipoIVACatalogo)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoIVAId)
+                .IsRequired()
+                .HasConstraintName("FK_Productos_TiposIVA")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
+                .IsRequired()
+                .HasConstraintName("FK_Productos_Categorias")
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Configuración de la relación con Categoría
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Ignore(p => p.ValorIVA);
             builder.Ignore(p => p.PrecioConIVA);
