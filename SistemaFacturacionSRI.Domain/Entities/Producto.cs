@@ -44,18 +44,11 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public decimal Precio { get; set; }
 
     /// <summary>
-    /// Tipo de IVA aplicable al producto (Enum usado por la UI actual).
-    /// Valores posibles: IVA_0 (0%), IVA_12 (12%), IVA_15 (15%)
+    /// Clave foránea al catálogo de Tipos de IVA almacenado en BD.
+    /// Reemplaza el uso del enum TipoIVA y es obligatoria.
     /// </summary>
     [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-    public TipoIVA TipoIVA { get; set; }
-
-    /// <summary>
-    /// Clave foránea opcional al catálogo de Tipos de IVA almacenado en BD.
-    /// Nota: Se mantiene la propiedad enum 'TipoIVA' para compatibilidad;
-    /// esta FK permite relacionar con la tabla TiposIVA.
-    /// </summary>
-    public int? TipoIVAId { get; set; }
+    public int TipoIVAId { get; set; }
 
     /// <summary>
     /// Navegación al catálogo de Tipos de IVA.
@@ -70,17 +63,12 @@ namespace SistemaFacturacionSRI.Domain.Entities
         [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
         public int Stock { get; set; } = 0;
 
-        /// <summary>
-        /// Unidad de medida del producto.
-        /// Ejemplo: "Unidad", "Kg", "Metro", "Litro"
-        /// </summary>
-        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
-        public string UnidadMedida { get; set; } = "Unidad";
+        
 
     /// <summary>
     /// Clave foránea opcional a Categoría del producto.
     /// </summary>
-    public int? CategoriaId { get; set; }
+    public int CategoriaId { get; set; }
 
     /// <summary>
     /// Navegación a Categoría.
@@ -91,17 +79,17 @@ namespace SistemaFacturacionSRI.Domain.Entities
 
         /// <summary>
         /// Calcula el valor del IVA para una unidad del producto.
-        /// Fórmula: Precio × TipoIVA%
-        /// Ejemplo: Si Precio = 100 y TipoIVA = 12%, retorna 12
+    /// Fórmula: Precio × Porcentaje IVA del catálogo
+    /// Ejemplo: Si Precio = 100 y Porcentaje = 12, retorna 12
         /// </summary>
-        public decimal ValorIVA => TipoIVA.CalcularIVA(Precio);
+    public decimal ValorIVA => Precio * ((TipoIVACatalogo?.Porcentaje ?? 0m) / 100m);
 
         /// <summary>
         /// Calcula el precio total (precio base + IVA).
         /// Fórmula: Precio + ValorIVA
         /// Ejemplo: Si Precio = 100 y ValorIVA = 12, retorna 112
         /// </summary>
-        public decimal PrecioConIVA => TipoIVA.CalcularTotal(Precio);
+    public decimal PrecioConIVA => Precio + ValorIVA;
 
         /// <summary>
         /// Indica si el producto tiene stock disponible.

@@ -49,6 +49,66 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             CategoriaId = 1,
                             Descripcion = "Categoría por defecto",
                             Nombre = "General"
+                        },
+                        new
+                        {
+                            CategoriaId = 2,
+                            Descripcion = "Productos lácteos",
+                            Nombre = "Lacteos"
+                        },
+                        new
+                        {
+                            CategoriaId = 3,
+                            Descripcion = "Carnes procesadas y embutidos",
+                            Nombre = "Embutidos"
+                        },
+                        new
+                        {
+                            CategoriaId = 4,
+                            Descripcion = "Productos de cadena de frío",
+                            Nombre = "Refrigerados"
+                        },
+                        new
+                        {
+                            CategoriaId = 5,
+                            Descripcion = "Dispositivos y accesorios electrónicos",
+                            Nombre = "Electronicos"
+                        },
+                        new
+                        {
+                            CategoriaId = 6,
+                            Descripcion = "Bebidas alcohólicas y no alcohólicas",
+                            Nombre = "Bebidas"
+                        },
+                        new
+                        {
+                            CategoriaId = 7,
+                            Descripcion = "Despensa y abarrotes",
+                            Nombre = "Abarrotes"
+                        },
+                        new
+                        {
+                            CategoriaId = 8,
+                            Descripcion = "Productos de limpieza",
+                            Nombre = "Limpieza"
+                        },
+                        new
+                        {
+                            CategoriaId = 9,
+                            Descripcion = "Cuidado personal e higiene",
+                            Nombre = "Higiene"
+                        },
+                        new
+                        {
+                            CategoriaId = 10,
+                            Descripcion = "Panes y repostería",
+                            Nombre = "Panaderia"
+                        },
+                        new
+                        {
+                            CategoriaId = 11,
+                            Descripcion = "Productos frescos",
+                            Nombre = "Frutas y Verduras"
                         });
                 });
 
@@ -178,6 +238,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("int");
 
+                    b.Property<decimal?>("Descuento")
+                        .HasColumnType("DECIMAL(18,2)");
+
                     b.Property<int>("FacturaId")
                         .HasColumnType("int");
 
@@ -249,7 +312,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("CategoriaId")
+                    b.Property<int>("CategoriaId")
                         .HasColumnType("int");
 
                     b.Property<string>("Codigo")
@@ -283,18 +346,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
-                    b.Property<int>("TipoIVA")
+                    b.Property<int>("TipoIVAId")
                         .HasColumnType("int");
-
-                    b.Property<int?>("TipoIVAId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UnidadMedida")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("NVARCHAR")
-                        .HasDefaultValue("Unidad");
 
                     b.HasKey("Id");
 
@@ -338,12 +391,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TipoIVAId"));
 
-                    b.Property<string>("CodigoSRI")
-                        .IsRequired()
-                        .HasMaxLength(1)
-                        .HasColumnType("nchar(1)")
-                        .IsFixedLength();
-
                     b.Property<string>("Descripcion")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -360,23 +407,44 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         new
                         {
                             TipoIVAId = 1,
-                            CodigoSRI = "0",
                             Descripcion = "IVA 0%",
                             Porcentaje = 0m
                         },
                         new
                         {
                             TipoIVAId = 2,
-                            CodigoSRI = "2",
+                            Descripcion = "IVA 5%",
+                            Porcentaje = 5m
+                        },
+                        new
+                        {
+                            TipoIVAId = 3,
+                            Descripcion = "IVA 8%",
+                            Porcentaje = 8m
+                        },
+                        new
+                        {
+                            TipoIVAId = 4,
+                            Descripcion = "IVA 10%",
+                            Porcentaje = 10m
+                        },
+                        new
+                        {
+                            TipoIVAId = 5,
                             Descripcion = "IVA 12%",
                             Porcentaje = 12m
                         },
                         new
                         {
-                            TipoIVAId = 3,
-                            CodigoSRI = "3",
+                            TipoIVAId = 6,
                             Descripcion = "IVA 15%",
                             Porcentaje = 15m
+                        },
+                        new
+                        {
+                            TipoIVAId = 7,
+                            Descripcion = "IVA 20%",
+                            Porcentaje = 20m
                         });
                 });
 
@@ -522,13 +590,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Categoria", "Categoria")
                         .WithMany("Productos")
                         .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
                         .HasConstraintName("FK_Productos_Categorias");
 
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", "TipoIVACatalogo")
                         .WithMany("Productos")
                         .HasForeignKey("TipoIVAId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
                         .HasConstraintName("FK_Productos_TiposIVA");
 
                     b.Navigation("Categoria");

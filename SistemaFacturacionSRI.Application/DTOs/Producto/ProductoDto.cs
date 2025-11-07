@@ -34,26 +34,33 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         /// </summary>
         public decimal Precio { get; set; }
 
-        /// <summary>
-        /// Tipo de IVA aplicable (0, 12, o 15).
-        /// </summary>
-        public TipoIVA TipoIVA { get; set; }
+    /// <summary>
+    /// Identificador del tipo de IVA (catálogo en base de datos).
+    /// </summary>
+    public int TipoIVAId { get; set; }
+
+    /// <summary>
+    /// Descripción legible del tipo de IVA (desde el catálogo).
+    /// Ejemplo: "IVA 12%"
+    /// </summary>
+    public string TipoIVADescripcion { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción legible del tipo de IVA.
-        /// Ejemplo: "IVA 12%"
+        /// Identificador de la categoría a la que pertenece el producto.
         /// </summary>
-        public string TipoIVADescripcion { get; set; } = string.Empty;
+        public int CategoriaId { get; set; }
+
+        /// <summary>
+        /// Nombre de la categoría a la que pertenece el producto.
+        /// </summary>
+        public string CategoriaNombre { get; set; } = string.Empty;
 
         /// <summary>
         /// Cantidad en stock.
         /// </summary>
         public int Stock { get; set; }
 
-        /// <summary>
-        /// Unidad de medida del producto.
-        /// </summary>
-        public string UnidadMedida { get; set; } = string.Empty;
+        
 
         /// <summary>
         /// Valor del IVA calculado para una unidad.

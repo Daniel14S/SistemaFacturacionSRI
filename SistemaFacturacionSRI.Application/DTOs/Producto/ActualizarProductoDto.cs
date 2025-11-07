@@ -51,13 +51,19 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
         public decimal Precio { get; set; }
 
+    /// <summary>
+    /// Tipo de IVA aplicable (FK del catálogo TiposIVA).
+    /// </summary>
+    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
+    [Range(1, int.MaxValue, ErrorMessage = "Seleccione un tipo de IVA válido")]
+    public int TipoIVAId { get; set; }
+
         /// <summary>
-        /// Tipo de IVA aplicable.
-        /// Valores válidos: 0 (IVA_0), 12 (IVA_12), 15 (IVA_15)
+        /// Categoría del producto.
         /// </summary>
-        [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-        [EnumDataType(typeof(TipoIVA), ErrorMessage = "Tipo de IVA inválido. Use 0, 12 o 15")]
-        public TipoIVA TipoIVA { get; set; }
+        [Required(ErrorMessage = "La categoría es obligatoria")]
+        [Range(1, int.MaxValue, ErrorMessage = "Seleccione una categoría válida")]
+        public int CategoriaId { get; set; }
 
         /// <summary>
         /// Cantidad en stock.
@@ -65,10 +71,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
         public int Stock { get; set; }
 
-        /// <summary>
-        /// Unidad de medida del producto.
-        /// </summary>
-        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
-        public string UnidadMedida { get; set; } = string.Empty;
+        
     }
 }

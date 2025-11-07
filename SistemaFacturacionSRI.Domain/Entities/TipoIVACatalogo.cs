@@ -4,7 +4,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
     public class TipoIVACatalogo
     {
         public int TipoIVAId { get; set; }
-        public string CodigoSRI { get; set; } = string.Empty; // NCHAR(1)
         public string Descripcion { get; set; } = string.Empty;
         public decimal Porcentaje { get; set; }
         /// <summary>

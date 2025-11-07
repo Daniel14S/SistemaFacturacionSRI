@@ -1,5 +1,7 @@
 using AutoMapper;
 using SistemaFacturacionSRI.Application.DTOs.Producto;
+using SistemaFacturacionSRI.Application.DTOs.Categoria;
+using SistemaFacturacionSRI.Application.DTOs.TipoIVA;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
 
@@ -13,14 +15,23 @@ namespace SistemaFacturacionSRI.Application.Mappings
     {
         public ProductoProfile()
         {
+            // Categoria -> CategoriaDto
+            CreateMap<Categoria, CategoriaDto>();
+            // TipoIVACatalogo -> TipoIVADto
+            CreateMap<TipoIVACatalogo, TipoIVADto>();
+
             // Mapeo de Entidad → DTO (para lectura/GET)
             CreateMap<Producto, ProductoDto>()
-                .ForMember(dest => dest.TipoIVADescripcion, 
-                    opt => opt.MapFrom(src => src.TipoIVA.ObtenerDescripcion()))
+                .ForMember(dest => dest.TipoIVADescripcion,
+                    opt => opt.MapFrom(src => src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Descripcion : string.Empty))
+                .ForMember(dest => dest.TipoIVAId,
+                    opt => opt.MapFrom(src => src.TipoIVAId))
+                .ForMember(dest => dest.CategoriaId, opt => opt.MapFrom(src => src.CategoriaId))
+                .ForMember(dest => dest.CategoriaNombre, opt => opt.MapFrom(src => src.Categoria != null ? src.Categoria.Nombre : string.Empty))
                 .ForMember(dest => dest.ValorIVA, 
-                    opt => opt.MapFrom(src => src.ValorIVA))
+                    opt => opt.MapFrom(src => src.Precio * ((src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje : 0m) / 100m)))
                 .ForMember(dest => dest.PrecioConIVA, 
-                    opt => opt.MapFrom(src => src.PrecioConIVA))
+                    opt => opt.MapFrom(src => src.Precio + (src.Precio * ((src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje : 0m) / 100m))))
                 .ForMember(dest => dest.TieneStock, 
                     opt => opt.MapFrom(src => src.TieneStock))
                 .ForMember(dest => dest.ValorInventario, 
