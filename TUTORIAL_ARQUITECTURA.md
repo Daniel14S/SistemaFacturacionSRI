@@ -905,7 +905,7 @@ public class ProductoRepository : RepositoryBase<Producto>, IProductoRepository
 > **"WebUI es lo que el usuario VE y USA. Blazor + Minimal APIs."**
 
 ### 📍 Ubicación
-
+```
 SistemaFacturacionSRI.WebUI/
 ├── Components/
 │   ├── Layout/
@@ -921,7 +921,7 @@ SistemaFacturacionSRI.WebUI/
 │   └── js/
 ├── appsettings.json
 └── Program.cs
-
+```
 
 ## 📘 Componentes Principales
 1. Program.cs (Configuración)
@@ -1998,13 +1998,13 @@ public class ProductoService
 
 | Habilidad | Pedro | Patricio | Kerly | Melany |
 |-----------|-------|----------|-------|--------|
-| Onion Architecture | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| Entity Framework | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| C# Avanzado | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| SQL Server | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
-| Blazor | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Git/GitHub | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| APIs REST | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ |
+| Onion Architecture | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+| Entity Framework | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+| C# Avanzado | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+| SQL Server | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ |
+| Blazor | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Git/GitHub | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
+| APIs REST | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ |
 | Testing | ⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ |
 
 **Objetivo:** Todos en ⭐⭐⭐⭐ para fin de proyecto.
