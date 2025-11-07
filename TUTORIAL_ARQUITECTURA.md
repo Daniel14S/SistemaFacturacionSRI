@@ -995,27 +995,29 @@ app.MapRazorComponents<App>()
 app.Run();
 ```
 
-🔑 Conceptos clave:
-Dependency Injection (DI)
-csharpbuilder.Services.AddScoped<IProductoService, ProductoService>();
+### 🔑 Conceptos clave
+### Dependency Injection (DI)
+```csharp
+builder.Services.AddScoped<IProductoService, ProductoService>();
+```
+- Registra servicios en el contenedor DI
+- Scoped: Una instancia por petición HTTP
+- Permite inyectar en constructores
 
-Registra servicios en el contenedor DI
-Scoped: Una instancia por petición HTTP
-Permite inyectar en constructores
+### Minimal APIs
+```csharp
+app.MapPost("/api/productos", async (dto, service) => { ... });
+```
+- APIs REST sin controllers tradicionales
+- Más ligeras y rápidas
+- Ideales para microservicios
 
-Minimal APIs
-csharpapp.MapPost("/api/productos", async (dto, service) => { ... });
-
-APIs REST sin controllers tradicionales
-Más ligeras y rápidas
-Ideales para microservicios
-
-
-2. Blazor Components (.razor)
-¿Qué es Blazor?
+### 2. Blazor Components (.razor)
+**¿Qué es Blazor?**
 Framework para crear UIs interactivas con C# (sin JavaScript).
 ListaProductos.razor
-razor@page "/productos"
+```csharp
+@page "/productos"
 @inject IProductoService ProductoService
 
 <h3>Lista de Productos</h3>
@@ -1077,43 +1079,33 @@ else
         productos = await ProductoService.ObtenerTodosAsync();
     }
 }
-🔑 Sintaxis Blazor:
-@page "/productos"
+```
 
-Define la URL de la página
+### 🔑 Sintaxis Blazor
 
-@inject IProductoService ProductoService
+- **@page "/productos"** - Define la URL de la página
+- **@inject IProductoService ProductoService** - Inyecta el servicio en la página
+- **@if, @foreach** - Lógica C# en Razor
+- **@onclick="() => Editar(id)"** - Event handler (como onclick en JS)
+- **@code { ... }** - Bloque de código C#
 
-Inyecta el servicio en la página
-
-@if, @foreach
-
-Lógica C# en Razor
-
-@onclick="() => Editar(id)"
-
-Event handler (como onclick en JS)
-
-@code { ... }
-
-Bloque de código C#
-
-
-8. Ejemplo Práctico: Crear un Producto
+### 8. Ejemplo Práctico: Crear un Producto
 Vamos a seguir el flujo COMPLETO con código real.
 🎬 Escenario
 Usuario completa el formulario:
 
-Código: PROD-001
-Nombre: Laptop HP
-Precio: 1000
-Tipo IVA: 12%
+- Código: PROD-001
+- Nombre: Laptop HP
+- Precio: 1000
+- Tipo IVA: 12%
 
 Click en "Guardar"
 
-📍 Paso 1: Frontend (Blazor)
-FormularioProducto.razor
-csharp@code {
+### 📍 Paso 1: Frontend (Blazor)
+**FormularioProducto.razor**
+
+```csharp
+@code {
     private CrearProductoDto modelo = new();
     
     private async Task GuardarAsync()
@@ -1139,8 +1131,10 @@ csharp@code {
         }
     }
 }
-HTTP Request generado:
-httpPOST https://localhost:7001/api/productos
+```
+**HTTP Request generado**
+```csharp
+POST https://localhost:7001/api/productos
 Content-Type: application/json
 
 {
@@ -1151,9 +1145,11 @@ Content-Type: application/json
   "stock": 0,
   "unidadMedida": "Unidad"
 }
+```
 
-📍 Paso 2: API Endpoint (Program.cs)
-csharpapp.MapPost("/api/productos", async (
+### 📍 Paso 2: API Endpoint (Program.cs)
+```csharp
+app.MapPost("/api/productos", async (
     [FromBody] CrearProductoDto dto,
     IProductoService service) =>
 {
@@ -1174,15 +1170,17 @@ csharpapp.MapPost("/api/productos", async (
         return Results.Conflict(new { error = ex.Message });
     }
 });
-¿Qué hace [FromBody]?
+```
 
-Lee el JSON del body HTTP
-Lo deserializa a CrearProductoDto
-Valida las [DataAnnotations]
+**¿Qué hace [FromBody]?**
 
+- Lee el JSON del body HTTP
+- Lo deserializa a CrearProductoDto
+- Valida las [DataAnnotations]
 
-📍 Paso 3: Service (ProductoService.cs)
-csharppublic async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
+### 📍 Paso 3: Service (ProductoService.cs)
+```csharp
+public async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
 {
     // 1. VALIDACIÓN DE NEGOCIO
     var codigoExiste = await _productoRepository.ExisteAsync(
@@ -1229,9 +1227,11 @@ csharppublic async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
     
     return resultado;
 }
+```
 
-📍 Paso 4: Repository (ProductoRepository.cs)
-csharppublic async Task<Producto> AgregarAsync(Producto entidad)
+### 📍 Paso 4: Repository (ProductoRepository.cs)
+```csharp
+public async Task<Producto> AgregarAsync(Producto entidad)
 {
     // 1. Agregar al DbSet (en memoria, aún NO en BD)
     await _dbSet.AddAsync(entidad);
@@ -1243,9 +1243,11 @@ csharppublic async Task<Producto> AgregarAsync(Producto entidad)
     // 3. Retornar entidad con Id generado
     return entidad;
 }
+```
 
-📍 Paso 5: DbContext (ApplicationDbContext.cs)
-csharppublic override async Task<int> SaveChangesAsync(...)
+### 📍 Paso 5: DbContext (ApplicationDbContext.cs)
+```csharp
+public override async Task<int> SaveChangesAsync(...)
 {
     // 1. Obtener entradas siendo modificadas
     var entradas = ChangeTracker.Entries<EntidadBase>();
@@ -1263,8 +1265,10 @@ csharppublic override async Task<int> SaveChangesAsync(...)
     // 2. Ejecutar SQL
     return await base.SaveChangesAsync(cancellationToken);
 }
-SQL generado por EF Core:
-sqlINSERT INTO Productos 
+```
+**SQL generado por EF Core:**
+```csharp
+INSERT INTO Productos 
     (Codigo, Nombre, Descripcion, Precio, TipoIVA, Stock, 
      UnidadMedida, FechaCreacion, Activo)
 VALUES 
@@ -1272,10 +1276,12 @@ VALUES
      'Unidad', '2025-10-31 15:30:00', 1);
 
 SELECT SCOPE_IDENTITY();  -- Obtener Id generado
+```
 
-📍 Paso 6: Respuesta al Cliente
-HTTP Response:
-httpHTTP/1.1 201 Created
+### 📍 Paso 6: Respuesta al Cliente
+**HTTP Response:**
+```csharp
+HTTP/1.1 201 Created
 Location: /api/productos/1
 Content-Type: application/json
 
@@ -1296,81 +1302,90 @@ Content-Type: application/json
   "fechaCreacion": "2025-10-31T15:30:00",
   "fechaModificacion": null
 }
+```
 
-📍 Paso 7: Frontend actualiza UI
-csharpif (response.IsSuccessStatusCode)
+### 📍 Paso 7: Frontend actualiza UI
+```csharp
+if (response.IsSuccessStatusCode)
 {
     var productoCreado = await response.Content.ReadFromJsonAsync<ProductoDto>();
     MostrarMensaje($"Producto {productoCreado.Codigo} creado exitosamente");
     NavManager.NavigateTo("/productos");
 }
-
-9. Patrones de Diseño Utilizados
+```
+### 9. Patrones de Diseño Utilizados
 🎨 Patrones Implementados
-1. Repository Pattern
+**1. Repository Pattern**
 ¿Qué es?
 Abstracción del acceso a datos.
 Ventaja:
+- Puedes cambiar de EF Core a Dapper sin tocar el Service
+- Fácil de testear (mocks)
 
-Puedes cambiar de EF Core a Dapper sin tocar el Service
-Fácil de testear (mocks)
-
-csharp// Service NO sabe que usa EF Core
+```csharp
+// Service NO sabe que usa EF Core
 public class ProductoService
 {
     private readonly IProductoRepository _repo;  // Interfaz, no implementación
 }
+```
 
-2. Dependency Injection (DI)
+**2. Dependency Injection (DI)**
 ¿Qué es?
 Las clases reciben sus dependencias por constructor.
 Sin DI (❌ Acoplamiento):
-csharppublic class ProductoService
+```csharp
+public class ProductoService
 {
     public ProductoService()
     {
         _repository = new ProductoRepository();  // Acoplado
     }
 }
-Con DI (✅ Desacoplamiento):
-csharppublic class ProductoService
+```
+
+**Con DI (✅ Desacoplamiento):**
+```csharp
+public class ProductoService
 {
     public ProductoService(IProductoRepository repository)
     {
         _repository = repository;  // Inyectado
     }
 }
+```
 
-3. DTO Pattern
+**3. DTO Pattern**
 ¿Qué es?
 Objetos para transferir datos entre capas.
 Ventaja:
+- Desacoplamiento entre API y BD
+- Control de qué se expone
 
-Desacoplamiento entre API y BD
-Control de qué se expone
-
-
-4. Unit of Work (implícito en DbContext)
+**4. Unit of Work (implícito en DbContext)**
 ¿Qué es?
 Agrupa múltiples operaciones en una transacción.
-csharp// Todo o nada (transaction)
+```csharp
+// Todo o nada (transaction)
 context.Productos.Add(producto);
 context.Categorias.Add(categoria);
 await context.SaveChangesAsync();  // Ambos o ninguno
+```
 
-5. Specification Pattern (parcial en repositorios)
+**5. Specification Pattern (parcial en repositorios)**
 ¿Qué es?
 Encapsular consultas complejas.
-csharpvar activos = await _repo.BuscarAsync(p => p.Activo && p.Stock > 0);
+```csharp
+var activos = await _repo.BuscarAsync(p => p.Activo && p.Stock > 0);
+```
 
-10. Ejercicios Prácticos
-🏋️ Ejercicio 1: Crear entidad Cliente
+### 10. Ejercicios Prácticos
+**🏋️ Ejercicio 1: Crear entidad Cliente**
 Objetivo: Aplicar lo aprendido creando una nueva entidad.
 Pasos:
-
-Domain/Entities/Cliente.cs
-
-csharppublic class Cliente : EntidadBase
+**1. Domain/Entities/Cliente.cs**
+```csharp
+public class Cliente : EntidadBase
 {
     public string Cedula { get; set; }
     public string Nombres { get; set; }
@@ -1378,20 +1393,22 @@ csharppublic class Cliente : EntidadBase
     public string Email { get; set; }
     public string Telefono { get; set; }
 }
+```
 
-Application/DTOs/Cliente/ClienteDto.cs
-
-csharppublic class ClienteDto
+**2. Application/DTOs/Cliente/ClienteDto.cs**
+```csharp
+public class ClienteDto
 {
     public int Id { get; set; }
     public string Cedula { get; set; }
     public string NombreCompleto { get; set; }  // Nombres + Apellidos
     public string Email { get; set; }
 }
+```
 
-Infrastructure/Configurations/ClienteConfiguration.cs
-
-csharppublic class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
+**3. Infrastructure/Configurations/ClienteConfiguration.cs**
+```csharp
+public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
 {
     public void Configure(EntityTypeBuilder<Cliente> builder)
     {
@@ -1405,23 +1422,25 @@ csharppublic class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.HasIndex(c => c.Cedula).IsUnique();
     }
 }
+```
 
-Crear migración y aplicar
-
-bashdotnet ef migrations add AgregarCliente
+**4. Crear migración y aplicar**
+```csharp
+dotnet ef migrations add AgregarCliente
 dotnet ef database update
+```
 
-🏋️ Ejercicio 2: Agregar búsqueda por precio
+**🏋️ Ejercicio 2: Agregar búsqueda por precio**
 Objetivo: Extender ProductoRepository
 Tarea:
+1. Agregar método en IProductoRepository:
+```csharp
+Task<IEnumerable<Producto>> BuscarPorRangoPrecioAsync(decimal min, decimal max);
+```
 
-Agregar método en IProductoRepository:
-
-csharpTask<IEnumerable<Producto>> BuscarPorRangoPrecioAsync(decimal min, decimal max);
-
-Implementar en ProductoRepository:
-
-csharppublic async Task<IEnumerable<Producto>> BuscarPorRangoPrecioAsync(
+2. Implementar en ProductoRepository:
+```csharp
+ppublic async Task<IEnumerable<Producto>> BuscarPorRangoPrecioAsync(
     decimal min, decimal max)
 {
     return await _dbSet
@@ -1429,10 +1448,11 @@ csharppublic async Task<IEnumerable<Producto>> BuscarPorRangoPrecioAsync(
         .OrderBy(p => p.Precio)
         .ToListAsync();
 }
+```
 
-Agregar endpoint en Program.cs:
-
-csharpapp.MapGet("/api/productos/buscar", async (
+3. Agregar endpoint en Program.cs:
+```csharp
+app.MapGet("/api/productos/buscar", async (
     decimal? min,
     decimal? max,
     IProductoRepository repo) =>
@@ -1440,14 +1460,14 @@ csharpapp.MapGet("/api/productos/buscar", async (
     var productos = await repo.BuscarPorRangoPrecioAsync(min ?? 0, max ?? decimal.MaxValue);
     return Results.Ok(productos);
 });
+```
 
-🏋️ Ejercicio 3: Agregar validación personalizada
+**🏋️ Ejercicio 3: Agregar validación personalizada**
 Objetivo: Validar que el precio no sea múltiplo de 100
 Tarea:
-
 Crear CrearProductoDto custom validation:
-
-csharppublic class CrearProductoDto : IValidatableObject
+```csharp
+public class CrearProductoDto : IValidatableObject
 {
     [Range(0.01, double.MaxValue)]
     public decimal Precio { get; set; }
@@ -1462,55 +1482,54 @@ csharppublic class CrearProductoDto : IValidatableObject
         }
     }
 }
-
-11. Buenas Prácticas
+```
+### 11. Buenas Prácticas
 ✅ DOs (Hacer)
+**1. Nombres descriptivos**
 
-Nombres descriptivos
-
-csharp// ✅ BIEN
+```csharp
+// ✅ BIEN
 public async Task<ProductoDto> ObtenerPorCodigoAsync(string codigo)
 
 // ❌ MAL
 public async Task<ProductoDto> Get(string c)
+```
 
-Usar async/await
-
-csharp// ✅ BIEN
+**2. Usar async/await**
+```csharp
+// ✅ BIEN
 public async Task<IEnumerable<Producto>> ObtenerTodosAsync()
 
 // ❌ MAL
 public IEnumerable<Producto> ObtenerTodos()  // Síncrono
+```
+**3. Validar en múltiples niveles**
+- Frontend: DataAnnotations
+- Service: Lógica de negocio
+- BD: Constraints
 
-Validar en múltiples niveles
-
-
-Frontend: DataAnnotations
-Service: Lógica de negocio
-BD: Constraints
-
-
-Usar DTOs para APIs
-
-csharp// ✅ BIEN
+**4. Usar DTOs para APIs**
+```csharp
+// ✅ BIEN
 public IActionResult Get() => Ok(_mapper.Map<ProductoDto>(producto));
 
 // ❌ MAL
 public IActionResult Get() => Ok(producto);  // Expone entidad
+```
 
-Commits frecuentes
-
-bash# ✅ BIEN
+**5. Commits frecuentes**
+```csharp
+# ✅ BIEN
 git commit -m "T-19: Implementado método CrearAsync en ProductoService"
 
 # ❌ MAL
 git commit -m "cambios"
+```
 
-❌ DON'Ts (No hacer)
-
-NO hacer consultas en Domain
-
-csharp// ❌ MAL - Domain no debe tener acceso a BD
+### ❌ DON'Ts (No hacer)
+**1. NO hacer consultas en Domain**
+```csharp
+// ❌ MAL - Domain no debe tener acceso a BD
 public class Producto : EntidadBase
 {
     public List<Producto> ObtenerRelacionados()
@@ -1518,18 +1537,20 @@ public class Producto : EntidadBase
         return context.Productos.Where(...).ToList();  // ¡NO!
     }
 }
+```
 
-NO usar entidades en controllers
-
-csharp// ❌ MAL
+**2. NO usar entidades en controllers**
+```csharp
+// ❌ MAL
 public IActionResult Post([FromBody] Producto producto)
 
 // ✅ BIEN
 public IActionResult Post([FromBody] CrearProductoDto dto)
+```
 
-NO poner lógica de negocio en controllers
-
-csharp// ❌ MAL
+**3. NO poner lógica de negocio en controllers**
+```csharp
+// ❌ MAL
 public async Task<IActionResult> Post(CrearProductoDto dto)
 {
     var existe = context.Productos.Any(p => p.Codigo == dto.Codigo);
@@ -1543,10 +1564,11 @@ public async Task<IActionResult> Post(CrearProductoDto dto)
     var resultado = await _service.CrearAsync(dto);  // Service maneja lógica
     return Ok(resultado);
 }
+```
 
-NO usar Select * innecesariamente
-
-csharp// ❌ MAL
+**4. NO usar Select * innecesariamente**
+```csharp
+// ❌ MAL
 var productos = await _context.Productos.ToListAsync();  // Trae TODO
 
 // ✅ BIEN
@@ -1554,10 +1576,11 @@ var productos = await _context.Productos
     .Where(p => p.Activo)
     .Select(p => new { p.Id, p.Nombre, p.Precio })
     .ToListAsync();
+```
 
-NO hacer commits gigantes
-
-bash# ❌ MAL
+**5. NO hacer commits gigantes**
+```csharp
+# ❌ MAL
 git add .
 git commit -m "Sprint 1 completo"  # 50 archivos
 
@@ -1565,37 +1588,31 @@ git commit -m "Sprint 1 completo"  # 50 archivos
 git commit -m "T-19: Service Crear" # 2-3 archivos por commit
 ```
 
----
+### 12. Preguntas Frecuentes
+**❓ ¿Por qué tantas capas? ¿No es complicado?**
+R: Al principio parece más trabajo, pero:
 
-## 12. Preguntas Frecuentes
+Mantenibilidad: Cambios en BD no afectan lógica de negocio
+Testeable: Puedes probar cada capa independientemente
+Escalable: Fácil agregar features sin romper lo existente
+Trabajo en equipo: Cada uno puede trabajar en su capa sin conflictos
 
-### ❓ ¿Por qué tantas capas? ¿No es complicado?
+**❓ ¿Cuándo usar DTO y cuándo Entidad?**
+R:
 
-**R:** Al principio parece más trabajo, pero:
-- **Mantenibilidad:** Cambios en BD no afectan lógica de negocio
-- **Testeable:** Puedes probar cada capa independientemente
-- **Escalable:** Fácil agregar features sin romper lo existente
-- **Trabajo en equipo:** Cada uno puede trabajar en su capa sin conflictos
+Entidad: Solo dentro de Application e Infrastructure
+DTO: Para comunicación con el exterior (APIs, frontend)
 
----
-
-### ❓ ¿Cuándo usar DTO y cuándo Entidad?
-
-**R:**
-- **Entidad:** Solo dentro de Application e Infrastructure
-- **DTO:** Para comunicación con el exterior (APIs, frontend)
-```
 Frontend ↔ DTO ↔ API ↔ Service ↔ Repository ↔ Entidad ↔ BD
 
-❓ ¿Por qué async/await en todo?
+**❓ ¿Por qué async/await en todo?**
 R:
 
 No bloquea hilos: Mientras espera la BD, el servidor puede atender otras peticiones
 Escalabilidad: Más peticiones simultáneas con los mismos recursos
 Estándar: Todas las APIs modernas son asíncronas
 
-
-❓ ¿Qué es LINQ y por qué usarlo?
+**❓ ¿Qué es LINQ y por qué usarlo?**
 R: Language Integrated Query - Consultas tipo SQL en C#
 csharp// LINQ (C#)
 var productos = await _context.Productos
@@ -1613,8 +1630,7 @@ IntelliSense (autocomplete)
 Type-safe (errores en compilación, no runtime)
 Legible
 
-
-❓ ¿Cuál es la diferencia entre Include y Select?
+**❓ ¿Cuál es la diferencia entre Include y Select?**
 R:
 Include (Eager Loading):
 csharpvar facturas = await _context.Facturas
@@ -1632,8 +1648,7 @@ csharpvar facturas = await _context.Facturas
 Solo trae columnas necesarias
 Más eficiente
 
-
-❓ ¿Cuándo usar Scoped vs Transient vs Singleton?
+**❓ ¿Cuándo usar Scoped vs Transient vs Singleton?**
 R:
 csharp// Scoped: Una instancia por petición HTTP (recomendado para servicios)
 builder.Services.AddScoped<IProductoService, ProductoService>();
@@ -1650,33 +1665,25 @@ Servicios de negocio: Scoped
 Servicios sin estado: Transient
 Caché, configuración: Singleton
 
-
-❓ ¿Cómo debuggear el código?
+**❓ ¿Cómo debuggear el código?**
 R:
-
-Puntos de interrupción (Breakpoints):
+1. Puntos de interrupción (Breakpoints):
 
 Click izquierdo en el margen del editor (punto rojo)
 F5 para iniciar debugging
 F10 para paso a paso
 
-
-Watch variables:
+2. Watch variables:
 
 Hover sobre variables para ver su valor
 Panel "Variables" en VS Code
 
-
-Logs:
-
+3. Logs:
 csharp_logger.LogInformation("Creando producto: {Codigo}", dto.Codigo);
-
-SQL Profiler:
+4. SQL Profiler:
 
 Ver qué SQL genera EF Core
 En appsettings.Development.json:
-
-
 
 json{
   "Logging": {
@@ -1686,28 +1693,24 @@ json{
   }
 }
 
-13. Recursos de Estudio
-📚 Documentación Oficial
+### 13. Recursos de Estudio
+**📚 Documentación Oficial**
+- .NET Documentation
+- Entity Framework Core
+- Blazor
+- AutoMapper
 
-.NET Documentation
-Entity Framework Core
-Blazor
-AutoMapper
+**🎥 Tutoriales Recomendados**
+- Onion Architecture Explained
+- EF Core Deep Dive
+- Blazor for Beginners
 
-### 🎥 Tutoriales Recomendados
+**📖 Libros**
+- "Clean Architecture" - Robert C. Martin
+- "Domain-Driven Design" - Eric Evans
+- "C# in Depth" - Jon Skeet
 
-Onion Architecture Explained
-EF Core Deep Dive
-Blazor for Beginners
-
-### 📖 Libros
-
-"Clean Architecture" - Robert C. Martin
-"Domain-Driven Design" - Eric Evans
-"C# in Depth" - Jon Skeet
-
-
-14. Checklist de Dominio del Tutorial
+### 14. Checklist de Dominio del Tutorial
 Marca cuando domines cada concepto:
 ### Conceptos Fundamentales
 - [ ] Entiendo qué es Onion Architecture
