@@ -104,7 +104,7 @@
                             {
                                 @foreach (var cat in categorias)
                                 {
-                                    <option value="@cat.CategoriaId">@cat.Nombre</option>
+                                    <option value="@cat.Id">@cat.Nombre</option>  @* ← Cambiar a cat.Id *@
                                 }
                             }
                         </InputSelect>
