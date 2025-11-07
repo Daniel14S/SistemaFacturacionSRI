@@ -6,6 +6,8 @@ using SistemaFacturacionSRI.Infrastructure.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
+using System;
+using System.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
+builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();
@@ -65,11 +71,12 @@ app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
 
 // ===========================
-// MIGRACIÓN AUTOMÁTICA
+// INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
 // ===========================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // Aplica migraciones pendientes en cualquier entorno
     db.Database.Migrate();
 }
 

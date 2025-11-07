@@ -27,11 +27,12 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public string Nombre { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción detallada del producto (opcional).
-        /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
-        /// </summary>
-        [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
-        public string? Descripcion { get; set; }
+    /// Descripción detallada del producto.
+    /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
+    /// </summary>
+    [Required(ErrorMessage = "La descripción del producto es obligatoria")]
+    [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
+    public string Descripcion { get; set; } = string.Empty;
 
         /// <summary>
         /// Precio unitario del producto sin IVA.
@@ -42,12 +43,17 @@ namespace SistemaFacturacionSRI.Domain.Entities
         [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
         public decimal Precio { get; set; }
 
-        /// <summary>
-        /// Tipo de IVA aplicable al producto.
-        /// Valores posibles: IVA_0 (0%), IVA_12 (12%), IVA_15 (15%)
-        /// </summary>
-        [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-        public TipoIVA TipoIVA { get; set; }
+    /// <summary>
+    /// Clave foránea al catálogo de Tipos de IVA almacenado en BD.
+    /// Reemplaza el uso del enum TipoIVA y es obligatoria.
+    /// </summary>
+    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
+    public int TipoIVAId { get; set; }
+
+    /// <summary>
+    /// Navegación al catálogo de Tipos de IVA.
+    /// </summary>
+    public TipoIVACatalogo? TipoIVACatalogo { get; set; }
 
         /// <summary>
         /// Cantidad disponible en inventario.
@@ -57,28 +63,33 @@ namespace SistemaFacturacionSRI.Domain.Entities
         [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
         public int Stock { get; set; } = 0;
 
-        /// <summary>
-        /// Unidad de medida del producto.
-        /// Ejemplo: "Unidad", "Kg", "Metro", "Litro"
-        /// </summary>
-        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
-        public string UnidadMedida { get; set; } = "Unidad";
+        
+
+    /// <summary>
+    /// Clave foránea opcional a Categoría del producto.
+    /// </summary>
+    public int CategoriaId { get; set; }
+
+    /// <summary>
+    /// Navegación a Categoría.
+    /// </summary>
+    public Categoria? Categoria { get; set; }
 
         // Propiedades calculadas (no se guardan en la BD, solo se calculan en memoria)
 
         /// <summary>
         /// Calcula el valor del IVA para una unidad del producto.
-        /// Fórmula: Precio × TipoIVA%
-        /// Ejemplo: Si Precio = 100 y TipoIVA = 12%, retorna 12
+    /// Fórmula: Precio × Porcentaje IVA del catálogo
+    /// Ejemplo: Si Precio = 100 y Porcentaje = 12, retorna 12
         /// </summary>
-        public decimal ValorIVA => TipoIVA.CalcularIVA(Precio);
+    public decimal ValorIVA => Precio * ((TipoIVACatalogo?.Porcentaje ?? 0m) / 100m);
 
         /// <summary>
         /// Calcula el precio total (precio base + IVA).
         /// Fórmula: Precio + ValorIVA
         /// Ejemplo: Si Precio = 100 y ValorIVA = 12, retorna 112
         /// </summary>
-        public decimal PrecioConIVA => TipoIVA.CalcularTotal(Precio);
+    public decimal PrecioConIVA => Precio + ValorIVA;
 
         /// <summary>
         /// Indica si el producto tiene stock disponible.

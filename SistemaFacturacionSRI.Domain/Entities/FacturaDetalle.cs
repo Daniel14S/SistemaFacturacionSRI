@@ -8,6 +8,8 @@ namespace SistemaFacturacionSRI.Domain.Entities
 
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
+    // Descuento opcional por línea (nullable)
+    public decimal? Descuento { get; set; }
         public decimal SubtotalLinea { get; set; }
         public decimal IvaLinea { get; set; }
         public decimal TotalLinea { get; set; }
