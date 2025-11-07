@@ -68,12 +68,12 @@ namespace SistemaFacturacionSRI.Domain.Entities
     /// <summary>
     /// Clave foránea opcional a Categoría del producto.
     /// </summary>
-    public int CategoriaId { get; set; }
+    public int? CategoriaId { get; set; }
 
     /// <summary>
     /// Navegación a Categoría.
     /// </summary>
-    public Categoria? Categoria { get; set; }
+    public virtual Categoria? Categoria { get; set; }
 
         // Propiedades calculadas (no se guardan en la BD, solo se calculan en memoria)
 

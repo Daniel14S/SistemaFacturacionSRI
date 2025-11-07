@@ -59,6 +59,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .IsRequired()
                 .HasConstraintName("FK_Productos_Categorias")
                 .OnDelete(DeleteBehavior.Restrict);
+            
+            // Configuración de la relación con Categoría
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Ignore(p => p.ValorIVA);
             builder.Ignore(p => p.PrecioConIVA);
