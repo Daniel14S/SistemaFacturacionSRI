@@ -53,5 +53,19 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 throw new Exception($"Error de conexión al crear el lote: {ex.Message}", ex);
             }
         }
+
+        public async Task<List<LoteDto>> ObtenerLotesPorProductoAsync(int productoId)
+{
+    try
+    {
+        // Llama al endpoint del backend que devuelve los lotes por producto
+        var lotes = await _httpClient.GetFromJsonAsync<List<LoteDto>>($"{ApiBaseUrl}/por-producto/{productoId}");
+        return lotes ?? new List<LoteDto>();
+    }
+    catch (HttpRequestException ex)
+    {
+        throw new Exception($"Error al obtener lotes del producto {productoId}: {ex.Message}", ex);
+    }
+}
     }
 }

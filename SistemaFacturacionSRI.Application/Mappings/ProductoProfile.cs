@@ -25,6 +25,8 @@ namespace SistemaFacturacionSRI.Application.Mappings
                     opt => opt.MapFrom(src => src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Descripcion : string.Empty))
                 .ForMember(dest => dest.TipoIVAId,
                     opt => opt.MapFrom(src => src.TipoIVAId))
+                .ForMember(dest => dest.PorcentajeIVA,
+        opt => opt.MapFrom(src => src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje / 100m : 0m))
                 .ForMember(dest => dest.CategoriaId, opt => opt.MapFrom(src => src.CategoriaId))
                 .ForMember(dest => dest.CategoriaNombre, opt => opt.MapFrom(src => src.Categoria != null ? src.Categoria.Nombre : string.Empty))
                 .ForMember(dest => dest.Precio,

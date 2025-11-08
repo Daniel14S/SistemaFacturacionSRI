@@ -3,6 +3,9 @@ using SistemaFacturacionSRI.Application.DTOs.Producto;
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace SistemaFacturacionSRI.Application.Services
 {
@@ -13,6 +16,8 @@ namespace SistemaFacturacionSRI.Application.Services
     public class ProductoService : IProductoService
     {
         private readonly IProductoRepository _productoRepository;
+        private readonly ILoteRepository _loteRepository;
+        private readonly ILoteService _loteService; // <- Agregado
         private readonly IMapper _mapper;
 
         /// <summary>
@@ -20,9 +25,13 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public ProductoService(
             IProductoRepository productoRepository,
+            ILoteRepository loteRepository,
+            ILoteService loteService, // <- Inyectar servicio de lotes
             IMapper mapper)
         {
             _productoRepository = productoRepository;
+            _loteRepository = loteRepository;
+            _loteService = loteService; // <- Asignar
             _mapper = mapper;
         }
 
@@ -32,20 +41,12 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
         {
-            // 1. Validar que el código no exista
             var codigoExiste = await _productoRepository.ExisteAsync(p => p.Codigo == dto.Codigo);
             if (codigoExiste)
-            {
                 throw new InvalidOperationException($"Ya existe un producto con el código '{dto.Codigo}'");
-            }
 
-            // 2. Mapear DTO a Entidad
             var producto = _mapper.Map<Producto>(dto);
-
-            // 3. Guardar en la base de datos
             var productoCreado = await _productoRepository.AgregarAsync(producto);
-
-            // 4. Mapear Entidad a DTO y retornar
             return _mapper.Map<ProductoDto>(productoCreado);
         }
 
@@ -54,10 +55,7 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<IEnumerable<ProductoDto>> ObtenerTodosAsync()
         {
-            // 1. Obtener todos los productos del repositorio
             var productos = await _productoRepository.ObtenerTodosAsync();
-
-            // 2. Mapear colección de entidades a colección de DTOs
             return _mapper.Map<IEnumerable<ProductoDto>>(productos);
         }
 
@@ -66,17 +64,8 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<ProductoDto?> ObtenerPorIdAsync(int id)
         {
-            // 1. Buscar el producto por ID
             var producto = await _productoRepository.ObtenerPorIdAsync(id);
-
-            // 2. Si no existe, retornar null
-            if (producto == null)
-            {
-                return null;
-            }
-
-            // 3. Mapear entidad a DTO y retornar
-            return _mapper.Map<ProductoDto>(producto);
+            return producto == null ? null : _mapper.Map<ProductoDto>(producto);
         }
 
         /// <summary>
@@ -84,23 +73,11 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<ProductoDto?> ObtenerPorCodigoAsync(string codigo)
         {
-            // 1. Validar que el código no esté vacío
             if (string.IsNullOrWhiteSpace(codigo))
-            {
                 throw new ArgumentException("El código no puede estar vacío", nameof(codigo));
-            }
 
-            // 2. Buscar el producto por código
             var producto = await _productoRepository.ObtenerPorCodigoAsync(codigo);
-
-            // 3. Si no existe, retornar null
-            if (producto == null)
-            {
-                return null;
-            }
-
-            // 4. Mapear entidad a DTO y retornar
-            return _mapper.Map<ProductoDto>(producto);
+            return producto == null ? null : _mapper.Map<ProductoDto>(producto);
         }
 
         /// <summary>
@@ -108,16 +85,10 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<IEnumerable<ProductoDto>> BuscarPorNombreAsync(string nombre)
         {
-            // 1. Validar que el nombre no esté vacío
             if (string.IsNullOrWhiteSpace(nombre))
-            {
                 throw new ArgumentException("El nombre no puede estar vacío", nameof(nombre));
-            }
 
-            // 2. Buscar productos que contengan el texto en el nombre
             var productos = await _productoRepository.BuscarPorNombreAsync(nombre);
-
-            // 3. Mapear y retornar
             return _mapper.Map<IEnumerable<ProductoDto>>(productos);
         }
 
@@ -126,50 +97,142 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<IEnumerable<ProductoDto>> ObtenerProductosConStockAsync()
         {
-            // 1. Obtener productos con stock > 0
             var productos = await _productoRepository.ObtenerProductosConStockAsync();
-
-            // 2. Mapear y retornar
             return _mapper.Map<IEnumerable<ProductoDto>>(productos);
         }
 
-        // Métodos que se implementarán en siguientes tareas
+        /// <summary>
+        /// Actualiza los datos de un producto existente.
+        /// </summary>
         public async Task<ProductoDto> ActualizarAsync(ActualizarProductoDto dto)
         {
-            // Validar existencia
             var existente = await _productoRepository.ObtenerPorIdAsync(dto.Id);
             if (existente == null)
-            {
                 throw new KeyNotFoundException($"No existe un producto con Id {dto.Id}");
-            }
 
-            // Validar unicidad de código si cambió
             if (!string.Equals(existente.Codigo, dto.Codigo, StringComparison.OrdinalIgnoreCase))
             {
                 var codigoOcupado = await _productoRepository.ExisteAsync(p => p.Codigo == dto.Codigo && p.Id != dto.Id);
                 if (codigoOcupado)
-                {
                     throw new InvalidOperationException($"Ya existe un producto con el código '{dto.Codigo}'");
-                }
             }
 
-            // Mapear cambios sobre la entidad existente
             _mapper.Map(dto, existente);
-
-            // Actualizar y retornar
             await _productoRepository.ActualizarAsync(existente);
             return _mapper.Map<ProductoDto>(existente);
         }
 
-        public async Task EliminarAsync(int id)
+        /// <summary>
+        /// Obtiene la cantidad total de lotes asociados a un producto.
+        /// </summary>
+        public async Task<int> ObtenerCantidadTotalLotesAsync(int idProducto)
         {
-            var existente = await _productoRepository.ObtenerPorIdAsync(id);
-            if (existente == null)
+            var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(idProducto);
+            return lotes.Sum(l => l.CantidadDisponible);
+        }
+
+        /// <summary>
+/// Obtiene todos los productos y les asigna su lote prioritario según fecha de expiración.
+/// También calcula precio promedio y detecta variación de precios entre lotes.
+/// </summary>
+
+// En ProductoService.cs, reemplaza el método ObtenerTodosConLotePrioritarioAsync
+
+public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync()
+{
+    var productos = await _productoRepository.ObtenerTodosAsync();
+    var productosDto = _mapper.Map<List<ProductoDto>>(productos);
+
+    foreach (var producto in productosDto)
+    {
+        // Obtener el producto original para acceder al TipoIVACatalogo
+        var productoOriginal = productos.First(p => p.Id == producto.Id);
+        
+        // Obtener todos los lotes con stock disponible
+        var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(producto.Id);
+        var lotesDisponibles = lotes.Where(l => l.CantidadDisponible > 0).ToList();
+
+        if (lotesDisponibles.Any())
+        {
+            // ===============================
+            // 1️⃣ Lote prioritario (FEFO: vence primero)
+            // ===============================
+            var lotePrioritario = lotesDisponibles
+                .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue)
+                .First();
+
+            producto.LotePrioritario = lotePrioritario.LoteId.ToString();
+            producto.FechaExpiracionLotePrioritario = lotePrioritario.FechaExpiracion;
+            producto.Precio = lotePrioritario.PrecioCosto;
+
+            // ✅ CALCULAR IVA Y PRECIO CON IVA DEL LOTE PRIORITARIO
+            if (producto.Precio.HasValue && productoOriginal.TipoIVACatalogo != null)
             {
-                throw new KeyNotFoundException($"No existe un producto con Id {id}");
+                decimal porcentajeIVA = productoOriginal.TipoIVACatalogo.Porcentaje;
+                producto.ValorIVA = producto.Precio.Value * (porcentajeIVA / 100m);
+                producto.PrecioConIVA = producto.Precio.Value + producto.ValorIVA.Value;
             }
 
-            await _productoRepository.EliminarAsync(id);
+            // ===============================
+            // 2️⃣ Verificar variación de precios entre lotes
+            // ===============================
+            producto.TieneVariacionPrecios = lotesDisponibles
+                .Select(l => l.PrecioCosto)
+                .Distinct()
+                .Count() > 1;
+
+            // ===============================
+            // 3️⃣ Precio promedio ponderado
+            // ===============================
+            var costoTotal = lotesDisponibles.Sum(l => l.PrecioCosto * l.CantidadDisponible);
+            var cantidadTotal = lotesDisponibles.Sum(l => l.CantidadDisponible);
+            producto.PrecioCostoPromedio = cantidadTotal > 0 ? costoTotal / cantidadTotal : 0;
+
+            // ===============================
+            // 4️⃣ Stock total sumando todos los lotes
+            // ===============================
+            producto.Stock = lotesDisponibles.Sum(l => l.CantidadDisponible);
+            producto.TieneStock = producto.Stock > 0;
+            
+            // ✅ CALCULAR VALOR DEL INVENTARIO CON EL PRECIO DEL LOTE PRIORITARIO
+            producto.ValorInventario = producto.Precio.HasValue 
+                ? producto.Stock * producto.Precio.Value 
+                : null;
         }
+        else
+        {
+            // Si no hay lotes disponibles
+            producto.Precio = null;
+            producto.ValorIVA = null;
+            producto.PrecioConIVA = null;
+            producto.PrecioCostoPromedio = null;
+            producto.TieneVariacionPrecios = false;
+            producto.Stock = 0;
+            producto.TieneStock = false;
+            producto.LotePrioritario = null;
+            producto.FechaExpiracionLotePrioritario = null;
+            producto.ValorInventario = null;
+        }
+    }
+
+    return productosDto;
+}
+
+        /// <summary>
+        /// Elimina un producto solo si no tiene stock disponible.
+        /// </summary>
+        public async Task EliminarAsync(int id)
+{
+    var producto = await _productoRepository.ObtenerPorIdAsync(id);
+    if (producto == null)
+        throw new KeyNotFoundException($"No existe un producto con Id {id}");
+
+    var lotePrioritario = await _loteService.ObtenerLotePrioritarioAsync(id);
+    if (lotePrioritario != null && lotePrioritario.CantidadDisponible > 0)
+        throw new InvalidOperationException("No se puede eliminar un producto que tiene stock disponible.");
+
+    await _productoRepository.EliminarAsync(id);
+}
+
     }
 }
