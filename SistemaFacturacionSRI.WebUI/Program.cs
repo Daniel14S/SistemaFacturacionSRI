@@ -35,7 +35,6 @@ builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
 builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
 builder.Services.AddScoped<ILoteRepository, LoteRepository>();
 builder.Services.AddScoped<ILoteService, LoteService>();
-builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 
 // ✅ Cliente HTTP para consumir la API desde Blazor
 builder.Services.AddScoped<ProductoHttpService>(sp =>
@@ -57,14 +56,10 @@ builder.Services.AddScoped<LoteHttpService>(sp =>
     return new LoteHttpService(httpClient);
 });
 
-// ✅ Cliente HTTP para categorías (CORREGIDO)
-builder.Services.AddScoped<CategoriaHttpService>(sp =>
+// ✅ Cliente HTTP para categorías
+builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
 {
-    var httpClient = new HttpClient
-    {
-        BaseAddress = new Uri("http://localhost:5293")
-    };
-    return new CategoriaHttpService(httpClient);
+    client.BaseAddress = new Uri("http://localhost:5293");
 });
 
 // Controladores (para los endpoints API)
@@ -98,9 +93,9 @@ app.UseAntiforgery();
 app.MapControllers();
 
 // ✅ Mapea los componentes Blazor
-// 🔧 CORREGIDO: Busca el archivo App.razor en la carpeta correcta
 app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
+
 // ===========================
 // INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
 // ===========================

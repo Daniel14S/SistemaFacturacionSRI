@@ -3,7 +3,7 @@ using SistemaFacturacionSRI.Application.DTOs.Categoria;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
-    public class CategoriaHttpService
+    public class CategoriaHttpService : ICategoriaHttpService
     {
         private readonly HttpClient _httpClient;
         private const string ApiEndpoint = "api/Categoria";
