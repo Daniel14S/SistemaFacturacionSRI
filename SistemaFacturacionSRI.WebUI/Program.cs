@@ -1,13 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.WebUI;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
-using System;
-using System.Data;
+using SistemaFacturacionSRI.WebUI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +33,26 @@ builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
 builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
+
+// ✅ Cliente HTTP para consumir la API desde Blazor
+builder.Services.AddScoped<ProductoHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293") // Ajusta según tu puerto
+    };
+    return new ProductoHttpService(httpClient);
+});
+
+// ✅ NUEVO: Cliente HTTP para categorías
+builder.Services.AddScoped<ICategoriaHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293") // Ajusta según tu puerto
+    };
+    return new CategoriaHttpService(httpClient);
+});
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();
@@ -67,18 +85,16 @@ app.UseAntiforgery();
 app.MapControllers();
 
 // ✅ Mapea los componentes Blazor
+// 🔧 CORREGIDO: Busca el archivo App.razor en la carpeta correcta
 app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
-
 // ===========================
 // INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
 // ===========================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // Aplica migraciones pendientes en cualquier entorno
     db.Database.Migrate();
 }
 
-// ===========================
 app.Run();

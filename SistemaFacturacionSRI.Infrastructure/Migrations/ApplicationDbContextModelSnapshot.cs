@@ -24,91 +24,144 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Categoria", b =>
                 {
-                    b.Property<int>("CategoriaId")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoriaId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
+                        .HasColumnType("NVARCHAR");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("NVARCHAR");
 
-                    b.HasKey("CategoriaId");
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Categorias_Codigo");
 
                     b.ToTable("Categorias", (string)null);
 
                     b.HasData(
                         new
                         {
-                            CategoriaId = 1,
+                            Id = 1,
+                            Activo = true,
+                            Codigo = "CAT-001",
                             Descripcion = "Categoría por defecto",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "General"
                         },
                         new
                         {
-                            CategoriaId = 2,
+                            Id = 2,
+                            Activo = true,
+                            Codigo = "CAT-002",
                             Descripcion = "Productos lácteos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Lacteos"
                         },
                         new
                         {
-                            CategoriaId = 3,
+                            Id = 3,
+                            Activo = true,
+                            Codigo = "CAT-003",
                             Descripcion = "Carnes procesadas y embutidos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Embutidos"
                         },
                         new
                         {
-                            CategoriaId = 4,
+                            Id = 4,
+                            Activo = true,
+                            Codigo = "CAT-004",
                             Descripcion = "Productos de cadena de frío",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Refrigerados"
                         },
                         new
                         {
-                            CategoriaId = 5,
+                            Id = 5,
+                            Activo = true,
+                            Codigo = "CAT-005",
                             Descripcion = "Dispositivos y accesorios electrónicos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Electronicos"
                         },
                         new
                         {
-                            CategoriaId = 6,
+                            Id = 6,
+                            Activo = true,
+                            Codigo = "CAT-006",
                             Descripcion = "Bebidas alcohólicas y no alcohólicas",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Bebidas"
                         },
                         new
                         {
-                            CategoriaId = 7,
+                            Id = 7,
+                            Activo = true,
+                            Codigo = "CAT-007",
                             Descripcion = "Despensa y abarrotes",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Abarrotes"
                         },
                         new
                         {
-                            CategoriaId = 8,
+                            Id = 8,
+                            Activo = true,
+                            Codigo = "CAT-008",
                             Descripcion = "Productos de limpieza",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Limpieza"
                         },
                         new
                         {
-                            CategoriaId = 9,
+                            Id = 9,
+                            Activo = true,
+                            Codigo = "CAT-009",
                             Descripcion = "Cuidado personal e higiene",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Higiene"
                         },
                         new
                         {
-                            CategoriaId = 10,
+                            Id = 10,
+                            Activo = true,
+                            Codigo = "CAT-010",
                             Descripcion = "Panes y repostería",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Panaderia"
                         },
                         new
                         {
-                            CategoriaId = 11,
+                            Id = 11,
+                            Activo = true,
+                            Codigo = "CAT-011",
                             Descripcion = "Productos frescos",
-                            Nombre = "Frutas y Verduras"
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "FrutasVerduras"
                         });
                 });
 
@@ -312,7 +365,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<int>("CategoriaId")
+                    b.Property<int?>("CategoriaId")
                         .HasColumnType("int");
 
                     b.Property<string>("Codigo")
@@ -346,6 +399,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<int?>("TipoIVACatalogoTipoIVAId")
+                        .HasColumnType("int");
+
                     b.Property<int>("TipoIVAId")
                         .HasColumnType("int");
 
@@ -357,7 +413,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Productos_Codigo");
 
-                    b.HasIndex("TipoIVAId");
+                    b.HasIndex("TipoIVACatalogoTipoIVAId");
 
                     b.ToTable("Productos", (string)null);
                 });
@@ -590,16 +646,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Categoria", "Categoria")
                         .WithMany("Productos")
                         .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Productos_Categorias");
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", "TipoIVACatalogo")
                         .WithMany("Productos")
-                        .HasForeignKey("TipoIVAId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Productos_TiposIVA");
+                        .HasForeignKey("TipoIVACatalogoTipoIVAId");
 
                     b.Navigation("Categoria");
 
