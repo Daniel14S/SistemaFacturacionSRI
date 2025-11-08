@@ -1,0 +1,203 @@
+@page "/categorias/nueva"
+@page "/categorias/editar/{Id:int}"
+@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.WebUI.Services
+@inject CategoriaHttpService CategoriaService
+@inject NavigationManager Navigation
+
+<PageTitle>@(Id.HasValue ? "Editar" : "Nueva") Categoría</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-tags"></i> @(Id.HasValue ? "Editar" : "Nueva") Categoría
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (cargando)
+                    {
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="@modelo" OnValidSubmit="GuardarCategoria">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+
+                            <div class="mb-3">
+                                <label for="codigo" class="form-label">Código <span class="text-danger">*</span></label>
+                                <InputText id="codigo" class="form-control" @bind-Value="modelo.Codigo" 
+                                           placeholder="Ej: CAT001" maxlength="20" />
+                                <ValidationMessage For="@(() => modelo.Codigo)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+                                <InputText id="nombre" class="form-control" @bind-Value="modelo.Nombre" 
+                                           placeholder="Nombre de la categoría" maxlength="100" />
+                                <ValidationMessage For="@(() => modelo.Nombre)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <InputTextArea id="descripcion" class="form-control" @bind-Value="modelo.Descripcion" 
+                                               rows="3" placeholder="Descripción opcional de la categoría" 
+                                               maxlength="500" />
+                                <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <InputCheckbox id="activo" class="form-check-input" @bind-Value="modelo.Activo" />
+                                    <label class="form-check-label" for="activo">
+                                        Activo
+                                    </label>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(mensajeError))
+                            {
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> @mensajeError
+                                </div>
+                            }
+
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                                    <i class="bi bi-x-circle"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-primary" disabled="@guardando">
+                                    @if (guardando)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                    }
+                                    <i class="bi bi-save"></i> Guardar
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private ModeloFormulario modelo = new();
+    private bool cargando = false;
+    private bool guardando = false;
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            await CargarCategoria();
+        }
+        else
+        {
+            modelo = new ModeloFormulario { Activo = true };
+        }
+    }
+
+    private async Task CargarCategoria()
+    {
+        try
+        {
+            cargando = true;
+            var categoria = await CategoriaService.ObtenerPorIdAsync(Id!.Value);
+            
+            if (categoria == null)
+            {
+                mensajeError = "Categoría no encontrada";
+                return;
+            }
+
+            modelo = new ModeloFormulario
+            {
+                Codigo = categoria.Codigo,
+                Nombre = categoria.Nombre,
+                Descripcion = categoria.Descripcion,
+                Activo = categoria.Activo
+            };
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar categoría: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task GuardarCategoria()
+    {
+        try
+        {
+            guardando = true;
+            mensajeError = string.Empty;
+
+            if (Id.HasValue)
+            {
+                // Actualizar
+                var updateDto = new UpdateCategoriaDto
+                {
+                    Id = Id.Value,
+                    Codigo = modelo.Codigo,
+                    Nombre = modelo.Nombre,
+                    Descripcion = modelo.Descripcion,
+                    Activo = modelo.Activo
+                };
+
+                await CategoriaService.ActualizarAsync(updateDto);
+            }
+            else
+            {
+                // Crear
+                var createDto = new CreateCategoriaDto
+                {
+                    Codigo = modelo.Codigo,
+                    Nombre = modelo.Nombre,
+                    Descripcion = modelo.Descripcion,
+                    Activo = modelo.Activo
+                };
+
+                await CategoriaService.CrearAsync(createDto);
+            }
+
+            Navigation.NavigateTo("/categorias");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = ex.Message;
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/categorias");
+    }
+
+    private class ModeloFormulario
+    {
+        public string Codigo { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public bool Activo { get; set; }
+    }
+}
