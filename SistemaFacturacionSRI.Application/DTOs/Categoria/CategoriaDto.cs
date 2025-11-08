@@ -2,9 +2,12 @@ namespace SistemaFacturacionSRI.Application.DTOs.Categoria
 {
     public class CategoriaDto
     {
-        public int Id { get; set; }  // ← Cambiar de CategoriaId a Id
-        public string Codigo { get; set; } = string.Empty;  // ← Agregar Codigo
+        public int Id { get; set; }
+        public string Codigo { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
-        public string? Descripcion { get; set; }  // ← Agregar Descripcion (opcional)
+        public string? Descripcion { get; set; }
+        public bool Activo { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime? FechaModificacion { get; set; }
     }
 }

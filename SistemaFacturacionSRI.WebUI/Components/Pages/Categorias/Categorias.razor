@@ -1,0 +1,230 @@
+@page "/categorias"
+@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.WebUI.Services
+@inject CategoriaHttpService CategoriaService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Gestión de Categorías</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h3>
+                <i class="bi bi-tags"></i> Gestión de Categorías
+            </h3>
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary" @onclick="NuevaCategoria">
+                <i class="bi bi-plus-circle"></i> Nueva Categoría
+            </button>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Buscar por código o nombre..." 
+                       @bind="terminoBusqueda" @bind:event="oninput" @onkeyup="Buscar" />
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="soloActivas" 
+                       @bind="mostrarSoloActivas" @bind:after="CargarCategorias">
+                <label class="form-check-label" for="soloActivas">
+                    Mostrar solo activas
+                </label>
+            </div>
+        </div>
+    </div>
+
+    @if (cargando)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+    else if (categorias == null || !categorias.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay categorías registradas.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var categoria in categorias)
+                    {
+                        <tr>
+                            <td><strong>@categoria.Codigo</strong></td>
+                            <td>@categoria.Nombre</td>
+                            <td>@(categoria.Descripcion ?? "-")</td>
+                            <td class="text-center">
+                                @if (categoria.Activo)
+                                {
+                                    <span class="badge bg-success">Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactiva</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-primary me-1" 
+                                        @onclick="() => EditarCategoria(categoria.Id)"
+                                        title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        @onclick="() => ConfirmarEliminar(categoria)"
+                                        title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-secondary">
+            <strong>Total de categorías:</strong> @categorias.Count
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> @mensajeError
+            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle"></i> @mensajeExito
+            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CategoriaDto> categorias = new();
+    private List<CategoriaDto> todasLasCategorias = new();
+    private bool cargando = true;
+    private string mensajeError = string.Empty;
+    private string mensajeExito = string.Empty;
+    private string terminoBusqueda = string.Empty;
+    private bool mostrarSoloActivas = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCategorias();
+    }
+
+    private async Task CargarCategorias()
+    {
+        try
+        {
+            cargando = true;
+            mensajeError = string.Empty;
+
+            if (mostrarSoloActivas)
+            {
+                todasLasCategorias = await CategoriaService.ObtenerActivasAsync();
+            }
+            else
+            {
+                todasLasCategorias = await CategoriaService.ObtenerTodasAsync();
+            }
+
+            categorias = todasLasCategorias;
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar categorías: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    private async Task Buscar()
+    {
+        if (string.IsNullOrWhiteSpace(terminoBusqueda))
+        {
+            categorias = todasLasCategorias;
+        }
+        else
+        {
+            try
+            {
+                categorias = await CategoriaService.BuscarAsync(terminoBusqueda);
+            }
+            catch (Exception ex)
+            {
+                mensajeError = $"Error al buscar: {ex.Message}";
+            }
+        }
+    }
+
+    private void NuevaCategoria()
+    {
+        Navigation.NavigateTo("/categorias/nueva");
+    }
+
+    private void EditarCategoria(int id)
+    {
+        Navigation.NavigateTo($"/categorias/editar/{id}");
+    }
+
+    private async Task ConfirmarEliminar(CategoriaDto categoria)
+    {
+        var confirmado = await JS.InvokeAsync<bool>("confirm", 
+            $"¿Está seguro de eliminar la categoría '{categoria.Nombre}'?");
+
+        if (confirmado)
+        {
+            await EliminarCategoria(categoria.Id);
+        }
+    }
+
+    private async Task EliminarCategoria(int id)
+    {
+        try
+        {
+            var resultado = await CategoriaService.EliminarAsync(id);
+            if (resultado)
+            {
+                mensajeExito = "Categoría eliminada exitosamente";
+                await CargarCategorias();
+            }
+            else
+            {
+                mensajeError = "No se pudo eliminar la categoría";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al eliminar: {ex.Message}";
+        }
+    }
+}
