@@ -33,6 +33,8 @@ builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
 builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
+builder.Services.AddScoped<ILoteRepository, LoteRepository>();
+builder.Services.AddScoped<ILoteService, LoteService>();
 
 // ✅ Cliente HTTP para consumir la API desde Blazor
 builder.Services.AddScoped<ProductoHttpService>(sp =>
@@ -52,6 +54,16 @@ builder.Services.AddScoped<ICategoriaHttpService>(sp =>
         BaseAddress = new Uri("http://localhost:5293") // Ajusta según tu puerto
     };
     return new CategoriaHttpService(httpClient);
+});
+
+// ✅ NUEVO: Cliente HTTP para lotes
+builder.Services.AddScoped<LoteHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293") // Ajusta según tu puerto
+    };
+    return new LoteHttpService(httpClient);
 });
 
 // Controladores (para los endpoints API)

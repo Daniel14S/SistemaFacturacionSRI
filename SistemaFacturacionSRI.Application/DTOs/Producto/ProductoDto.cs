@@ -1,5 +1,3 @@
-using SistemaFacturacionSRI.Domain.Enums;
-
 namespace SistemaFacturacionSRI.Application.DTOs.Producto
 {
     /// <summary>
@@ -30,9 +28,9 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         public string? Descripcion { get; set; }
 
         /// <summary>
-        /// Precio unitario sin IVA.
+    /// Precio unitario sin IVA calculado a partir del último lote registrado.
         /// </summary>
-        public decimal Precio { get; set; }
+    public decimal? Precio { get; set; }
 
     /// <summary>
     /// Identificador del tipo de IVA (catálogo en base de datos).
@@ -58,29 +56,29 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         /// <summary>
         /// Cantidad en stock.
         /// </summary>
-        public int Stock { get; set; }
+    public int Stock { get; set; }
 
         
 
         /// <summary>
-        /// Valor del IVA calculado para una unidad.
-        /// </summary>
-        public decimal ValorIVA { get; set; }
+    /// Valor del IVA calculado para una unidad en base al precio actual.
+    /// </summary>
+    public decimal? ValorIVA { get; set; }
 
         /// <summary>
-        /// Precio total incluyendo IVA.
+    /// Precio total incluyendo IVA (si existe precio base).
         /// </summary>
-        public decimal PrecioConIVA { get; set; }
+    public decimal? PrecioConIVA { get; set; }
 
         /// <summary>
         /// Indica si el producto tiene stock disponible.
         /// </summary>
-        public bool TieneStock { get; set; }
+    public bool TieneStock { get; set; }
 
         /// <summary>
-        /// Valor total del inventario (Stock × Precio).
+    /// Valor total del inventario (Stock × Precio actual).
         /// </summary>
-        public decimal ValorInventario { get; set; }
+    public decimal? ValorInventario { get; set; }
 
         /// <summary>
         /// Fecha de creación del producto.

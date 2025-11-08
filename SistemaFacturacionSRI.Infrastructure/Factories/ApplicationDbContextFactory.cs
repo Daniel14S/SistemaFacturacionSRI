@@ -16,11 +16,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Factories
             // Cargar la cadena de conexión desde el appsettings del proyecto WebUI
             var basePath = Directory.GetCurrentDirectory();
             // Intentar resolver ruta al WebUI (asumiendo estructura de solución estándar)
-            var webUiPath = Path.Combine(basePath, "..", "SistemaFacturacionSRI.WebUI");
+            var webUiPath = Path.GetFullPath(Path.Combine(basePath, "..", "SistemaFacturacionSRI.WebUI"));
             if (!Directory.Exists(webUiPath))
             {
                 // fallback al directorio actual (por si el comando se ejecuta desde el WebUI)
-                webUiPath = basePath;
+                webUiPath = Path.GetFullPath(basePath);
             }
 
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development";
@@ -32,8 +32,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Factories
                 .AddEnvironmentVariables()
                 .Build();
 
-            var connectionString = config.GetConnectionString("DefaultConnection")
-                ?? "Server=(localdb)\\MSSQLLocalDB;Database=SistemaFacturacionSRI;Trusted_Connection=True;MultipleActiveResultSets=true;Encrypt=False";
+            var connectionString = config.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                connectionString = "Server=localhost\\SQLEXPRESS;Database=SistemaFacturacionSRI;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True;Encrypt=False";
+            }
 
             optionsBuilder.UseSqlServer(connectionString);
 

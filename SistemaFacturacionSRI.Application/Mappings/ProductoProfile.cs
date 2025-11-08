@@ -3,7 +3,6 @@ using SistemaFacturacionSRI.Application.DTOs.Producto;
 using SistemaFacturacionSRI.Application.DTOs.Categoria;
 using SistemaFacturacionSRI.Application.DTOs.TipoIVA;
 using SistemaFacturacionSRI.Domain.Entities;
-using SistemaFacturacionSRI.Domain.Enums;
 
 namespace SistemaFacturacionSRI.Application.Mappings
 {
@@ -28,13 +27,17 @@ namespace SistemaFacturacionSRI.Application.Mappings
                     opt => opt.MapFrom(src => src.TipoIVAId))
                 .ForMember(dest => dest.CategoriaId, opt => opt.MapFrom(src => src.CategoriaId))
                 .ForMember(dest => dest.CategoriaNombre, opt => opt.MapFrom(src => src.Categoria != null ? src.Categoria.Nombre : string.Empty))
-                .ForMember(dest => dest.ValorIVA, 
-                    opt => opt.MapFrom(src => src.Precio * ((src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje : 0m) / 100m)))
-                .ForMember(dest => dest.PrecioConIVA, 
-                    opt => opt.MapFrom(src => src.Precio + (src.Precio * ((src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje : 0m) / 100m))))
-                .ForMember(dest => dest.TieneStock, 
+                .ForMember(dest => dest.Precio,
+                    opt => opt.MapFrom(src => src.PrecioActual))
+                .ForMember(dest => dest.Stock,
+                    opt => opt.MapFrom(src => src.StockDisponible))
+                .ForMember(dest => dest.TieneStock,
                     opt => opt.MapFrom(src => src.TieneStock))
-                .ForMember(dest => dest.ValorInventario, 
+                .ForMember(dest => dest.ValorIVA,
+                    opt => opt.MapFrom(src => src.ValorIVA))
+                .ForMember(dest => dest.PrecioConIVA,
+                    opt => opt.MapFrom(src => src.PrecioConIVA))
+                .ForMember(dest => dest.ValorInventario,
                     opt => opt.MapFrom(src => src.ValorInventario));
 
             // Mapeo de CrearProductoDto → Entidad (para creación/POST)
@@ -42,13 +45,15 @@ namespace SistemaFacturacionSRI.Application.Mappings
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Id se genera automáticamente
                 .ForMember(dest => dest.FechaCreacion, opt => opt.Ignore()) // Se establece en DbContext
                 .ForMember(dest => dest.FechaModificacion, opt => opt.Ignore())
-                .ForMember(dest => dest.Activo, opt => opt.Ignore()); // Se establece en DbContext
+                .ForMember(dest => dest.Activo, opt => opt.Ignore()) // Se establece en DbContext
+                .ForMember(dest => dest.Lotes, opt => opt.Ignore());
 
             // Mapeo de ActualizarProductoDto → Entidad (para actualización/PUT)
             CreateMap<ActualizarProductoDto, Producto>()
                 .ForMember(dest => dest.FechaCreacion, opt => opt.Ignore()) // No se actualiza
                 .ForMember(dest => dest.FechaModificacion, opt => opt.Ignore()) // Se establece en DbContext
-                .ForMember(dest => dest.Activo, opt => opt.Ignore()); // No se actualiza desde el DTO
+                .ForMember(dest => dest.Activo, opt => opt.Ignore()) // No se actualiza desde el DTO
+                .ForMember(dest => dest.Lotes, opt => opt.Ignore());
         }
     }
 }

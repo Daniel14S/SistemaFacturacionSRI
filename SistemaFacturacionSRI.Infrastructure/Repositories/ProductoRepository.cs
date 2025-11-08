@@ -19,6 +19,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return await _dbSet
                 .Include(p => p.Categoria)
                 .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
                 .FirstOrDefaultAsync(p => p.Codigo == codigo && p.Activo);
         }
 
@@ -27,7 +28,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return await _dbSet
                 .Include(p => p.Categoria)
                 .Include(p => p.TipoIVACatalogo)
-                .Where(p => p.Stock > 0 && p.Activo)
+                .Include(p => p.Lotes)
+                .Where(p => p.Activo && p.Lotes.Any(l => l.CantidadDisponible > 0))
                 .ToListAsync();
         }
 
@@ -36,6 +38,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return await _dbSet
                 .Include(p => p.Categoria)
                 .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
                 .Where(p => p.Nombre.Contains(nombre) && p.Activo)
                 .ToListAsync();
         }
@@ -45,6 +48,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return await _dbSet
                 .Include(p => p.Categoria)
                 .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
                 .Where(p => p.Activo)
                 .ToListAsync();
         }
@@ -54,6 +58,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return await _dbSet
                 .Include(p => p.Categoria)
                 .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
                 .FirstOrDefaultAsync(e => e.Id == id && e.Activo);
         }
     }

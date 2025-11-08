@@ -391,17 +391,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("NVARCHAR");
 
-                    b.Property<decimal>("Precio")
-                        .HasColumnType("DECIMAL(18,2)");
-
-                    b.Property<int>("Stock")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<int?>("TipoIVACatalogoTipoIVAId")
-                        .HasColumnType("int");
-
                     b.Property<int>("TipoIVAId")
                         .HasColumnType("int");
 
@@ -413,7 +402,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_Productos_Codigo");
 
-                    b.HasIndex("TipoIVACatalogoTipoIVAId");
+                    b.HasIndex("TipoIVAId");
 
                     b.ToTable("Productos", (string)null);
                 });
@@ -632,7 +621,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Lote", b =>
                 {
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Producto", "Producto")
-                        .WithMany()
+                        .WithMany("Lotes")
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
@@ -650,7 +639,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", "TipoIVACatalogo")
                         .WithMany("Productos")
-                        .HasForeignKey("TipoIVACatalogoTipoIVAId");
+                        .HasForeignKey("TipoIVAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Productos_TiposIVA");
 
                     b.Navigation("Categoria");
 
@@ -677,6 +669,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>
                 {
                     b.Navigation("Detalles");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>
+                {
+                    b.Navigation("Lotes");
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Rol", b =>

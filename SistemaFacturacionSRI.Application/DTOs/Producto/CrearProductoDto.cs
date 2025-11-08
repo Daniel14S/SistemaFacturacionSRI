@@ -1,4 +1,3 @@
-using SistemaFacturacionSRI.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaFacturacionSRI.Application.DTOs.Producto
@@ -35,14 +34,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
     [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
     public string Descripcion { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Precio unitario sin IVA.
-        /// Debe ser mayor a 0.
-        /// </summary>
-        [Required(ErrorMessage = "El precio es obligatorio")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
-        public decimal Precio { get; set; }
-
     /// <summary>
     /// Tipo de IVA aplicable (FK del catálogo TiposIVA).
     /// </summary>
@@ -56,14 +47,5 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         [Required(ErrorMessage = "La categoría es obligatoria")]
         [Range(1, int.MaxValue, ErrorMessage = "Seleccione una categoría válida")]
         public int CategoriaId { get; set; }
-
-        /// <summary>
-        /// Cantidad inicial en stock.
-        /// Por defecto es 0 si no se especifica.
-        /// </summary>
-        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
-        public int Stock { get; set; } = 0;
-
-        
     }
 }
