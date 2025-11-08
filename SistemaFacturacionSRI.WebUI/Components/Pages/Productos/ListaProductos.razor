@@ -138,7 +138,16 @@
                             </td>
                             
                             <!-- Precio -->
-                            <td><strong>$@producto.Precio.ToString("N2")</strong></td>
+                            <td>
+                                @if (producto.Precio.HasValue)
+                                {
+                                    <strong>$@producto.Precio.Value.ToString("N2")</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
                             
                             <!-- IVA -->
                             <td>
@@ -147,7 +156,14 @@
                             
                             <!-- Precio con IVA -->
                             <td>
-                                <strong class="text-success">$@producto.PrecioConIVA.ToString("N2")</strong>
+                                @if (producto.PrecioConIVA.HasValue)
+                                {
+                                    <strong class="text-success">$@producto.PrecioConIVA.Value.ToString("N2")</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
                             </td>
                             
                             <!-- Stock -->
@@ -204,7 +220,7 @@
                             <div class="card-body">
                                 <p class="mb-1"><strong>Código:</strong> @productoAEliminar.Codigo</p>
                                 <p class="mb-1"><strong>Nombre:</strong> @productoAEliminar.Nombre</p>
-                                <p class="mb-1"><strong>Precio:</strong> $@productoAEliminar.Precio.ToString("N2")</p>
+                                <p class="mb-1"><strong>Precio:</strong> @((productoAEliminar.Precio.HasValue ? "$" + productoAEliminar.Precio.Value.ToString("N2") : "N/A"))</p>
                                 <p class="mb-0"><strong>Stock:</strong> @productoAEliminar.Stock @productoAEliminar.CategoriaNombre</p>
                             </div>
                         </div>
@@ -280,7 +296,7 @@
             resultado = ordenamiento switch
             {
                 "codigo" => resultado.OrderBy(p => p.Codigo),
-                "precio" => resultado.OrderBy(p => p.Precio),
+                "precio" => resultado.OrderBy(p => p.Precio ?? 0m),
                 "stock" => resultado.OrderByDescending(p => p.Stock),
                 _ => resultado.OrderBy(p => p.Nombre)
             };

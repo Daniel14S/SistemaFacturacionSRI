@@ -1,5 +1,6 @@
-using SistemaFacturacionSRI.Domain.Enums;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace SistemaFacturacionSRI.Domain.Entities
 {
@@ -34,15 +35,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
     [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
     public string Descripcion { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Precio unitario del producto sin IVA.
-        /// Ejemplo: 1000.00
-        /// Debe ser mayor a cero.
-        /// </summary>
-        [Required(ErrorMessage = "El precio es obligatorio")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
-        public decimal Precio { get; set; }
-
     /// <summary>
     /// Clave foránea al catálogo de Tipos de IVA almacenado en BD.
     /// Reemplaza el uso del enum TipoIVA y es obligatoria.
@@ -55,16 +47,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
     /// </summary>
     public TipoIVACatalogo? TipoIVACatalogo { get; set; }
 
-        /// <summary>
-        /// Cantidad disponible en inventario.
-        /// Ejemplo: 50 unidades
-        /// Puede ser 0 si no hay stock.
-        /// </summary>
-        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
-        public int Stock { get; set; } = 0;
-
-        
-
     /// <summary>
     /// Clave foránea opcional a Categoría del producto.
     /// </summary>
@@ -75,32 +57,53 @@ namespace SistemaFacturacionSRI.Domain.Entities
     /// </summary>
     public virtual Categoria? Categoria { get; set; }
 
-        // Propiedades calculadas (no se guardan en la BD, solo se calculan en memoria)
+        /// <summary>
+        /// Colección de lotes asociados al producto.
+        /// Cada lote representa una entrada de inventario con su propio costo y cantidades.
+        /// </summary>
+        public ICollection<Lote> Lotes { get; set; } = new List<Lote>();
 
         /// <summary>
-        /// Calcula el valor del IVA para una unidad del producto.
-    /// Fórmula: Precio × Porcentaje IVA del catálogo
-    /// Ejemplo: Si Precio = 100 y Porcentaje = 12, retorna 12
+        /// Obtiene el precio actual tomando el costo del lote más reciente.
+        /// Retorna null cuando el producto aún no tiene lotes.
         /// </summary>
-    public decimal ValorIVA => Precio * ((TipoIVACatalogo?.Porcentaje ?? 0m) / 100m);
+        public decimal? PrecioActual => Lotes
+            .OrderByDescending(l => l.FechaCompra)
+            .Select(l => (decimal?)l.PrecioCosto)
+            .FirstOrDefault();
 
         /// <summary>
-        /// Calcula el precio total (precio base + IVA).
-        /// Fórmula: Precio + ValorIVA
-        /// Ejemplo: Si Precio = 100 y ValorIVA = 12, retorna 112
+        /// Calcula el stock disponible sumando la cantidad disponible de cada lote.
         /// </summary>
-    public decimal PrecioConIVA => Precio + ValorIVA;
+        public int StockDisponible => Lotes?.Sum(l => l.CantidadDisponible) ?? 0;
 
         /// <summary>
-        /// Indica si el producto tiene stock disponible.
-        /// Útil para validaciones en la interfaz.
+        /// Calcula el valor del IVA para una unidad del producto en base al precio actual.
+        /// Retorna null cuando no hay precio vigente o el catálogo no está cargado.
         /// </summary>
-        public bool TieneStock => Stock > 0;
+        public decimal? ValorIVA => PrecioActual.HasValue && TipoIVACatalogo != null
+            ? PrecioActual.Value * (TipoIVACatalogo.Porcentaje / 100m)
+            : null;
 
         /// <summary>
-        /// Calcula el valor total del inventario (Stock × Precio).
-        /// Ejemplo: Si Stock = 10 y Precio = 100, retorna 1000
+        /// Calcula el precio final incluyendo IVA.
+        /// Retorna null cuando no hay precio vigente.
         /// </summary>
-        public decimal ValorInventario => Stock * Precio;
+        public decimal? PrecioConIVA => PrecioActual.HasValue
+            ? PrecioActual + (ValorIVA ?? 0m)
+            : null;
+
+        /// <summary>
+        /// Indica si existe stock disponible.
+        /// </summary>
+        public bool TieneStock => StockDisponible > 0;
+
+        /// <summary>
+        /// Calcula el valor total del inventario (precio actual × stock disponible).
+        /// Retorna null cuando no hay precio vigente.
+        /// </summary>
+        public decimal? ValorInventario => Lotes != null && Lotes.Any()
+            ? Lotes.Sum(l => l.CantidadDisponible * l.PrecioCosto)
+            : null;
     }
 }

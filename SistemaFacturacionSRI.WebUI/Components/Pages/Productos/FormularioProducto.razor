@@ -6,7 +6,6 @@
 @using SistemaFacturacionSRI.Application.DTOs.Categoria
 @using SistemaFacturacionSRI.Application.DTOs.TipoIVA
 @using SistemaFacturacionSRI.WebUI.Services
-@using SistemaFacturacionSRI.Domain.Enums
 @inject IProductoService ProductoService
 @inject ITipoIVAService TipoIVAService
 @inject NavigationManager Navigation
@@ -70,18 +69,8 @@
                         <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
                     </div>
 
-                    <!-- Precio -->
-                    <div class="col-md-4">
-                        <label class="form-label">Precio <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <InputNumber class="form-control" @bind-Value="modelo.Precio" step="0.01" placeholder="0.00" />
-                        </div>
-                        <ValidationMessage For="@(() => modelo.Precio)" class="text-danger" />
-                    </div>
-
                     <!-- Tipo de IVA (desde catálogo) -->
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Tipo de IVA <span class="text-danger">*</span></label>
                         <InputSelect class="form-select" @bind-Value="modelo.TipoIVAId">
                             <option value="0">-- Seleccione --</option>
@@ -95,23 +84,21 @@
                         </InputSelect>
                         <ValidationMessage For="@(() => modelo.TipoIVAId)" class="text-danger" />
                     </div>
-        
-                   
-<!-- Categoría -->
-<div class="col-md-4">
-    <label class="form-label">Categoría <span class="text-danger">*</span></label>
-    <InputSelect class="form-select" @bind-Value="modelo.CategoriaId">
-        <option value="0">-- Seleccione --</option>
-        @if (categorias is not null)
-        {
-            @foreach (var cat in categorias)
-            {
-                <option value="@cat.Id">@cat.Nombre</option>  @* ← Cambiar a cat.Id *@
-            }
-        }
-    </InputSelect>
-    <ValidationMessage For="@(() => modelo.CategoriaId)" class="text-danger" />
-</div>
+                    <!-- Categoría -->
+                    <div class="col-md-6">
+                        <label class="form-label">Categoría <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="modelo.CategoriaId">
+                            <option value="0">-- Seleccione --</option>
+                            @if (categorias is not null)
+                            {
+                                @foreach (var cat in categorias)
+                                {
+                                    <option value="@cat.Id">@cat.Nombre</option>
+                                }
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => modelo.CategoriaId)" class="text-danger" />
+                    </div>
 
                     
                 </div>
@@ -208,20 +195,17 @@
                     Codigo = producto.Codigo,
                     Nombre = producto.Nombre,
                     Descripcion = producto.Descripcion ?? string.Empty,
-                    Precio = producto.Precio,
                     TipoIVAId = producto.TipoIVAId,
-                    CategoriaId = producto.CategoriaId,
-                    Stock = producto.Stock
+                    CategoriaId = producto.CategoriaId
                 };
 
                 // Copiar al modelo de visualización
                 modelo.Codigo = producto.Codigo;
                 modelo.Nombre = producto.Nombre;
                 modelo.Descripcion = producto.Descripcion ?? string.Empty;
-                modelo.Precio = producto.Precio;
                 modelo.TipoIVAId = producto.TipoIVAId;
                 modelo.CategoriaId = producto.CategoriaId;
-                modelo.Stock = producto.Stock;
+
             }
             else
             {
@@ -248,10 +232,8 @@
                 modeloActualizar.Codigo = modelo.Codigo;
                 modeloActualizar.Nombre = modelo.Nombre;
                 modeloActualizar.Descripcion = modelo.Descripcion;
-                modeloActualizar.Precio = modelo.Precio;
                 modeloActualizar.TipoIVAId = modelo.TipoIVAId;
                 modeloActualizar.CategoriaId = modelo.CategoriaId;
-                modeloActualizar.Stock = modelo.Stock;
 
                 await ProductoService.ActualizarAsync(modeloActualizar);
                 mensajeExito = "Producto actualizado correctamente";

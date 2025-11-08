@@ -33,15 +33,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .HasColumnType("NVARCHAR")
                 .IsRequired();
 
-            builder.Property(p => p.Precio)
-                .IsRequired()
-                .HasColumnType("DECIMAL(18,2)");
-
-            // El TipoIVA (enum) ya no se usa; se reemplaza por FK requerida TipoIVAId.
-
-            builder.Property(p => p.Stock)
-                .IsRequired()
-                .HasDefaultValue(0);
+            builder.Property(p => p.TipoIVAId)
+                .IsRequired();
 
             // UnidadMedida eliminada del modelo
 
@@ -66,6 +59,20 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .HasForeignKey(p => p.CategoriaId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            builder.HasOne(p => p.TipoIVACatalogo)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoIVAId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Productos_TiposIVA");
+
+            builder.HasMany(p => p.Lotes)
+                .WithOne(l => l.Producto)
+                .HasForeignKey(l => l.ProductoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Propiedades calculadas, no mapeadas en base de datos
+            builder.Ignore(p => p.PrecioActual);
+            builder.Ignore(p => p.StockDisponible);
             builder.Ignore(p => p.ValorIVA);
             builder.Ignore(p => p.PrecioConIVA);
             builder.Ignore(p => p.TieneStock);
