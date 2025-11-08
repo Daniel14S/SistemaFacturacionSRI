@@ -6,13 +6,11 @@ namespace SistemaFacturacionSRI.WebUI.Services
     public class CategoriaHttpService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILogger<CategoriaHttpService> _logger;
         private const string ApiEndpoint = "api/Categoria";
 
-        public CategoriaHttpService(HttpClient httpClient, ILogger<CategoriaHttpService> logger)
+        public CategoriaHttpService(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _logger = logger;
         }
 
         public async Task<List<CategoriaDto>> ObtenerTodasAsync()
@@ -22,10 +20,9 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var response = await _httpClient.GetFromJsonAsync<List<CategoriaDto>>(ApiEndpoint);
                 return response ?? new List<CategoriaDto>();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al obtener todas las categorías");
-                throw;
+                return new List<CategoriaDto>();
             }
         }
 
@@ -36,10 +33,9 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var response = await _httpClient.GetFromJsonAsync<List<CategoriaDto>>($"{ApiEndpoint}/activas");
                 return response ?? new List<CategoriaDto>();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al obtener categorías activas");
-                throw;
+                return new List<CategoriaDto>();
             }
         }
 
@@ -53,9 +49,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
             {
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al obtener categoría por ID: {Id}", id);
                 throw;
             }
         }
@@ -70,9 +65,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
             {
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al obtener categoría por código: {Codigo}", codigo);
                 throw;
             }
         }
@@ -87,10 +81,9 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var response = await _httpClient.GetFromJsonAsync<List<CategoriaDto>>($"{ApiEndpoint}/buscar/{termino}");
                 return response ?? new List<CategoriaDto>();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al buscar categorías con término: {Termino}", termino);
-                throw;
+                return new List<CategoriaDto>();
             }
         }
 
@@ -104,9 +97,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var categoria = await response.Content.ReadFromJsonAsync<CategoriaDto>();
                 return categoria ?? throw new Exception("No se pudo crear la categoría");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al crear categoría");
                 throw;
             }
         }
@@ -121,9 +113,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var categoria = await response.Content.ReadFromJsonAsync<CategoriaDto>();
                 return categoria ?? throw new Exception("No se pudo actualizar la categoría");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al actualizar categoría");
                 throw;
             }
         }
@@ -135,9 +126,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var response = await _httpClient.DeleteAsync($"{ApiEndpoint}/{id}");
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al eliminar categoría con ID: {Id}", id);
                 throw;
             }
         }
@@ -153,9 +143,8 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 var response = await _httpClient.GetFromJsonAsync<bool>(url);
                 return response;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _logger.LogError(ex, "Error al verificar código de categoría");
                 throw;
             }
         }
