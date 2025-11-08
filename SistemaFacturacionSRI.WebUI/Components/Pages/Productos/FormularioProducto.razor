@@ -5,11 +5,12 @@
 @using SistemaFacturacionSRI.Application.Interfaces.Services
 @using SistemaFacturacionSRI.Application.DTOs.Categoria
 @using SistemaFacturacionSRI.Application.DTOs.TipoIVA
+@using SistemaFacturacionSRI.WebUI.Services
 @using SistemaFacturacionSRI.Domain.Enums
 @inject IProductoService ProductoService
-@inject ICategoriaService CategoriaService
 @inject ITipoIVAService TipoIVAService
 @inject NavigationManager Navigation
+@inject ICategoriaHttpService CategoriaHttpService
 
 <PageTitle>@(IdProducto.HasValue ? "Editar Producto" : "Nuevo Producto")</PageTitle>
 
@@ -94,29 +95,23 @@
                         </InputSelect>
                         <ValidationMessage For="@(() => modelo.TipoIVAId)" class="text-danger" />
                     </div>
-
-                    <!-- Categoría -->
-                    <div class="col-md-4">
-                        <label class="form-label">Categoría <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="modelo.CategoriaId">
-                            <option value="0">-- Seleccione --</option>
-                            @if (categorias is not null)
-                            {
-                                @foreach (var cat in categorias)
-                                {
-                                    <option value="@cat.CategoriaId">@cat.Nombre</option>
-                                }
-                            }
-                        </InputSelect>
-                        <ValidationMessage For="@(() => modelo.CategoriaId)" class="text-danger" />
-                    </div>
-
-                    <!-- Stock -->
-                    <div class="col-md-4">
-                        <label class="form-label">Stock <span class="text-danger">*</span></label>
-                        <InputNumber class="form-control" @bind-Value="modelo.Stock" placeholder="0" />
-                        <ValidationMessage For="@(() => modelo.Stock)" class="text-danger" />
-                    </div>
+        
+                   
+<!-- Categoría -->
+<div class="col-md-4">
+    <label class="form-label">Categoría <span class="text-danger">*</span></label>
+    <InputSelect class="form-select" @bind-Value="modelo.CategoriaId">
+        <option value="0">-- Seleccione --</option>
+        @if (categorias is not null)
+        {
+            @foreach (var cat in categorias)
+            {
+                <option value="@cat.Id">@cat.Nombre</option>  @* ← Cambiar a cat.Id *@
+            }
+        }
+    </InputSelect>
+    <ValidationMessage For="@(() => modelo.CategoriaId)" class="text-danger" />
+</div>
 
                     
                 </div>
@@ -158,6 +153,7 @@
     protected override async Task OnInitializedAsync()
     {
         await CargarCategorias();
+
         await CargarTiposIVA();
         if (IdProducto.HasValue)
         {
@@ -176,16 +172,16 @@
     }
 
     private async Task CargarCategorias()
+{
+    try
     {
-        try
-        {
-            categorias = await CategoriaService.ObtenerTodasAsync();
-        }
-        catch (Exception ex)
-        {
-            mensajeError = $"Error al cargar categorías: {ex.Message}";
-        }
+        categorias = await CategoriaHttpService.ObtenerTodasAsync();
     }
+    catch (Exception ex)
+    {
+        mensajeError = $"Error al cargar categorías: {ex.Message}";
+    }
+}
 
     private async Task CargarTiposIVA()
     {

@@ -26,18 +26,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             // Seed de categorías de ejemplo (al menos 10)
             builder.HasData(
-                new Categoria { Id = 1, Nombre = "General", Descripcion = "Categoría por defecto" },
-                new Categoria { Id = 2, Nombre = "Lacteos", Descripcion = "Productos lácteos" },
-                new Categoria { Id = 3, Nombre = "Embutidos", Descripcion = "Carnes procesadas y embutidos" },
-                new Categoria { Id = 4, Nombre = "Refrigerados", Descripcion = "Productos de cadena de frío" },
-                new Categoria { Id = 5, Nombre = "Electronicos", Descripcion = "Dispositivos y accesorios electrónicos" },
-                new Categoria { Id = 6, Nombre = "Bebidas", Descripcion = "Bebidas alcohólicas y no alcohólicas" },
-                new Categoria { Id = 7, Nombre = "Abarrotes", Descripcion = "Despensa y abarrotes" },
-                new Categoria { Id = 8, Nombre = "Limpieza", Descripcion = "Productos de limpieza" },
-                new Categoria { Id = 9, Nombre = "Higiene", Descripcion = "Cuidado personal e higiene" },
-                new Categoria { Id = 10, Nombre = "Panaderia", Descripcion = "Panes y repostería" },
-                new Categoria { Id = 11, Nombre = "Frutas y Verduras", Descripcion = "Productos frescos" }
-            );
+    new Categoria { Id = 1, Codigo = "CAT-001", Nombre = "General", Descripcion = "Categoría por defecto" },
+    new Categoria { Id = 2, Codigo = "CAT-002", Nombre = "Lacteos", Descripcion = "Productos lácteos" },
+    new Categoria { Id = 3, Codigo = "CAT-003", Nombre = "Embutidos", Descripcion = "Carnes procesadas y embutidos" },
+    new Categoria { Id = 4, Codigo = "CAT-004", Nombre = "Refrigerados", Descripcion = "Productos de cadena de frío" },
+    new Categoria { Id = 5, Codigo = "CAT-005", Nombre = "Electronicos", Descripcion = "Dispositivos y accesorios electrónicos" },
+    new Categoria { Id = 6, Codigo = "CAT-006", Nombre = "Bebidas", Descripcion = "Bebidas alcohólicas y no alcohólicas" },
+    new Categoria { Id = 7, Codigo = "CAT-007", Nombre = "Abarrotes", Descripcion = "Despensa y abarrotes" },
+    new Categoria { Id = 8, Codigo = "CAT-008", Nombre = "Limpieza", Descripcion = "Productos de limpieza" },
+    new Categoria { Id = 9, Codigo = "CAT-009", Nombre = "Higiene", Descripcion = "Cuidado personal e higiene" },
+    new Categoria { Id = 10, Codigo = "CAT-010", Nombre = "Panaderia", Descripcion = "Panes y repostería" },
+    new Categoria { Id = 11, Codigo = "CAT-011", Nombre = "FrutasVerduras", Descripcion = "Productos frescos" }
+);
+
 
             builder.HasMany(c => c.Productos)
                 .WithOne(p => p.Categoria)       

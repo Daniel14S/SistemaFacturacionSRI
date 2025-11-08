@@ -46,7 +46,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             // UnidadMedida eliminada del modelo
 
             // Relaciones: FK requerida a TiposIVA (catálogo) y Categorias
-            builder.HasOne(p => p.TipoIVACatalogo)
+            /*builder.HasOne(p => p.TipoIVACatalogo)
                 .WithMany(t => t.Productos)
                 .HasForeignKey(p => p.TipoIVAId)
                 .IsRequired()
@@ -59,7 +59,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .IsRequired()
                 .HasConstraintName("FK_Productos_Categorias")
                 .OnDelete(DeleteBehavior.Restrict);
-            
+            */
             // Configuración de la relación con Categoría
             builder.HasOne(p => p.Categoria)
                 .WithMany(c => c.Productos)
