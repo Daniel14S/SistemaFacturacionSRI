@@ -75,12 +75,66 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         /// <summary>
-        /// Obtiene el lote prioritario de un producto según la fecha de expiración más cercana.
+        /// Actualiza la información de un lote existente.
+        /// </summary>
+        /// <param name="loteDto">Datos del lote a actualizar.</param>
+        /// <returns>LoteDto actualizado.</returns>
+        public async Task<LoteDto> ActualizarAsync(LoteDto loteDto)
+        {
+            if (loteDto == null)
+                throw new ArgumentNullException(nameof(loteDto));
+
+            var loteExistente = await _loteRepository.ObtenerPorIdAsync(loteDto.LoteId);
+            if (loteExistente == null)
+                throw new KeyNotFoundException($"No se encontró el lote con ID {loteDto.LoteId}.");
+
+            // Validar producto
+            var producto = await _productoRepository.ObtenerPorIdAsync(loteDto.ProductoId);
+            if (producto == null)
+                throw new KeyNotFoundException($"El producto con ID {loteDto.ProductoId} no existe o está inactivo.");
+
+            // Validar fechas
+            if (loteDto.FechaExpiracion.HasValue && loteDto.FechaExpiracion.Value.Date < loteDto.FechaCompra.Date)
+                throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
+
+            // Mapear cambios desde el DTO hacia la entidad existente
+            loteExistente.PrecioCosto = loteDto.PrecioCosto;
+            loteExistente.CantidadInicial = loteDto.CantidadInicial;
+            loteExistente.FechaCompra = loteDto.FechaCompra;
+            loteExistente.FechaExpiracion = loteDto.FechaExpiracion;
+            loteExistente.ProductoId = loteDto.ProductoId;
+
+            // Guardar los cambios
+            await _loteRepository.ActualizarAsync(loteExistente);
+
+            // Retornar el DTO actualizado
+            return _mapper.Map<LoteDto>(loteExistente);
+        }
+
+        /// <summary>
+        /// Elimina un lote existente por su ID.
+        /// </summary>
+        /// <param name="id">ID del lote a eliminar.</param>
+        public async Task EliminarAsync(int id)
+        {
+            var loteExistente = await _loteRepository.ObtenerPorIdAsync(id);
+            if (loteExistente == null)
+                throw new KeyNotFoundException($"No se encontró el lote con ID {id}.");
+
+            if (loteExistente.CantidadDisponible > 0)
+                throw new InvalidOperationException(
+                    $"No se puede eliminar el lote #{id} porque tiene {loteExistente.CantidadDisponible} unidades disponibles en stock. Solo se pueden eliminar lotes sin stock disponible.");
+
+            await _loteRepository.EliminarAsync(id);
+        }
+
+        /// <summary>
+        /// Obtiene el lote prioritario de un producto (el más próximo a expirar).
         /// </summary>
         /// <param name="idProducto">ID del producto.</param>
-        /// <returns>LoteDto del lote prioritario o null si no hay lotes disponibles.</returns>
+        /// <returns>LoteDto prioritario o null.</returns>
         public async Task<LoteDto?> ObtenerLotePrioritarioAsync(int idProducto)
-        {
+        {   
             var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(idProducto);
 
             var lotePrioritario = lotes
@@ -88,25 +142,56 @@ namespace SistemaFacturacionSRI.Application.Services
                 .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue)
                 .FirstOrDefault();
 
-            if (lotePrioritario == null)
-                return null;
-
-            // Mapear entidad a DTO
-            return _mapper.Map<LoteDto>(lotePrioritario);
+            return lotePrioritario == null ? null : _mapper.Map<LoteDto>(lotePrioritario);
         }
 
-        public async Task<List<LoteDto>> ObtenerLotesPorProductoAsync(int productoId)
-        {
-            var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(productoId);
-            return _mapper.Map<List<LoteDto>>(lotes);
-        }
-
+        /// <summary>
+        /// Obtiene todos los lotes asociados a un producto.
+        /// </summary>
+        /// <param name="productoId">ID del producto.</param>
+        /// <returns>Lista de LoteDto.</returns>
         public async Task<IEnumerable<LoteDto>> ObtenerPorProductoAsync(int productoId)
+        {
+            var lotes = await _loteRepository.ObtenerPorProductoAsync(productoId);
+            return _mapper.Map<IEnumerable<LoteDto>>(lotes);
+        }
+        // SistemaFacturacionSRI.Application/Services/LoteService.cs
+        // Agregar estos métodos a la clase existente:
+
+        public async Task<LoteDto?> ObtenerPorIdAsync(int loteId)
+        {
+            var lote = await _loteRepository.ObtenerPorIdAsync(loteId);
+            return lote == null ? null : _mapper.Map<LoteDto>(lote);
+        }
+
+       public async Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto)
 {
-    var lotes = await _loteRepository.ObtenerPorProductoAsync(productoId);
-    return _mapper.Map<IEnumerable<LoteDto>>(lotes);
+    var lote = await _loteRepository.ObtenerPorIdAsync(dto.LoteId);
+    if (lote == null)
+        throw new KeyNotFoundException("No se encontró el lote.");
+
+    lote.FechaExpiracion = dto.FechaExpiracion;
+    lote.PrecioCosto = dto.PrecioCosto;
+    lote.CantidadInicial = dto.CantidadInicial;
+    lote.CantidadDisponible = dto.CantidadDisponible;
+
+    await _loteRepository.ActualizarAsync(lote);
+
+    return new LoteDto
+    {
+        LoteId = lote.LoteId,
+        ProductoId = lote.ProductoId,
+        ProductoNombre = lote.Producto?.Nombre ?? "",
+        ProductoCodigo = lote.Producto?.Codigo ?? "",
+        ProductoCategoria = lote.Producto?.Categoria?.Nombre ?? "",
+        FechaCompra = lote.FechaCompra,
+        FechaExpiracion = lote.FechaExpiracion,
+        PrecioCosto = lote.PrecioCosto,
+        CantidadInicial = lote.CantidadInicial,
+        CantidadDisponible = lote.CantidadDisponible
+    };
 }
 
-
     }
+    
 }

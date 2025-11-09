@@ -1,71 +1,65 @@
 using SistemaFacturacionSRI.Application.DTOs.Lote;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
-    /// <summary>
-    /// Cliente HTTP para consumir el endpoint de lotes desde los componentes Blazor.
-    /// </summary>
     public class LoteHttpService
     {
         private readonly HttpClient _httpClient;
-        private const string ApiBaseUrl = "/api/lote";
 
         public LoteHttpService(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
 
-    public async Task<List<LoteDto>> ObtenerTodosAsync()
+        // 🔹 Obtener todos los lotes
+        public async Task<IEnumerable<LoteDto>> ObtenerTodosAsync()
         {
-            try
-            {
-                var lotes = await _httpClient.GetFromJsonAsync<List<LoteDto>>(ApiBaseUrl);
-                return lotes ?? new List<LoteDto>();
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error al obtener los lotes: {ex.Message}", ex);
-            }
+            var response = await _httpClient.GetAsync("api/lote");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<IEnumerable<LoteDto>>() ?? new List<LoteDto>();
         }
 
+        // 🔹 Crear nuevo lote
         public async Task<LoteDto> CrearAsync(CrearLoteDto dto)
         {
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync(ApiBaseUrl, dto);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new Exception($"Error al crear el lote: {error}");
-                }
-
-                var loteCreado = await response.Content.ReadFromJsonAsync<LoteDto>();
-                return loteCreado ?? throw new Exception("No se recibió respuesta del servidor al crear el lote.");
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error de conexión al crear el lote: {ex.Message}", ex);
-            }
+            var response = await _httpClient.PostAsJsonAsync("api/lote", dto);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<LoteDto>() ?? new LoteDto();
         }
 
-        public async Task<List<LoteDto>> ObtenerLotesPorProductoAsync(int productoId)
-{
-    try
-    {
-        // Llama al endpoint del backend que devuelve los lotes por producto
-        var lotes = await _httpClient.GetFromJsonAsync<List<LoteDto>>($"{ApiBaseUrl}/por-producto/{productoId}");
-        return lotes ?? new List<LoteDto>();
-    }
-    catch (HttpRequestException ex)
-    {
-        throw new Exception($"Error al obtener lotes del producto {productoId}: {ex.Message}", ex);
-    }
-}
+        // 🔹 Obtener lote por ID
+        public async Task<LoteDto?> ObtenerPorIdAsync(int id)
+        {
+            var response = await _httpClient.GetAsync($"api/lote/{id}");
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            return await response.Content.ReadFromJsonAsync<LoteDto>();
+        }
+
+        // 🔹 Actualizar lote existente (CORREGIDO)
+        // Cambiamos el tipo del parámetro para aceptar ActualizarLoteDto
+        public async Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto)
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/lote/{dto.LoteId}", dto);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<LoteDto>() ?? new LoteDto();
+        }
+
+        // 🔹 Eliminar lote por ID
+        public async Task EliminarAsync(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/lote/{id}");
+            response.EnsureSuccessStatusCode();
+        }
+
+        // 🔹 Obtener lotes por producto
+        public async Task<IEnumerable<LoteDto>> ObtenerLotesPorProductoAsync(int productoId)
+        {
+            var response = await _httpClient.GetAsync($"api/lote/por-producto/{productoId}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<IEnumerable<LoteDto>>() ?? new List<LoteDto>();
+        }
     }
 }

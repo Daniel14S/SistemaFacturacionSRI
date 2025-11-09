@@ -1,645 +1,1003 @@
-@page "/lotes"
-@rendermode InteractiveServer
-@using System
-@using System.Collections.Generic
-@using System.ComponentModel.DataAnnotations
-@using System.Threading.Tasks
-@using Microsoft.AspNetCore.Components
-@using System.Linq
-@using SistemaFacturacionSRI.Application.DTOs.Lote
-@using SistemaFacturacionSRI.Application.DTOs.Producto
-@using SistemaFacturacionSRI.WebUI.Services
-@inject LoteHttpService LoteService
-@inject ProductoHttpService ProductoService
+    @page "/lotes"
+    @rendermode InteractiveServer
+    @using System
+    @using System.Collections.Generic
+    @using System.ComponentModel.DataAnnotations
+    @using System.Threading.Tasks
+    @using Microsoft.AspNetCore.Components
+    @using System.Linq
+    @using SistemaFacturacionSRI.Application.DTOs.Lote
+    @using SistemaFacturacionSRI.Application.DTOs.Producto
+    @using SistemaFacturacionSRI.WebUI.Services
+    @inject LoteHttpService LoteService
+    @inject ProductoHttpService ProductoService
+    @inject IJSRuntime JSRuntime
 
-<PageTitle>Gestión de Lotes</PageTitle>
+    <PageTitle>Gestión de Lotes</PageTitle>
 
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2 class="mb-1 text-dark">
-                <i class="bi bi-boxes me-2" style="color: #1e3a5f;"></i>
-                Gestión de Lotes e Inventario
-            </h2>
-            <p class="text-secondary mb-0">Control y seguimiento de lotes de productos</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <button type="button" class="btn btn-corporate btn-lg shadow-sm" 
-                    @onclick="MostrarFormulario" 
-                    disabled="@(!PuedeCrearLotes || cargando)">
-                <i class="bi bi-plus-circle me-2"></i>Nuevo Lote
-            </button>
-        </div>
-    </div>
-
-    <!-- Alertas -->
-    @if (!PuedeCrearLotes && !cargando)
-    {
-        <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-info-circle-fill me-2"></i>
-            <strong>Información:</strong> Debe registrar al menos un producto antes de crear lotes.
-            <button type="button" class="btn-close" @onclick="() => {}" aria-label="Close"></button>
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(mensajeError))
-    {
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-            <strong>Error:</strong> @mensajeError
-            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
-        </div>
-    }
-
-    @if (!string.IsNullOrEmpty(mensajeExito))
-    {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>
-            <strong>Éxito:</strong> @mensajeExito
-            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
-        </div>
-    }
-
-    <!-- Formulario de Creación -->
-    @if (mostrandoFormulario)
-    {
-        <div class="card border-0 shadow-lg mb-4 animate-slide-down">
-            <div class="card-header bg-corporate text-white py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-plus-square me-2"></i>
-                        Registrar Nuevo Lote
-                    </h5>
-                    <button type="button" class="btn btn-sm btn-light rounded-circle" 
-                            @onclick="CancelarCreacion" 
-                            aria-label="Cerrar"
-                            style="width: 32px; height: 32px;">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h2 class="mb-1 text-dark">
+                    <i class="bi bi-boxes me-2" style="color: #1e3a5f;"></i>
+                    Gestión de Lotes e Inventario
+                </h2>
+                <p class="text-secondary mb-0">Control y seguimiento de lotes de productos</p>
             </div>
-            <div class="card-body p-4 bg-light">
-                <EditForm Model="@loteForm" OnValidSubmit="CrearLoteAsync">
-                    <DataAnnotationsValidator />
-                    
-                    <div class="row g-4">
-                        <!-- Selección de Producto -->
-                        <div class="col-lg-6">
-                            <label class="form-label fw-bold text-dark">
-                                <i class="bi bi-box-seam me-1" style="color: #1e3a5f;"></i>
-                                Producto
-                            </label>
-                            <InputSelect class="form-select form-select-lg shadow-sm" @bind-Value="loteForm.ProductoId">
-                                <option value="">── Seleccione un producto ──</option>
-                                @foreach (var producto in productos)
-                                {
-                                    <option value="@producto.Id">
-                                        @producto.Nombre • @producto.Codigo
-                                    </option>
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="@(() => loteForm.ProductoId)" class="text-danger small mt-1" />
-                        </div>
+            <div class="col-md-4 text-end">
+                <button type="button" class="btn btn-corporate btn-lg shadow-sm" 
+                        @onclick="MostrarFormularioNuevo" 
+                        disabled="@(!PuedeCrearLotes || cargando)">
+                    <i class="bi bi-plus-circle me-2"></i>Nuevo Lote
+                </button>
+            </div>
+        </div>
 
-                        <!-- Cantidad Inicial -->
-                        <div class="col-lg-3">
-                            <label class="form-label fw-bold text-dark">
-                                <i class="bi bi-123 me-1" style="color: #1e3a5f;"></i>
-                                Cantidad Inicial
-                            </label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <span class="input-group-text bg-light border">
-                                    <i class="bi bi-boxes text-secondary"></i>
-                                </span>
-                                <InputNumber @bind-Value="loteForm.CantidadInicial" 
-                                             class="form-control border-start-0" 
-                                             min="1" 
-                                             placeholder="Ej: 100" />
-                            </div>
-                            <ValidationMessage For="@(() => loteForm.CantidadInicial)" class="text-danger small mt-1" />
-                        </div>
+        <!-- Alertas -->
+        @if (!PuedeCrearLotes && !cargando)
+        {
+            <div class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <strong>Información:</strong> Debe registrar al menos un producto antes de crear lotes.
+                <button type="button" class="btn-close" @onclick="() => {}" aria-label="Close"></button>
+            </div>
+        }
 
-                        <!-- Precio Costo -->
-                        <div class="col-lg-3">
-                            <label class="form-label fw-bold text-dark">
-                                <i class="bi bi-currency-dollar me-1 text-success"></i>
-                                Precio Costo
-                            </label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <span class="input-group-text bg-light border">$</span>
-                                <InputNumber @bind-Value="loteForm.PrecioCosto" 
-                                             class="form-control border-start-0" 
-                                             step="0.01" 
-                                             min="0" 
-                                             placeholder="0.00" />
-                            </div>
-                            <ValidationMessage For="@(() => loteForm.PrecioCosto)" class="text-danger small mt-1" />
-                        </div>
+        @if (!string.IsNullOrEmpty(mensajeError))
+        {
+            <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Error:</strong> @mensajeError
+                <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+            </div>
+        }
 
-                        <!-- Fecha de Compra -->
-                        <div class="col-lg-6">
-                            <label class="form-label fw-bold text-dark">
-                                <i class="bi bi-calendar-check me-1" style="color: #1e3a5f;"></i>
-                                Fecha de Compra
-                            </label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <span class="input-group-text bg-light border">
-                                    <i class="bi bi-calendar3 text-secondary"></i>
-                                </span>
-                                <InputDate @bind-Value="loteForm.FechaCompra" class="form-control border-start-0" />
-                            </div>
-                            <ValidationMessage For="@(() => loteForm.FechaCompra)" class="text-danger small mt-1" />
-                        </div>
+        @if (!string.IsNullOrEmpty(mensajeExito))
+        {
+            <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Éxito:</strong> @mensajeExito
+                <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
+            </div>
+        }
 
-                        <!-- Fecha de Expiración -->
-                        <div class="col-lg-6">
-                            <label class="form-label fw-bold text-dark">
-                                <i class="bi bi-calendar-x me-1 text-warning"></i>
-                                Fecha de Expiración
-                                <span class="badge bg-secondary ms-2">Opcional</span>
-                            </label>
-                            <div class="input-group input-group-lg shadow-sm">
-                                <span class="input-group-text bg-light border">
-                                    <i class="bi bi-hourglass-split text-secondary"></i>
-                                </span>
-                                <InputDate @bind-Value="loteForm.FechaExpiracion" class="form-control border-start-0" />
-                            </div>
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Dejar vacío si el producto no caduca
-                            </small>
-                        </div>
-                    </div>
-
-                    <!-- Botones de Acción -->
-                    <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
-                        <button type="button" 
-                                class="btn btn-lg btn-outline-secondary px-4" 
-                                @onclick="CancelarCreacion" 
-                                disabled="@creandoLote">
-                            <i class="bi bi-x-circle me-2"></i>
-                            Cancelar
+        <!-- Formulario de Creación/Edición -->
+        @if (mostrandoFormulario)
+        {
+            <div class="card border-0 shadow-lg mb-4 animate-slide-down">
+                <div class="card-header bg-corporate text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi @(esModoEdicion ? "bi-pencil-square" : "bi-plus-square") me-2"></i>
+                            @(esModoEdicion ? "Editar Lote" : "Registrar Nuevo Lote")
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-light rounded-circle" 
+                                @onclick="CancelarFormulario" 
+                                aria-label="Cerrar"
+                                style="width: 32px; height: 32px;">
+                            <i class="bi bi-x-lg"></i>
                         </button>
-                        <button type="submit" 
-                                class="btn btn-lg btn-corporate px-5 shadow" 
-                                disabled="@creandoLote">
-                            @if (creandoLote)
+                    </div>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <EditForm Model="@loteForm" OnValidSubmit="GuardarLote">
+                        <DataAnnotationsValidator />
+                        
+                        <div class="row g-4">
+                            @if (!esModoEdicion)
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                                <span>Guardando...</span>
+                                <!-- Selección de Producto (SOLO en modo creación) -->
+                                <div class="col-lg-12">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-box-seam me-1" style="color: #1e3a5f;"></i>
+                                        Producto
+                                    </label>
+                                    <InputSelect class="form-select form-select-lg shadow-sm" 
+                                                @bind-Value="loteForm.ProductoId">
+                                        <option value="">── Seleccione un producto ──</option>
+                                        @foreach (var producto in productos)
+                                        {
+                                            <option value="@producto.Id">
+                                                @producto.Nombre • @producto.Codigo
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => loteForm.ProductoId)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Fecha de Compra (SOLO en modo creación) -->
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-calendar-check me-1" style="color: #1e3a5f;"></i>
+                                        Fecha de Compra
+                                    </label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-light border">
+                                            <i class="bi bi-calendar3 text-secondary"></i>
+                                        </span>
+                                        <InputDate @bind-Value="loteForm.FechaCompra" class="form-control border-start-0" />
+                                    </div>
+                                    <ValidationMessage For="@(() => loteForm.FechaCompra)" class="text-danger small mt-1" />
+                                </div>
+
+                                <!-- Fecha de Expiración -->
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-calendar-x me-1 text-warning"></i>
+                                        Fecha de Expiración
+                                        <span class="badge bg-secondary ms-2">Opcional</span>
+                                    </label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-light border">
+                                            <i class="bi bi-hourglass-split text-secondary"></i>
+                                        </span>
+                                        <InputDate @bind-Value="loteForm.FechaExpiracion" class="form-control border-start-0" />
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Dejar vacío si el producto no caduca
+                                    </small>
+                                </div>
                             }
                             else
                             {
-                                <i class="bi bi-save me-2"></i>
-                                <span>Guardar Lote</span>
+                                <!-- Información NO editable (modo edición) -->
+                                <div class="col-12">
+                                    <div class="alert alert-info mb-3">
+                                        <i class="bi bi-info-circle-fill me-2"></i>
+                                        <strong>Información del Lote:</strong> El producto y la fecha de compra no se pueden modificar.
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-box-seam me-1" style="color: #1e3a5f;"></i>
+                                        Producto
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" 
+                                        value="@loteForm.ProductoNombre" 
+                                        disabled />
+                                    <small class="text-muted">
+                                        <i class="bi bi-lock-fill me-1"></i>
+                                        Campo no editable
+                                    </small>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-calendar-check me-1" style="color: #1e3a5f;"></i>
+                                        Fecha de Compra
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" 
+                                        value="@(loteForm.FechaCompra?.ToString("dd/MM/yyyy") ?? "")" 
+                                        disabled />
+                                    <small class="text-muted">
+                                        <i class="bi bi-lock-fill me-1"></i>
+                                        Campo no editable
+                                    </small>
+                                </div>
+
+                                <!-- Fecha de Expiración (EDITABLE) -->
+                                <div class="col-lg-12">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-calendar-x me-1 text-warning"></i>
+                                        Fecha de Expiración
+                                        <span class="badge bg-warning text-dark ms-2">Editable</span>
+                                    </label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-light border">
+                                            <i class="bi bi-hourglass-split text-secondary"></i>
+                                        </span>
+                                        <InputDate @bind-Value="loteForm.FechaExpiracion" class="form-control border-start-0" />
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Dejar vacío si el producto no caduca
+                                    </small>
+                                </div>
+                            }
+
+                            <!-- Campos SIEMPRE editables -->
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bold text-dark">
+                                    <i class="bi bi-currency-dollar me-1 text-success"></i>
+                                    Precio Costo
+                                    @if (esModoEdicion)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-2">Editable</span>
+                                    }
+                                </label>
+                                <div class="input-group input-group-lg shadow-sm">
+                                    <span class="input-group-text bg-light border">$</span>
+                                    <InputNumber @bind-Value="loteForm.PrecioCosto" 
+                                                class="form-control border-start-0" 
+                                                step="0.01" 
+                                                min="0" 
+                                                placeholder="0.00" />
+                                </div>
+                                <ValidationMessage For="@(() => loteForm.PrecioCosto)" class="text-danger small mt-1" />
+                            </div>
+
+                            <div class="col-lg-6">
+                                <label class="form-label fw-bold text-dark">
+                                    <i class="bi bi-123 me-1" style="color: #1e3a5f;"></i>
+                                    Cantidad Inicial
+                                    @if (esModoEdicion)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-2">Editable</span>
+                                    }
+                                </label>
+                                <div class="input-group input-group-lg shadow-sm">
+                                    <span class="input-group-text bg-light border">
+                                        <i class="bi bi-boxes text-secondary"></i>
+                                    </span>
+                                    <InputNumber @bind-Value="loteForm.CantidadInicial" 
+                                                class="form-control border-start-0" 
+                                                min="0" 
+                                                placeholder="Ej: 100" />
+                                </div>
+                                <ValidationMessage For="@(() => loteForm.CantidadInicial)" class="text-danger small mt-1" />
+                            </div>
+
+                            @if (esModoEdicion)
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                        <strong>Nota:</strong> Al cambiar la cantidad inicial, la cantidad disponible se ajustará proporcionalmente.
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                                                        <!-- ✅ Nuevo campo editable: Cantidad Disponible -->
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold text-dark">
+                                        <i class="bi bi-box2-fill me-1 text-success"></i>
+                                        Cantidad Disponible
+                                        <span class="badge bg-warning text-dark ms-2">Editable</span>
+                                    </label>
+                                    <div class="input-group input-group-lg shadow-sm">
+                                        <span class="input-group-text bg-light border">
+                                            <i class="bi bi-box-seam text-secondary"></i>
+                                        </span>
+                                        <InputNumber @bind-Value="loteForm.CantidadDisponible"
+                                                    class="form-control border-start-0"
+                                                    min="0"
+                                                    placeholder="Ej: 50" />
+                                    </div>
+                                    <ValidationMessage For="@(() => loteForm.CantidadDisponible)" class="text-danger small mt-1" />
+                                </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
+                            <button type="button" 
+                                    class="btn btn-lg btn-outline-secondary px-4" 
+                                    @onclick="CancelarFormulario" 
+                                    disabled="@guardandoLote">
+                                <i class="bi bi-x-circle me-2"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" 
+                                    class="btn btn-lg btn-corporate px-5 shadow" 
+                                    disabled="@guardandoLote">
+                                @if (guardandoLote)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Guardando...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-save me-2"></i>
+                                    <span>@(esModoEdicion ? "Actualizar" : "Guardar") Lote</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <!-- Filtros y Estadísticas -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row align-items-center g-3">
+                    <div class="col-lg-6">
+                        <label class="form-label fw-bold text-dark mb-2">
+                            <i class="bi bi-search me-2"></i>Buscar Lotes
+                        </label>
+                        <div class="input-group input-group-lg shadow-sm">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-funnel text-secondary"></i>
+                            </span>
+                            <input class="form-control border-start-0 ps-0" 
+                                @bind="textoBusqueda" 
+                                @bind:event="oninput" 
+                                placeholder="Buscar por nombre o código de producto..." />
+                            @if (!string.IsNullOrWhiteSpace(textoBusqueda))
+                            {
+                                <button class="btn btn-outline-secondary" @onclick="() => textoBusqueda = string.Empty">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="card bg-corporate-light border-0 h-100 shadow-sm">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <i class="bi bi-box-seam fs-1 text-corporate"></i>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="mb-0 text-secondary">Total Lotes</h6>
+                                                <h2 class="mb-0 fw-bold text-dark">@(lotes?.Count ?? 0)</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card bg-light border-0 h-100 shadow-sm">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                <i class="bi bi-check-circle fs-1 text-success"></i>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="mb-0 text-secondary">Con Stock</h6>
+                                                <h2 class="mb-0 fw-bold text-dark">@(lotes?.Count(l => l.CantidadDisponible > 0) ?? 0)</h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Lotes -->
+        @if (cargando)
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="spinner-border text-corporate mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mb-0">Cargando información de lotes...</p>
+                </div>
+            </div>
+        }
+        else if (lotes == null || lotes.Count == 0)
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-inbox text-secondary" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-dark">No hay lotes registrados</h4>
+                    <p class="text-secondary mb-4">Comience agregando su primer lote de inventario</p>
+                    <button class="btn btn-corporate btn-lg" 
+                            @onclick="MostrarFormularioNuevo" 
+                            disabled="@(!PuedeCrearLotes)">
+                        <i class="bi bi-plus-circle me-2"></i>Crear Primer Lote
+                    </button>
+                </div>
+            </div>
+        }
+        else if (!LotesFiltrados.Any())
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-search text-secondary" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-dark">No se encontraron resultados</h4>
+                    <p class="text-secondary mb-3">No hay lotes que coincidan con "<strong>@textoBusqueda</strong>"</p>
+                    <button class="btn btn-outline-secondary" @onclick="() => textoBusqueda = string.Empty">
+                        <i class="bi bi-x-circle me-2"></i>Limpiar filtro
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light border-bottom py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-dark">
+                            <i class="bi bi-list-ul me-2"></i>
+                            Listado de Lotes
+                        </h5>
+                        <span class="badge bg-corporate fs-6">
+                            Mostrando @LotesFiltrados.Count() de @lotes.Count
+                        </span>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-corporate-light">
+                            <tr>
+                                <th class="px-4 py-3 text-dark">
+                                    <i class="bi bi-hash me-1"></i>Lote
+                                </th>
+                                <th class="py-3 text-dark">Producto</th>
+                                <th class="py-3 text-dark">Código</th>
+                                <th class="py-3 text-dark">Categoría</th>
+                                <th class="py-3 text-dark">
+                                    <i class="bi bi-calendar-check me-1"></i>Compra
+                                </th>
+                                <th class="py-3 text-dark">
+                                    <i class="bi bi-calendar-x me-1"></i>Expiración
+                                </th>
+                                <th class="py-3 text-dark">
+                                    <i class="bi bi-currency-dollar me-1"></i>Costo
+                                </th>
+                                <th class="py-3 text-center text-dark">Inicial</th>
+                                <th class="py-3 text-center text-dark">Disponible</th>
+                                <th class="py-3 text-center text-dark" style="width: 10%;">Acciones</th>
+                                <th class="py-3 text-center text-dark">Acciones</th>
+
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var lote in LotesFiltrados)
+                            {
+                                var diasParaVencer = lote.FechaExpiracion.HasValue 
+                                    ? (lote.FechaExpiracion.Value.Date - DateTime.Today).Days 
+                                    : int.MaxValue;
+                                var colorVencimiento = ObtenerColorVencimiento(diasParaVencer);
+                                var sinStock = lote.CantidadDisponible == 0;
+
+                                <tr class="@(sinStock ? "table-light" : "")">
+                                    <td class="px-4">
+                                        <span class="badge bg-dark fs-6 px-3 py-2">
+                                            #@lote.LoteId
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-dark">@lote.ProductoNombre</span>
+                                            <small class="text-secondary">
+                                                <i class="bi bi-tag-fill me-1"></i>ID: @lote.ProductoId
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <code class="bg-light px-2 py-1 rounded text-dark border">@lote.ProductoCodigo</code>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(lote.ProductoCategoria))
+                                        {
+                                            <span class="badge bg-secondary">@lote.ProductoCategoria</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Sin categoría</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="text-secondary">
+                                            @lote.FechaCompra.ToString("dd/MM/yyyy")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (lote.FechaExpiracion.HasValue)
+                                        {
+                                            <div class="d-flex flex-column">
+                                                <span class="@colorVencimiento">
+                                                    @lote.FechaExpiracion.Value.ToString("dd/MM/yyyy")
+                                                </span>
+                                                @if (diasParaVencer < 0)
+                                                {
+                                                    <small class="text-danger fw-bold">
+                                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                        Vencido
+                                                    </small>
+                                                }
+                                                else if (diasParaVencer <= 30)
+                                                {
+                                                    <small class="@colorVencimiento">
+                                                        <i class="bi bi-clock-fill me-1"></i>
+                                                        @diasParaVencer días
+                                                    </small>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-infinity"></i> Sin vencer
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-dark">
+                                            $@lote.PrecioCosto.ToString("N2")
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">
+                                            @lote.CantidadInicial
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge @(lote.CantidadDisponible > 0 ? "bg-success" : "bg-danger") fs-6 px-3 py-2">
+                                            <i class="bi @(lote.CantidadDisponible > 0 ? "bi-check-circle" : "bi-x-circle") me-1"></i>
+                                            @lote.CantidadDisponible
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column gap-1">
+                                            <button class="btn btn-sm btn-warning w-100" 
+                                                    @onclick="() => EditarLote(lote)">
+                                                <i class="bi bi-pencil me-1"></i>
+                                                Editar
+                                            </button>
+                                            <button class="btn btn-sm btn-danger w-100" 
+                                                    @onclick="() => MostrarConfirmacionEliminar(lote)" 
+                                                    disabled="@(lote.CantidadDisponible > 0)"
+                                                    title="@(lote.CantidadDisponible > 0 ? "No se puede eliminar: tiene stock disponible" : "")">
+                                                <i class="bi bi-trash me-1"></i>
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+
+    @* Modal de confirmación para eliminar *@
+    @if (mostrarModalEliminar)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Confirmar Eliminación
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CancelarEliminar"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (loteAEliminar != null)
+                        {
+                            <p class="mb-3">¿Está seguro que desea eliminar el siguiente lote?</p>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>Lote ID:</strong> #@loteAEliminar.LoteId</p>
+                                    <p class="mb-1"><strong>Producto:</strong> @loteAEliminar.ProductoNombre</p>
+                                    <p class="mb-1"><strong>Código:</strong> @loteAEliminar.ProductoCodigo</p>
+                                    <p class="mb-1"><strong>Precio Costo:</strong> $@loteAEliminar.PrecioCosto.ToString("N2")</p>
+                                    <p class="mb-0">
+                                        <strong>Stock Disponible:</strong> 
+                                        <span class="badge @(loteAEliminar.CantidadDisponible > 0 ? "bg-danger" : "bg-secondary")">
+                                            @loteAEliminar.CantidadDisponible unidades
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if (loteAEliminar.CantidadDisponible > 0)
+                            {
+                                <div class="alert alert-danger mt-3 mb-0">
+                                    <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                                    <strong>¡Atención!</strong> Este lote tiene <strong>@loteAEliminar.CantidadDisponible unidades</strong> en stock disponible. 
+                                    No podrá ser eliminado hasta que el stock llegue a 0.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-warning mt-3 mb-0">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+                                </div>
+                            }
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelarEliminar" disabled="@eliminando">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminar" disabled="@GetDisabledEliminar()">
+                            @if (eliminando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Eliminando...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-trash"></i>
+                                <span> Eliminar</span>
                             }
                         </button>
                     </div>
-                </EditForm>
-            </div>
-        </div>
-    }
-
-    <!-- Filtros y Estadísticas -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row align-items-center g-3">
-                <div class="col-lg-6">
-                    <label class="form-label fw-bold text-dark mb-2">
-                        <i class="bi bi-search me-2"></i>Buscar Lotes
-                    </label>
-                    <div class="input-group input-group-lg shadow-sm">
-                        <span class="input-group-text bg-light border-end-0">
-                            <i class="bi bi-funnel text-secondary"></i>
-                        </span>
-                        <input class="form-control border-start-0 ps-0" 
-                               @bind="textoBusqueda" 
-                               @bind:event="oninput" 
-                               placeholder="Buscar por nombre o código de producto..." />
-                        @if (!string.IsNullOrWhiteSpace(textoBusqueda))
-                        {
-                            <button class="btn btn-outline-secondary" @onclick="() => textoBusqueda = string.Empty">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        }
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="card bg-corporate-light border-0 h-100 shadow-sm">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0">
-                                            <i class="bi bi-box-seam fs-1 text-corporate"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <h6 class="mb-0 text-secondary">Total Lotes</h6>
-                                            <h2 class="mb-0 fw-bold text-dark">@(lotes?.Count ?? 0)</h2>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card bg-light border-0 h-100 shadow-sm">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0">
-                                            <i class="bi bi-check-circle fs-1 text-success"></i>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <h6 class="mb-0 text-secondary">Con Stock</h6>
-                                            <h2 class="mb-0 fw-bold text-dark">@(lotes?.Count(l => l.CantidadDisponible > 0) ?? 0)</h2>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Tabla de Lotes -->
-    @if (cargando)
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5">
-                <div class="spinner-border text-corporate mb-3" role="status" style="width: 3rem; height: 3rem;">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-                <p class="text-muted mb-0">Cargando información de lotes...</p>
-            </div>
-        </div>
-    }
-    else if (lotes == null || lotes.Count == 0)
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-inbox text-secondary" style="font-size: 4rem;"></i>
-                <h4 class="mt-3 text-dark">No hay lotes registrados</h4>
-                <p class="text-secondary mb-4">Comience agregando su primer lote de inventario</p>
-                <button class="btn btn-corporate btn-lg" 
-                        @onclick="MostrarFormulario" 
-                        disabled="@(!PuedeCrearLotes)">
-                    <i class="bi bi-plus-circle me-2"></i>Crear Primer Lote
-                </button>
-            </div>
-        </div>
-    }
-    else if (!LotesFiltrados.Any())
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-search text-secondary" style="font-size: 4rem;"></i>
-                <h4 class="mt-3 text-dark">No se encontraron resultados</h4>
-                <p class="text-secondary mb-3">No hay lotes que coincidan con "<strong>@textoBusqueda</strong>"</p>
-                <button class="btn btn-outline-secondary" @onclick="() => textoBusqueda = string.Empty">
-                    <i class="bi bi-x-circle me-2"></i>Limpiar filtro
-                </button>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-light border-bottom py-3">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 text-dark">
-                        <i class="bi bi-list-ul me-2"></i>
-                        Listado de Lotes
-                    </h5>
-                    <span class="badge bg-corporate fs-6">
-                        Mostrando @LotesFiltrados.Count() de @lotes.Count
-                    </span>
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-corporate-light">
-                        <tr>
-                            <th class="px-4 py-3 text-dark">
-                                <i class="bi bi-hash me-1"></i>Lote
-                            </th>
-                            <th class="py-3 text-dark">Producto</th>
-                            <th class="py-3 text-dark">Código</th>
-                            <th class="py-3 text-dark">Categoría</th>
-                            <th class="py-3 text-dark">
-                                <i class="bi bi-calendar-check me-1"></i>Compra
-                            </th>
-                            <th class="py-3 text-dark">
-                                <i class="bi bi-calendar-x me-1"></i>Expiración
-                            </th>
-                            <th class="py-3 text-dark">
-                                <i class="bi bi-currency-dollar me-1"></i>Costo
-                            </th>
-                            <th class="py-3 text-center text-dark">Inicial</th>
-                            <th class="py-3 text-center text-dark">Disponible</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var lote in LotesFiltrados)
-                        {
-                            var diasParaVencer = lote.FechaExpiracion.HasValue 
-                                ? (lote.FechaExpiracion.Value.Date - DateTime.Today).Days 
-                                : int.MaxValue;
-                            var colorVencimiento = ObtenerColorVencimiento(diasParaVencer);
-                            var sinStock = lote.CantidadDisponible == 0;
-
-                            <tr class="@(sinStock ? "table-light" : "")">
-                                <td class="px-4">
-                                    <span class="badge bg-dark fs-6 px-3 py-2">
-                                        #@lote.LoteId
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-bold text-dark">@lote.ProductoNombre</span>
-                                        <small class="text-secondary">
-                                            <i class="bi bi-tag-fill me-1"></i>ID: @lote.ProductoId
-                                        </small>
-                                    </div>
-                                </td>
-                                <td>
-                                    <code class="bg-light px-2 py-1 rounded text-dark border">@lote.ProductoCodigo</code>
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(lote.ProductoCategoria))
-                                    {
-                                        <span class="badge bg-secondary">@lote.ProductoCategoria</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Sin categoría</span>
-                                    }
-                                </td>
-                                <td>
-                                    <span class="text-secondary">
-                                        @lote.FechaCompra.ToString("dd/MM/yyyy")
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (lote.FechaExpiracion.HasValue)
-                                    {
-                                        <div class="d-flex flex-column">
-                                            <span class="@colorVencimiento">
-                                                @lote.FechaExpiracion.Value.ToString("dd/MM/yyyy")
-                                            </span>
-                                            @if (diasParaVencer < 0)
-                                            {
-                                                <small class="text-danger fw-bold">
-                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                                    Vencido
-                                                </small>
-                                            }
-                                            else if (diasParaVencer <= 30)
-                                            {
-                                                <small class="@colorVencimiento">
-                                                    <i class="bi bi-clock-fill me-1"></i>
-                                                    @diasParaVencer días
-                                                </small>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">
-                                            <i class="bi bi-infinity"></i> Sin vencer
-                                        </span>
-                                    }
-                                </td>
-                                <td>
-                                    <span class="fw-bold text-dark">
-                                        $@lote.PrecioCosto.ToString("N2")
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border">
-                                        @lote.CantidadInicial
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge @(lote.CantidadDisponible > 0 ? "bg-success" : "bg-danger") fs-6 px-3 py-2">
-                                        <i class="bi @(lote.CantidadDisponible > 0 ? "bi-check-circle" : "bi-x-circle") me-1"></i>
-                                        @lote.CantidadDisponible
-                                    </span>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
-</div>
-
-<style>
-    :root {
-        --corporate-primary: #1e3a5f;
-        --corporate-secondary: #2c5282;
-        --corporate-light: #e8eef5;
     }
 
-    .bg-corporate {
-        background-color: var(--corporate-primary) !important;
-    }
-
-    .bg-corporate-light {
-        background-color: var(--corporate-light) !important;
-    }
-
-    .text-corporate {
-        color: var(--corporate-primary) !important;
-    }
-
-    .btn-corporate {
-        background-color: var(--corporate-primary);
-        border-color: var(--corporate-primary);
-        color: white;
-    }
-
-    .btn-corporate:hover {
-        background-color: var(--corporate-secondary);
-        border-color: var(--corporate-secondary);
-        color: white;
-    }
-
-    .btn-corporate:disabled {
-        background-color: #6c757d;
-        border-color: #6c757d;
-    }
-
-    .animate-slide-down {
-        animation: slideDown 0.3s ease-out;
-    }
-
-    @@keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
+    <style>
+        :root {
+            --corporate-primary: #1e3a5f;
+            --corporate-secondary: #2c5282;
+            --corporate-light: #e8eef5;
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+
+        .bg-corporate {
+            background-color: var(--corporate-primary) !important;
         }
-    }
 
-    .table-hover tbody tr:hover {
-        background-color: #f8f9fa;
-        transition: background-color 0.2s ease;
-    }
-</style>
+        .bg-corporate-light {
+            background-color: var(--corporate-light) !important;
+        }
 
-@code {
-    private List<LoteDto>? lotes;
-    private List<ProductoDto> productos = new();
-    private CrearLoteFormModel loteForm = new();
-    private bool cargando = true;
-    private bool mostrandoFormulario;
-    private bool creandoLote;
-    private string mensajeError = string.Empty;
-    private string mensajeExito = string.Empty;
-    private string textoBusqueda = string.Empty;
+        .text-corporate {
+            color: var(--corporate-primary) !important;
+        }
 
-    private bool PuedeCrearLotes => productos.Count > 0;
+        .btn-corporate {
+            background-color: var(--corporate-primary);
+            border-color: var(--corporate-primary);
+            color: white;
+        }
 
-    private IEnumerable<LoteDto> LotesFiltrados
-        => string.IsNullOrWhiteSpace(textoBusqueda)
-            ? lotes ?? Enumerable.Empty<LoteDto>()
-            : (lotes ?? Enumerable.Empty<LoteDto>()).Where(l =>
-                (l.ProductoNombre?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (l.ProductoCodigo?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false));
+        .btn-corporate:hover {
+            background-color: var(--corporate-secondary);
+            border-color: var(--corporate-secondary);
+            color: white;
+        }
 
-    protected override async Task OnInitializedAsync()
-    {
-        try
+        .btn-corporate:disabled {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            transition: background-color 0.2s ease;
+        }
+    </style>
+
+    @code {
+        private List<LoteDto>? lotes;
+        private List<ProductoDto> productos = new();
+        private LoteFormModel loteForm = new();
+        private bool cargando = true;
+        private bool mostrandoFormulario;
+        private bool guardandoLote;
+        private bool esModoEdicion;
+        private string mensajeError = string.Empty;
+        private string mensajeExito = string.Empty;
+        private string textoBusqueda = string.Empty;
+        
+        // Variables para eliminación
+        private bool mostrarModalEliminar = false;
+        private bool eliminando = false;
+        private LoteDto? loteAEliminar = null;
+
+        private bool PuedeCrearLotes => productos.Count > 0;
+
+        private IEnumerable<LoteDto> LotesFiltrados
+            => string.IsNullOrWhiteSpace(textoBusqueda)
+                ? lotes ?? Enumerable.Empty<LoteDto>()
+                : (lotes ?? Enumerable.Empty<LoteDto>()).Where(l =>
+                    (l.ProductoNombre?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (l.ProductoCodigo?.Contains(textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        protected override async Task OnInitializedAsync()
         {
-            cargando = true;
+            await CargarDatos();
+        }
+
+        private async Task CargarDatos()
+        {
+            try
+            {
+                cargando = true;
+                mensajeError = string.Empty;
+                mensajeExito = string.Empty;
+
+                var lotesObtenidos = await LoteService.ObtenerTodosAsync();
+                lotes = lotesObtenidos?.ToList() ?? new List<LoteDto>();
+                OrdenarLotes();
+
+                var productosObtenidos = await ProductoService.ObtenerTodosAsync();
+                productos = (productosObtenidos ?? new List<ProductoDto>())
+                    .OrderBy(p => p.Nombre)
+                    .ToList();
+            }
+            catch (Exception ex)
+            {
+                mensajeError = ex.Message;
+            }
+            finally
+            {
+                cargando = false;
+            }
+        }
+
+        private void MostrarFormularioNuevo()
+        {
             mensajeError = string.Empty;
             mensajeExito = string.Empty;
+            
+            if (!PuedeCrearLotes || cargando) return;
+            
+            esModoEdicion = false;
+            loteForm = new LoteFormModel();
+            mostrandoFormulario = true;
+        }
 
-            var lotesObtenidos = await LoteService.ObtenerTodosAsync();
-            lotes = lotesObtenidos?.ToList() ?? new List<LoteDto>();
-            OrdenarLotes();
+        private async Task EditarLote(LoteDto lote)
+        {
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+            
+            esModoEdicion = true;
+            
+            var producto = productos.FirstOrDefault(p => p.Id == lote.ProductoId);
+            
+            loteForm = new LoteFormModel
+            {
+                LoteId = lote.LoteId,
+                ProductoId = lote.ProductoId,
+                ProductoNombre = lote.ProductoNombre,
+                FechaCompra = lote.FechaCompra,
+                FechaExpiracion = lote.FechaExpiracion,
+                PrecioCosto = lote.PrecioCosto,
+                CantidadInicial = lote.CantidadInicial,
+                CantidadDisponible = lote.CantidadDisponible
+            };
+            
+            mostrandoFormulario = true;
+        }
 
-            var productosObtenidos = await ProductoService.ObtenerTodosAsync();
-            productos = (productosObtenidos ?? new List<ProductoDto>())
-                .OrderBy(p => p.Nombre)
+        private async Task GuardarLote()
+        {
+            if (guardandoLote) return;
+
+            try
+            {
+                guardandoLote = true;
+                mensajeError = string.Empty;
+                mensajeExito = string.Empty;
+
+                if (esModoEdicion)
+                {
+                    // ✅ ACTUALIZAR (solo precio, cantidad y fecha expiración)
+                    // Usar el DTO de actualización que espera el servicio.
+                    var dto = new ActualizarLoteDto
+                    {
+                        LoteId = loteForm.LoteId!.Value,
+                        PrecioCosto = loteForm.PrecioCosto!.Value,
+                        CantidadInicial = loteForm.CantidadInicial!.Value,
+                        FechaExpiracion = loteForm.FechaExpiracion
+                    };
+
+                    var loteActualizado = await LoteService.ActualizarAsync(dto);
+
+                    // Si el servicio no devuelve el lote actualizado, informar y salir para evitar null dereference.
+                    if (loteActualizado == null)
+                    {
+                        mensajeError = "No se pudo actualizar el lote. Intente nuevamente.";
+                        return;
+                    }
+
+                    // Si el servicio no devuelve información completa del producto, preservar/llenar desde la lista local
+                    var productoLocal = productos.FirstOrDefault(p => p.Id == loteActualizado.ProductoId);
+                    if (productoLocal != null)
+                    {
+                        loteActualizado.ProductoNombre ??= productoLocal.Nombre;
+                        loteActualizado.ProductoCodigo ??= productoLocal.Codigo;
+                        // Nota: ProductoDto no expone una propiedad 'Categoria' en este proyecto, 
+                        // por lo que no intentamos asignarla aquí para evitar errores de compilación.
+                    }
+
+                    // Actualizar en la lista local
+                    if (lotes != null)
+                    {
+                        var index = lotes.FindIndex(l => l.LoteId == loteActualizado.LoteId);
+                        if (index >= 0)
+                        {
+                            lotes[index] = loteActualizado;
+                            OrdenarLotes();
+                        }
+                    }
+
+                    mensajeExito = $"Lote #{loteActualizado.LoteId} actualizado exitosamente.";
+                }
+                else
+                {
+                    // ✅ CREAR NUEVO
+                    if (loteForm.ProductoId is null || loteForm.FechaCompra is null || 
+                        loteForm.PrecioCosto is null || loteForm.CantidadInicial is null) return;
+
+                    var dto = new CrearLoteDto
+                    {
+                        ProductoId = loteForm.ProductoId.Value,
+                        FechaCompra = loteForm.FechaCompra.Value,
+                        FechaExpiracion = loteForm.FechaExpiracion,
+                        PrecioCosto = loteForm.PrecioCosto.Value,
+                        CantidadInicial = loteForm.CantidadInicial.Value
+                    };
+
+                    var loteCreado = await LoteService.CrearAsync(dto);
+
+                    if (lotes == null) lotes = new List<LoteDto>();
+                    lotes.Add(loteCreado);
+                    OrdenarLotes();
+
+                    var producto = productos.FirstOrDefault(p => p.Id == loteCreado.ProductoId);
+                    mensajeExito = $"Lote #{loteCreado.LoteId} del producto '{producto?.Nombre}' creado exitosamente.";
+                }
+
+                mostrandoFormulario = false;
+                loteForm = new LoteFormModel();
+            }
+            catch (Exception ex)
+            {
+                mensajeError = ex.Message;
+            }
+            finally
+            {
+                guardandoLote = false;
+            }
+        }
+
+        private void CancelarFormulario()
+        {
+            mostrandoFormulario = false;
+            esModoEdicion = false;
+            loteForm = new LoteFormModel();
+        }
+
+        private void OrdenarLotes()
+        {
+            if (lotes == null || lotes.Count == 0) return;
+            lotes = lotes
+                .OrderByDescending(l => l.FechaCompra)
+                .ThenByDescending(l => l.LoteId)
                 .ToList();
         }
-        catch (Exception ex)
+
+        private string ObtenerColorVencimiento(int dias)
         {
-            mensajeError = ex.Message;
+            if (dias < 0) return "text-danger fw-bold";
+            if (dias <= 7) return "text-danger fw-bold";
+            if (dias <= 30) return "text-warning fw-bold";
+            return "text-secondary";
         }
-        finally
-        {
-            cargando = false;
-        }
-    }
 
-    private async Task CrearLoteAsync()
-    {
-        if (creandoLote) return;
-        if (loteForm.ProductoId is null || loteForm.FechaCompra is null || 
-            loteForm.PrecioCosto is null || loteForm.CantidadInicial is null) return;
+    // ========================================
+    // MÉTODOS PARA ELIMINAR
+    // ========================================
 
-        try
-        {
-            creandoLote = true;
-            mensajeError = string.Empty;
-            mensajeExito = string.Empty;
-
-            var dto = new CrearLoteDto
-            {
-                ProductoId = loteForm.ProductoId.Value,
-                FechaCompra = loteForm.FechaCompra.Value,
-                FechaExpiracion = loteForm.FechaExpiracion,
-                PrecioCosto = loteForm.PrecioCosto.Value,
-                CantidadInicial = loteForm.CantidadInicial.Value
-            };
-
-            var loteCreado = await LoteService.CrearAsync(dto);
-
-            if (lotes == null) lotes = new List<LoteDto>();
-            lotes.Add(loteCreado);
-            OrdenarLotes();
-
-            var producto = productos.FirstOrDefault(p => p.Id == loteCreado.ProductoId);
-            mensajeExito = $"Lote #{loteCreado.LoteId} del producto '{producto?.Nombre}' creado exitosamente.";
-            mostrandoFormulario = false;
-            ResetFormulario();
-        }
-        catch (Exception ex)
-        {
-            mensajeError = ex.Message;
-        }
-        finally
-        {
-            creandoLote = false;
-        }
-    }
-
-    private void MostrarFormulario()
+    private void MostrarConfirmacionEliminar(LoteDto lote)
     {
         mensajeError = string.Empty;
         mensajeExito = string.Empty;
-        if (!PuedeCrearLotes || cargando) return;
-        if (!mostrandoFormulario) ResetFormulario();
-        mostrandoFormulario = !mostrandoFormulario;
+        loteAEliminar = lote;
+        mostrarModalEliminar = true;
     }
 
-    private void CancelarCreacion()
+    private void CancelarEliminar()
     {
-        mostrandoFormulario = false;
-        ResetFormulario();
+        mostrarModalEliminar = false;
+        loteAEliminar = null;
     }
 
-    private void ResetFormulario()
+    private async Task ConfirmarEliminar()
     {
-        loteForm = new CrearLoteFormModel();
-    }
+        if (loteAEliminar == null) return;
+        var loteId = loteAEliminar.LoteId;
+        var productoNombre = loteAEliminar.ProductoNombre;
 
-    private void OrdenarLotes()
-    {
-        if (lotes == null || lotes.Count == 0) return;
-        lotes = lotes
-            .OrderByDescending(l => l.FechaCompra)
-            .ThenByDescending(l => l.LoteId)
-            .ToList();
-    }
-
-    private string ObtenerColorVencimiento(int dias)
-    {
-        if (dias < 0) return "text-danger fw-bold";
-        if (dias <= 7) return "text-danger fw-bold";
-        if (dias <= 30) return "text-warning fw-bold";
-        return "text-secondary";
-    }
-
-    private sealed class CrearLoteFormModel
-    {
-        public CrearLoteFormModel()
+        try
         {
-            FechaCompra = DateTime.Today;
+            eliminando = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            // Llamar al servicio para eliminar
+            await LoteService.EliminarAsync(loteId);
+
+            // Eliminar de la lista local sin recargar todo
+            lotes?.RemoveAll(l => l.LoteId == loteId);
+
+            mensajeExito = $"Lote #{loteId} del producto '{productoNombre}' eliminado exitosamente.";
+
+            // Cerrar el modal
+            mostrarModalEliminar = false;
+            loteAEliminar = null;
+
+            StateHasChanged();
         }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("stock disponible", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("tiene") && ex.Message.Contains("unidades"))
+            {
+                mensajeError = $"No se puede eliminar el lote #{loteId} porque tiene stock disponible.";
+            }
+            else
+            {
+                mensajeError = $"Error al eliminar el lote #{loteId}: {ex.Message}";
+            }
 
-        [Required(ErrorMessage = "Seleccione un producto")]
-        public int? ProductoId { get; set; }
-
-        [Required(ErrorMessage = "La fecha de compra es obligatoria")]
-        public DateTime? FechaCompra { get; set; }
-
-        public DateTime? FechaExpiracion { get; set; }
-
-        [Required(ErrorMessage = "Ingrese el precio de costo")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio de costo debe ser mayor a 0")]
-        public decimal? PrecioCosto { get; set; }
-
-        [Required(ErrorMessage = "Ingrese la cantidad inicial")]
-        [Range(1, int.MaxValue, ErrorMessage = "La cantidad inicial debe ser mayor a 0")]
-        public int? CantidadInicial { get; set; }
+            mostrarModalEliminar = false;
+            loteAEliminar = null;
+        }
+        finally
+        {
+            eliminando = false;
+        }
     }
-}
+
+    private bool GetDisabledEliminar()
+    {
+        if (eliminando) return true;
+        if (loteAEliminar == null) return false;
+        return loteAEliminar.CantidadDisponible > 0;
+    }
+
+
+        // ========================================
+        // MODELO DEL FORMULARIO
+        // ========================================
+        private sealed class LoteFormModel
+        {
+            public LoteFormModel()
+            {
+                FechaCompra = DateTime.Today;
+            }
+
+            // Para edición
+            public int? LoteId { get; set; }
+            public string? ProductoNombre { get; set; }
+
+            [Required(ErrorMessage = "Seleccione un producto")]
+            public int? ProductoId { get; set; }
+
+            [Required(ErrorMessage = "La fecha de compra es obligatoria")]
+            public DateTime? FechaCompra { get; set; }
+
+            public DateTime? FechaExpiracion { get; set; }
+
+            [Required(ErrorMessage = "Ingrese el precio de costo")]
+            [Range(0.01, double.MaxValue, ErrorMessage = "El precio de costo debe ser mayor a 0")]
+            public decimal? PrecioCosto { get; set; }
+
+            [Required(ErrorMessage = "Ingrese la cantidad inicial")]
+            [Range(0, int.MaxValue, ErrorMessage = "La cantidad inicial no puede ser negativa")]
+            public int? CantidadInicial { get; set; }
+
+            [Range(0, int.MaxValue, ErrorMessage = "La cantidad disponible no puede ser negativa")]
+            public int? CantidadDisponible { get; set; }
+        }
+        }
+        // Usar los DTOs del proyecto (SistemaFacturacionSRI.Application.DTOs.Lote).
+        // Se eliminaron los DTOs locales para evitar conflictos de nombres con los DTOs reales del proyecto.
+        }
+    }
