@@ -135,7 +135,114 @@ public async Task<ActionResult<IEnumerable<LoteDto>>> ObtenerPorProducto(int pro
         });
     }
 }
+// SistemaFacturacionSRI.WebUI/Controllers/LoteController.cs
+// Agregar estos endpoints:
 
+/// <summary>
+/// GET /api/lote/{id}
+/// Obtiene un lote específico por su ID.
+/// </summary>
+[HttpGet("{id}")]
+[ProducesResponseType(typeof(LoteDto), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<ActionResult<LoteDto>> ObtenerPorId(int id)
+{
+    try
+    {
+        _logger.LogInformation("GET /api/lote/{Id} - Recuperando lote", id);
+        var lote = await _loteService.ObtenerPorIdAsync(id);
+
+        if (lote == null)
+        {
+            _logger.LogWarning("Lote {Id} no encontrado", id);
+            return NotFound(new { mensaje = $"Lote con ID {id} no encontrado." });
+        }
+
+        return Ok(lote);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al obtener lote {Id}", id);
+        return StatusCode(500, new { error = "Error interno al obtener el lote" });
+    }
+}
+
+/// <summary>
+/// PUT /api/lote/{id}
+/// Actualiza un lote existente.
+/// </summary>
+[HttpPut("{id}")]
+[ProducesResponseType(typeof(LoteDto), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<ActionResult<LoteDto>> Actualizar(int id, [FromBody] ActualizarLoteDto dto)
+{
+    try
+    {
+        _logger.LogInformation("PUT /api/lote/{Id} - Actualizando lote", id);
+
+        if (id != dto.LoteId)
+            return BadRequest(new { error = "El ID de la ruta no coincide con el ID del lote" });
+
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var loteActualizado = await _loteService.ActualizarAsync(dto);
+        _logger.LogInformation("Lote {Id} actualizado correctamente", id);
+        
+        return Ok(loteActualizado);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        _logger.LogWarning(ex, "Lote o producto no encontrado al actualizar");
+        return NotFound(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        _logger.LogWarning(ex, "Validación fallida al actualizar lote");
+        return BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al actualizar lote {Id}", id);
+        return StatusCode(500, new { error = "Error interno al actualizar el lote" });
+    }
+}
+
+/// <summary>
+/// DELETE /api/lote/{id}
+/// Elimina un lote. Solo se puede eliminar si CantidadDisponible == 0.
+/// </summary>
+[HttpDelete("{id}")]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<ActionResult> Eliminar(int id)
+{
+    try
+    {
+        _logger.LogInformation("DELETE /api/lote/{Id} - Eliminando lote", id);
+        await _loteService.EliminarAsync(id);
+        _logger.LogInformation("Lote {Id} eliminado correctamente", id);
+        
+        return Ok(new { mensaje = "Lote eliminado exitosamente", id });
+    }
+    catch (KeyNotFoundException ex)
+    {
+        _logger.LogWarning(ex, "Lote {Id} no encontrado para eliminar", id);
+        return NotFound(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        _logger.LogWarning(ex, "No se puede eliminar lote {Id}: tiene stock", id);
+        return BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al eliminar lote {Id}", id);
+        return StatusCode(500, new { error = "Error interno al eliminar el lote" });
+    }
+}
 
     }
 }

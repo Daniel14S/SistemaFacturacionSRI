@@ -22,7 +22,7 @@ namespace SistemaFacturacionSRI.Application.DTOs.Lote
         public decimal PrecioCosto { get; set; }
 
         [Required(ErrorMessage = "La cantidad inicial es obligatoria")]
-        [Range(1, int.MaxValue, ErrorMessage = "La cantidad inicial debe ser mayor a 0")]
+        [Range(0, int.MaxValue, ErrorMessage = "La cantidad inicial no puede ser negativa")]
         public int CantidadInicial { get; set; }
     }
 }

@@ -67,7 +67,33 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        // SistemaFacturacionSRI.Infrastructure/Repositories/LoteRepository.cs
+// Agregar estos métodos a la clase existente:
 
+public async Task<Lote?> ObtenerPorIdAsync(int loteId)
+{
+    return await _context.Lotes
+        .Include(l => l.Producto)
+            .ThenInclude(p => p!.Categoria)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(l => l.LoteId == loteId);
+}
+
+public async Task ActualizarAsync(Lote lote)
+{
+    _context.Lotes.Update(lote);
+    await _context.SaveChangesAsync();
+}
+
+public async Task EliminarAsync(int loteId)
+{
+    var lote = await _context.Lotes.FindAsync(loteId);
+    if (lote != null)
+    {
+        _context.Lotes.Remove(lote);
+        await _context.SaveChangesAsync();
+    }
+}
 
 
     }
