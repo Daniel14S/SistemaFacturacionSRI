@@ -26,18 +26,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             // Seed de categorías de ejemplo (al menos 10)
             builder.HasData(
-    new Categoria { Id = 1, Codigo = "CAT-001", Nombre = "General", Descripcion = "Categoría por defecto" },
-    new Categoria { Id = 2, Codigo = "CAT-002", Nombre = "Lacteos", Descripcion = "Productos lácteos" },
-    new Categoria { Id = 3, Codigo = "CAT-003", Nombre = "Embutidos", Descripcion = "Carnes procesadas y embutidos" },
-    new Categoria { Id = 4, Codigo = "CAT-004", Nombre = "Refrigerados", Descripcion = "Productos de cadena de frío" },
-    new Categoria { Id = 5, Codigo = "CAT-005", Nombre = "Electronicos", Descripcion = "Dispositivos y accesorios electrónicos" },
-    new Categoria { Id = 6, Codigo = "CAT-006", Nombre = "Bebidas", Descripcion = "Bebidas alcohólicas y no alcohólicas" },
-    new Categoria { Id = 7, Codigo = "CAT-007", Nombre = "Abarrotes", Descripcion = "Despensa y abarrotes" },
-    new Categoria { Id = 8, Codigo = "CAT-008", Nombre = "Limpieza", Descripcion = "Productos de limpieza" },
-    new Categoria { Id = 9, Codigo = "CAT-009", Nombre = "Higiene", Descripcion = "Cuidado personal e higiene" },
-    new Categoria { Id = 10, Codigo = "CAT-010", Nombre = "Panaderia", Descripcion = "Panes y repostería" },
-    new Categoria { Id = 11, Codigo = "CAT-011", Nombre = "FrutasVerduras", Descripcion = "Productos frescos" }
-);
+                new Categoria { Id = 1, Codigo = "CAT-001", Nombre = "General", Descripcion = "Categoría por defecto" },
+                new Categoria { Id = 2, Codigo = "CAT-002", Nombre = "Lacteos", Descripcion = "Productos lácteos" },
+                new Categoria { Id = 3, Codigo = "CAT-003", Nombre = "Embutidos", Descripcion = "Carnes procesadas y embutidos" },
+                new Categoria { Id = 4, Codigo = "CAT-004", Nombre = "Refrigerados", Descripcion = "Productos de cadena de frío" },
+                new Categoria { Id = 5, Codigo = "CAT-005", Nombre = "Enlatados", Descripcion = "Conservas y alimentos enlatados" },
+                new Categoria { Id = 6, Codigo = "CAT-006", Nombre = "Bebidas", Descripcion = "Bebidas alcohólicas y no alcohólicas" },
+                new Categoria { Id = 8, Codigo = "CAT-008", Nombre = "Limpieza", Descripcion = "Productos de limpieza" },
+                new Categoria { Id = 9, Codigo = "CAT-009", Nombre = "Higiene", Descripcion = "Cuidado personal e higiene" },
+                new Categoria { Id = 10, Codigo = "CAT-010", Nombre = "Panaderia", Descripcion = "Panes y repostería" },
+                new Categoria { Id = 11, Codigo = "CAT-011", Nombre = "FrutasVerduras", Descripcion = "Productos frescos" },
+                new Categoria { Id = 12, Codigo = "CAT-012", Nombre = "Granos", Descripcion = "Arroz, granos y legumbres secas" },
+                new Categoria { Id = 14, Codigo = "CAT-014", Nombre = "Snacks", Descripcion = "Galletas, confites y snacks empacados" }
+            );
 
 
             builder.HasMany(c => c.Productos)

@@ -105,9 +105,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Id = 5,
                             Activo = true,
                             Codigo = "CAT-005",
-                            Descripcion = "Dispositivos y accesorios electrónicos",
+                            Descripcion = "Conservas y alimentos enlatados",
                             FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombre = "Electronicos"
+                            Nombre = "Enlatados"
                         },
                         new
                         {
@@ -117,15 +117,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Descripcion = "Bebidas alcohólicas y no alcohólicas",
                             FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "Bebidas"
-                        },
-                        new
-                        {
-                            Id = 7,
-                            Activo = true,
-                            Codigo = "CAT-007",
-                            Descripcion = "Despensa y abarrotes",
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Nombre = "Abarrotes"
                         },
                         new
                         {
@@ -162,6 +153,24 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Descripcion = "Productos frescos",
                             FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Nombre = "FrutasVerduras"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Activo = true,
+                            Codigo = "CAT-012",
+                            Descripcion = "Arroz, granos y legumbres secas",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Granos"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Activo = true,
+                            Codigo = "CAT-014",
+                            Descripcion = "Galletas, confites y snacks empacados",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Snacks"
                         });
                 });
 
