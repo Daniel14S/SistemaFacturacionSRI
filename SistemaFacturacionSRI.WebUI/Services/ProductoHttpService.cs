@@ -138,5 +138,7 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 throw new Exception($"Error al buscar productos: {ex.Message}", ex);
             }
         }
+
+        
     }
 }

@@ -51,9 +51,10 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
         /// <summary>
         /// GET /api/producto
-        /// Obtiene la lista de todos los productos activos.
+        /// Obtiene la lista de todos los productos activos CON LOTE PRIORITARIO.
+        /// El lote prioritario es el que tiene la fecha de expiración más cercana.
         /// </summary>
-        /// <returns>Lista de productos</returns>
+        /// <returns>Lista de productos con información del lote más próximo a vencer</returns>
         /// <response code="200">Lista obtenida exitosamente</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpGet]
@@ -63,12 +64,13 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         {
             try
             {
-                _logger.LogInformation("GET /api/producto - Obteniendo todos los productos");
+                _logger.LogInformation("GET /api/producto - Obteniendo todos los productos con lote prioritario");
 
-                // Delegar a la capa Application (Arquitectura Onion)
-                var productos = await _productoService.ObtenerTodosAsync();
+                // ✅ CAMBIO CRÍTICO: Usar método que incluye lote prioritario
+                // Esto calcula automáticamente cuál lote está más próximo a vencer
+                var productos = await _productoService.ObtenerTodosConLotePrioritarioAsync();
                 
-                _logger.LogInformation("Se obtuvieron {Count} productos", productos.Count());
+                _logger.LogInformation("Se obtuvieron {Count} productos con lote prioritario", productos.Count());
                 
                 return Ok(productos);
             }
@@ -169,7 +171,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 }
 
                 // Delegar a la capa Application
-                // La validación de código único se hace en ProductoService (T-23)
+                // La validación de código único se hace en ProductoService
                 var productoCreado = await _productoService.CrearAsync(dto);
                 
                 _logger.LogInformation("Producto creado exitosamente con ID {Id}", productoCreado.Id);
@@ -278,11 +280,12 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// DELETE /api/producto/{id}
         /// Elimina lógicamente un producto (lo marca como inactivo).
+        /// SOLO se puede eliminar si NO tiene stock disponible.
         /// </summary>
         /// <param name="id">ID del producto a eliminar</param>
         /// <returns>Confirmación de eliminación</returns>
         /// <response code="200">Producto eliminado exitosamente</response>
-        /// <response code="400">ID inválido</response>
+        /// <response code="400">ID inválido o producto tiene stock</response>
         /// <response code="404">Producto no encontrado</response>
         /// <response code="500">Error interno del servidor</response>
         [HttpDelete("{id}")]
@@ -304,6 +307,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 }
 
                 // Delegar a la capa Application
+                // La validación de stock se hace en ProductoService.EliminarAsync()
                 await _productoService.EliminarAsync(id);
                 
                 _logger.LogInformation("Producto {Id} eliminado exitosamente", id);
@@ -319,6 +323,12 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 // Producto no existe
                 _logger.LogWarning(ex, "Producto {Id} no encontrado para eliminar", id);
                 return NotFound(new { error = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Producto tiene stock disponible
+                _logger.LogWarning(ex, "No se puede eliminar producto {Id}: tiene stock", id);
+                return BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {

@@ -45,5 +45,30 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
 
             return lote;
         }
+
+        public async Task<IEnumerable<Lote>> ObtenerLotesPorProductoAsync(int idProducto)
+        {
+            return await _context.Lotes
+                .Include(l => l.Producto!) // Producto no será null
+                    .ThenInclude(p => p.Categoria)
+                .Where(l => l.ProductoId == idProducto)
+                .AsNoTracking()
+                .OrderByDescending(l => l.FechaCompra)
+                .ThenByDescending(l => l.LoteId)
+                .ToListAsync();
+        }
+
+
+        public async Task<IEnumerable<Lote>> ObtenerPorProductoAsync(int productoId)
+        {
+            return await _context.Lotes
+                .Include(l => l.Producto)
+                .Where(l => l.ProductoId == productoId)
+                .ToListAsync();
+        }
+
+
+
+
     }
 }

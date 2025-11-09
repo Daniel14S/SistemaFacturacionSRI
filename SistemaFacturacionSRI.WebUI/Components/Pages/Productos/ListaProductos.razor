@@ -1,7 +1,10 @@
 @page "/productos"
 @rendermode InteractiveServer
 @using SistemaFacturacionSRI.Application.DTOs.Producto
+@using SistemaFacturacionSRI.Domain.Entities
 @using SistemaFacturacionSRI.WebUI.Services
+@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.WebUI.Controllers
 @inject ProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
@@ -15,7 +18,7 @@
         </NavLink>
     </div>
 
-    @* T-42: Mensajes de éxito/error *@
+    @* Mensajes de éxito/error *@
     @if (!string.IsNullOrEmpty(mensajeExito))
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -24,7 +27,6 @@
             <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
         </div>
     }
-
     @if (!string.IsNullOrEmpty(mensajeError))
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -61,6 +63,20 @@
                         <option value="codigo">Código</option>
                         <option value="precio">Precio</option>
                         <option value="stock">Stock</option>
+                        <option value="expiracion">Fecha Expiración</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Categoría:</label>
+                    <select class="form-select" @bind="filtroCategoria">
+                        <option value="todas">Todas</option>
+                        @foreach (var categoria in ProductosFiltrados
+                            .Select(p => new CategoriaDto { Id = p.CategoriaId, Nombre = p.CategoriaNombre })
+                            .Distinct()
+                            .OrderBy(c => c.Nombre))
+                        {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                        }
                     </select>
                 </div>
             </div>
@@ -100,35 +116,29 @@
             <table class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th style="width: 10%;">Código</th>
-                        <th style="width: 18%;">Nombre</th>
-                        <th style="width: 22%;">Descripción</th>
-                        <th style="width: 10%;">Precio</th>
-                        <th style="width: 8%;">IVA</th>
-                        <th style="width: 10%;">Precio c/IVA</th>
-                        <th style="width: 7%;">Stock</th>
-                        <th style="width: 7%;">Categoría</th>
-                        <th style="width: 8%;" class="text-center">Acciones</th>
+                        <th style="width: 8%;">Código</th>
+                        <th style="width: 15%;">Nombre</th>
+                        <th style="width: 18%;">Descripción</th>
+                        <th style="width: 8%;">Precio/Lote Prioritario</th>
+                        <th style="width: 6%;">IVA</th>
+                        <th style="width: 8%;">Precio c/IVA</th>
+                        <th style="width: 6%;">Stock</th>
+                        <th style="width: 8%;">Categoría</th>
+                        <th style="width: 13%;">Lote Prioritario</th>
+                        <th style="width: 10%;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var producto in ProductosFiltrados)
                     {
                         <tr>
-                            <!-- Código -->
                             <td><code class="text-primary">@producto.Codigo</code></td>
-                            
-                            <!-- Nombre -->
                             <td><strong>@producto.Nombre</strong></td>
-                            
-                            <!-- Descripción -->
                             <td>
                                 @if (!string.IsNullOrEmpty(producto.Descripcion))
                                 {
                                     <small class="text-muted">
-                                        @(producto.Descripcion.Length > 60 
-                                            ? producto.Descripcion.Substring(0, 60) + "..." 
-                                            : producto.Descripcion)
+                                        @(producto.Descripcion.Length > 50 ? producto.Descripcion.Substring(0, 50) + "..." : producto.Descripcion)
                                     </small>
                                 }
                                 else
@@ -136,8 +146,6 @@
                                     <small class="text-muted fst-italic">Sin descripción</small>
                                 }
                             </td>
-                            
-                            <!-- Precio -->
                             <td>
                                 @if (producto.Precio.HasValue)
                                 {
@@ -148,13 +156,7 @@
                                     <span class="text-muted">N/A</span>
                                 }
                             </td>
-                            
-                            <!-- IVA -->
-                            <td>
-                                <span class="badge bg-info">@producto.TipoIVADescripcion</span>
-                            </td>
-                            
-                            <!-- Precio con IVA -->
+                            <td><span class="badge bg-info">@producto.TipoIVADescripcion</span></td>
                             <td>
                                 @if (producto.PrecioConIVA.HasValue)
                                 {
@@ -165,32 +167,80 @@
                                     <span class="text-muted">N/A</span>
                                 }
                             </td>
-                            
-                            <!-- Stock -->
+                            <td><span class="badge @(producto.TieneStock ? "bg-success" : "bg-danger")">@producto.Stock</span></td>
+                            <td><small>@producto.CategoriaNombre</small></td>
+
+                            <!-- Columna Lote Prioritario con colores -->
                             <td>
-                                <span class="badge @(producto.TieneStock ? "bg-success" : "bg-danger")">
-                                    @producto.Stock
-                                </span>
+                                @if (!string.IsNullOrEmpty(producto.LotePrioritario) && producto.FechaExpiracionLotePrioritario.HasValue)
+                                {
+                                    var diasParaVencer = (producto.FechaExpiracionLotePrioritario.Value.Date - DateTime.Today).Days;
+                                    var colorBadge = ObtenerColorLote(diasParaVencer);
+                                    var icono = ObtenerIconoLote(diasParaVencer);
+
+                                    <div class="d-flex flex-column">
+                                        <span class="badge @colorBadge mb-1">
+                                            <i class="bi @icono me-1"></i>
+                                            Lote: @producto.LotePrioritario
+                                        </span>
+                                        <small class="text-muted">
+                                            Vence: @producto.FechaExpiracionLotePrioritario.Value.ToString("dd/MM/yyyy")
+                                        </small>
+                                        @if (diasParaVencer < 0)
+                                        {
+                                            <small class="text-danger fw-bold">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> ¡VENCIDO! (@Math.Abs(diasParaVencer) días)
+                                            </small>
+                                        }
+                                        else if (diasParaVencer <= 7)
+                                        {
+                                            <small class="text-danger fw-bold">
+                                                <i class="bi bi-exclamation-circle-fill"></i> Vence en @diasParaVencer día(s)
+                                            </small>
+                                        }
+                                        else if (diasParaVencer <= 30)
+                                        {
+                                            <small class="text-warning">
+                                                <i class="bi bi-clock-fill"></i> @diasParaVencer días restantes
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-success">
+                                                @diasParaVencer días restantes
+                                            </small>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-box-seam"></i> Sin lotes
+                                    </span>
+                                }
                             </td>
 
-                            <!-- Categoría -->
-                            <td><small>@producto.CategoriaNombre</small></td>
-                            
-                            <!-- Acciones -->
                             <td class="text-center">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button class="btn btn-outline-primary" 
-                                            @onclick="() => EditarProducto(producto.Id)"
-                                            title="Editar producto">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" 
-                                            @onclick="() => MostrarConfirmacionEliminar(producto)"
-                                            title="Eliminar producto">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+    <div class="d-flex flex-column gap-1">
+        <button class="btn btn-sm btn-primary w-100" 
+                @onclick="() => VerDetalle(producto.Id)">
+            <i class="bi bi-eye me-1"></i>
+            Ver Detalles
+        </button>
+        <button class="btn btn-sm btn-warning w-100" 
+                @onclick="() => EditarProducto(producto.Id)">
+            <i class="bi bi-pencil me-1"></i>
+            Editar
+        </button>
+        <button class="btn btn-sm btn-danger w-100" 
+                @onclick="() => MostrarConfirmacionEliminar(producto)" 
+                disabled="@producto.TieneStock"
+                title="@(producto.TieneStock ? "No se puede eliminar: tiene stock disponible" : "")">
+            <i class="bi bi-trash me-1"></i>
+            Eliminar
+        </button>
+    </div>
+</td>
                         </tr>
                     }
                 </tbody>
@@ -199,7 +249,7 @@
     }
 </div>
 
-@* T-40: Modal de confirmación para eliminar *@
+@* Modal de confirmación para eliminar *@
 @if (mostrarModalEliminar)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -220,21 +270,37 @@
                             <div class="card-body">
                                 <p class="mb-1"><strong>Código:</strong> @productoAEliminar.Codigo</p>
                                 <p class="mb-1"><strong>Nombre:</strong> @productoAEliminar.Nombre</p>
-                                <p class="mb-1"><strong>Precio:</strong> @((productoAEliminar.Precio.HasValue ? "$" + productoAEliminar.Precio.Value.ToString("N2") : "N/A"))</p>
-                                <p class="mb-0"><strong>Stock:</strong> @productoAEliminar.Stock @productoAEliminar.CategoriaNombre</p>
+                                <p class="mb-1"><strong>Categoría:</strong> @productoAEliminar.CategoriaNombre</p>
+                                <p class="mb-0"><strong>Stock:</strong> 
+                                    <span class="badge @(productoAEliminar.TieneStock ? "bg-danger" : "bg-secondary")">
+                                        @productoAEliminar.Stock unidades
+                                    </span>
+                                </p>
                             </div>
                         </div>
-                        <div class="alert alert-warning mt-3 mb-0">
-                            <i class="bi bi-info-circle me-2"></i>
-                            <strong>Advertencia:</strong> Esta acción no se puede deshacer.
-                        </div>
+
+                        @if (productoAEliminar.TieneStock)
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                                <strong>¡Atención!</strong> Este producto tiene <strong>@productoAEliminar.Stock unidades</strong> en stock. 
+                                No podrá ser eliminado hasta que agote o elimine los lotes asociados.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+                            </div>
+                        }
                     }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CancelarEliminar" disabled="@eliminando">
                         <i class="bi bi-x-circle"></i> Cancelar
                     </button>
-                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminar" disabled="@eliminando">
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminar" disabled="@GetDisabledEliminar()">
                         @if (eliminando)
                         {
                             <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -256,26 +322,44 @@
     private List<ProductoDto>? productos;
     private string textoBusqueda = string.Empty;
     private string filtroStock = "todos";
+    private string filtroCategoria = "todas";
     private string ordenamiento = "nombre";
     private bool cargando = true;
     private string mensajeExito = string.Empty;
     private string mensajeError = string.Empty;
-
-    // T-40: Variables para el modal de confirmación
     private bool mostrarModalEliminar = false;
     private bool eliminando = false;
     private ProductoDto? productoAEliminar = null;
+
+    private string ObtenerColorLote(int diasParaVencer)
+    {
+        if (diasParaVencer < 0) return "bg-danger";
+        if (diasParaVencer <= 7) return "bg-danger";
+        if (diasParaVencer <= 30) return "bg-warning";
+        return "bg-success";
+    }
+
+    private string ObtenerIconoLote(int diasParaVencer)
+    {
+        if (diasParaVencer < 0) return "bi-x-circle-fill";
+        if (diasParaVencer <= 7) return "bi-exclamation-triangle-fill";
+        if (diasParaVencer <= 30) return "bi-clock-fill";
+        return "bi-check-circle-fill";
+    }
+
+    private void VerDetalle(int id)
+{
+    Navigation.NavigateTo($"/productos/detalles/{id}");
+}
+
 
     private IEnumerable<ProductoDto> ProductosFiltrados
     {
         get
         {
-            if (productos == null)
-                return Enumerable.Empty<ProductoDto>();
-
+            if (productos == null) return Enumerable.Empty<ProductoDto>();
             var resultado = productos.AsEnumerable();
 
-            // Filtro por texto de búsqueda (nombre o código)
             if (!string.IsNullOrWhiteSpace(textoBusqueda))
             {
                 resultado = resultado.Where(p =>
@@ -284,7 +368,6 @@
                 );
             }
 
-            // Filtro por stock
             resultado = filtroStock switch
             {
                 "conStock" => resultado.Where(p => p.TieneStock),
@@ -292,12 +375,17 @@
                 _ => resultado
             };
 
-            // Ordenamiento
+            resultado = filtroCategoria != "todas"
+                ? resultado.Where(p => p.CategoriaId.ToString() == filtroCategoria)
+                : resultado;
+            
+
             resultado = ordenamiento switch
             {
                 "codigo" => resultado.OrderBy(p => p.Codigo),
                 "precio" => resultado.OrderBy(p => p.Precio ?? 0m),
                 "stock" => resultado.OrderByDescending(p => p.Stock),
+                "expiracion" => resultado.OrderBy(p => p.FechaExpiracionLotePrioritario ?? DateTime.MaxValue),
                 _ => resultado.OrderBy(p => p.Nombre)
             };
 
@@ -316,8 +404,7 @@
         {
             cargando = true;
             mensajeError = string.Empty;
-            var resultado = await ProductoService.ObtenerTodosAsync();
-            productos = resultado.ToList();
+            productos = (await ProductoService.ObtenerTodosAsync()).ToList();
         }
         catch (Exception ex)
         {
@@ -334,24 +421,22 @@
         Navigation.NavigateTo($"/productos/editar/{id}");
     }
 
-    // T-40: Mostrar modal de confirmación
     private void MostrarConfirmacionEliminar(ProductoDto producto)
     {
         productoAEliminar = producto;
         mostrarModalEliminar = true;
     }
 
-    // T-40: Cancelar eliminación
     private void CancelarEliminar()
     {
         mostrarModalEliminar = false;
         productoAEliminar = null;
     }
 
-    // T-40: Confirmar y ejecutar eliminación
     private async Task ConfirmarEliminar()
     {
         if (productoAEliminar == null) return;
+        var nombreProducto = productoAEliminar.Nombre;
 
         try
         {
@@ -361,25 +446,35 @@
 
             await ProductoService.EliminarAsync(productoAEliminar.Id);
             
-            // T-42: Mensaje de éxito
-            mensajeExito = $"Producto '{productoAEliminar.Nombre}' eliminado exitosamente";
-            
-            // Cerrar modal
+            mensajeExito = $"Producto '{nombreProducto}' eliminado exitosamente";
             mostrarModalEliminar = false;
             productoAEliminar = null;
-            
-            // Recargar lista
             await CargarProductos();
         }
         catch (Exception ex)
         {
-            // T-42: Mensaje de error
-            mensajeError = $"No se pudo eliminar el producto: {ex.Message}";
+            if (ex.Message.Contains("stock disponible") || ex.Message.Contains("tiene stock"))
+            {
+                mensajeError = $"No se puede eliminar '{nombreProducto}' porque tiene stock disponible en lotes.";
+            }
+            else
+            {
+                mensajeError = $"Error al eliminar: {ex.Message}";
+            }
+
             mostrarModalEliminar = false;
         }
         finally
         {
             eliminando = false;
+            productoAEliminar = null;
         }
+    }
+
+    private bool GetDisabledEliminar()
+    {
+        if (eliminando) return true;
+        if (productoAEliminar == null) return false;
+        return productoAEliminar.TieneStock;
     }
 }

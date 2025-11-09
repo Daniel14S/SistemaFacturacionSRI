@@ -100,5 +100,42 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 });
             }
         }
+
+        /// <summary>
+/// GET /api/lote/por-producto/{productoId}
+/// Obtiene todos los lotes relacionados con un producto específico.
+/// </summary>
+[HttpGet("por-producto/{productoId}")]
+[ProducesResponseType(typeof(IEnumerable<LoteDto>), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<ActionResult<IEnumerable<LoteDto>>> ObtenerPorProducto(int productoId)
+{
+    try
+    {
+        _logger.LogInformation("GET /api/lote/por-producto/{ProductoId} - Recuperando lotes", productoId);
+        var lotes = await _loteService.ObtenerPorProductoAsync(productoId);
+
+        if (lotes == null || !lotes.Any())
+        {
+            _logger.LogWarning("No se encontraron lotes para el producto {ProductoId}", productoId);
+            return NotFound(new { mensaje = "No se encontraron lotes para este producto." });
+        }
+
+        _logger.LogInformation("Se obtuvieron {Count} lotes para el producto {ProductoId}", lotes.Count(), productoId);
+        return Ok(lotes);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al obtener lotes por producto {ProductoId}", productoId);
+        return StatusCode(500, new
+        {
+            error = "Error interno al obtener los lotes",
+            mensaje = "Ocurrió un error inesperado. Por favor contacte al administrador."
+        });
+    }
+}
+
+
     }
 }
