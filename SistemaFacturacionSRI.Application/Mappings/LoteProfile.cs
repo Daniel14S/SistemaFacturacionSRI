@@ -23,7 +23,6 @@ namespace SistemaFacturacionSRI.Application.Mappings
                 .ForMember(dest => dest.CantidadDisponible, opt => opt.MapFrom(src => src.CantidadInicial))
                 .ForMember(dest => dest.Producto, opt => opt.Ignore());
             CreateMap<ActualizarLoteDto, Lote>()
-                .ForMember(dest => dest.CantidadDisponible, opt => opt.Ignore())
                 .ForMember(dest => dest.Producto, opt => opt.Ignore());
         }
     }

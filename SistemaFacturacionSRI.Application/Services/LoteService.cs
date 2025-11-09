@@ -75,43 +75,6 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         /// <summary>
-        /// Actualiza la información de un lote existente.
-        /// </summary>
-        /// <param name="loteDto">Datos del lote a actualizar.</param>
-        /// <returns>LoteDto actualizado.</returns>
-        public async Task<LoteDto> ActualizarAsync(LoteDto loteDto)
-        {
-            if (loteDto == null)
-                throw new ArgumentNullException(nameof(loteDto));
-
-            var loteExistente = await _loteRepository.ObtenerPorIdAsync(loteDto.LoteId);
-            if (loteExistente == null)
-                throw new KeyNotFoundException($"No se encontró el lote con ID {loteDto.LoteId}.");
-
-            // Validar producto
-            var producto = await _productoRepository.ObtenerPorIdAsync(loteDto.ProductoId);
-            if (producto == null)
-                throw new KeyNotFoundException($"El producto con ID {loteDto.ProductoId} no existe o está inactivo.");
-
-            // Validar fechas
-            if (loteDto.FechaExpiracion.HasValue && loteDto.FechaExpiracion.Value.Date < loteDto.FechaCompra.Date)
-                throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
-
-            // Mapear cambios desde el DTO hacia la entidad existente
-            loteExistente.PrecioCosto = loteDto.PrecioCosto;
-            loteExistente.CantidadInicial = loteDto.CantidadInicial;
-            loteExistente.FechaCompra = loteDto.FechaCompra;
-            loteExistente.FechaExpiracion = loteDto.FechaExpiracion;
-            loteExistente.ProductoId = loteDto.ProductoId;
-
-            // Guardar los cambios
-            await _loteRepository.ActualizarAsync(loteExistente);
-
-            // Retornar el DTO actualizado
-            return _mapper.Map<LoteDto>(loteExistente);
-        }
-
-        /// <summary>
         /// Elimina un lote existente por su ID.
         /// </summary>
         /// <param name="id">ID del lote a eliminar.</param>
@@ -155,42 +118,32 @@ namespace SistemaFacturacionSRI.Application.Services
             var lotes = await _loteRepository.ObtenerPorProductoAsync(productoId);
             return _mapper.Map<IEnumerable<LoteDto>>(lotes);
         }
-        // SistemaFacturacionSRI.Application/Services/LoteService.cs
-        // Agregar estos métodos a la clase existente:
-
         public async Task<LoteDto?> ObtenerPorIdAsync(int loteId)
         {
             var lote = await _loteRepository.ObtenerPorIdAsync(loteId);
             return lote == null ? null : _mapper.Map<LoteDto>(lote);
         }
 
-       public async Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto)
-{
-    var lote = await _loteRepository.ObtenerPorIdAsync(dto.LoteId);
-    if (lote == null)
-        throw new KeyNotFoundException("No se encontró el lote.");
+        public async Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto)
+        {
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto));
 
-    lote.FechaExpiracion = dto.FechaExpiracion;
-    lote.PrecioCosto = dto.PrecioCosto;
-    lote.CantidadInicial = dto.CantidadInicial;
-    lote.CantidadDisponible = dto.CantidadDisponible;
+            var lote = await _loteRepository.ObtenerPorIdAsync(dto.LoteId);
+            if (lote == null)
+                throw new KeyNotFoundException("No se encontró el lote.");
 
-    await _loteRepository.ActualizarAsync(lote);
+            if (dto.FechaExpiracion.HasValue && dto.FechaExpiracion.Value.Date < lote.FechaCompra.Date)
+                throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
 
-    return new LoteDto
-    {
-        LoteId = lote.LoteId,
-        ProductoId = lote.ProductoId,
-        ProductoNombre = lote.Producto?.Nombre ?? "",
-        ProductoCodigo = lote.Producto?.Codigo ?? "",
-        ProductoCategoria = lote.Producto?.Categoria?.Nombre ?? "",
-        FechaCompra = lote.FechaCompra,
-        FechaExpiracion = lote.FechaExpiracion,
-        PrecioCosto = lote.PrecioCosto,
-        CantidadInicial = lote.CantidadInicial,
-        CantidadDisponible = lote.CantidadDisponible
-    };
-}
+            lote.FechaExpiracion = dto.FechaExpiracion;
+            lote.PrecioCosto = dto.PrecioCosto;
+            lote.CantidadDisponible = dto.CantidadDisponible;
+
+            await _loteRepository.ActualizarAsync(lote);
+
+            return _mapper.Map<LoteDto>(lote);
+        }
 
     }
     
