@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.WebUI;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
+using SistemaFacturacionSRI.WebUI.Services;
+using SistemaFacturacionSRI.WebUI.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,40 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
 builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
+builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
+builder.Services.AddScoped<ILoteRepository, LoteRepository>();
+builder.Services.AddScoped<ILoteService, LoteService>();
+builder.Services.AddScoped<ProductoHttpService>();
+
+
+// ✅ Cliente HTTP para consumir la API desde Blazor
+builder.Services.AddScoped<ProductoHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293")
+    };
+    return new ProductoHttpService(httpClient);
+});
+
+// ✅ Cliente HTTP para lotes
+builder.Services.AddScoped<LoteHttpService>(sp =>
+{
+    var httpClient = new HttpClient
+    {
+        BaseAddress = new Uri("http://localhost:5293")
+    };
+    return new LoteHttpService(httpClient);
+});
+
+// ✅ Cliente HTTP para categorías
+builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+});
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();
@@ -65,7 +100,7 @@ app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
     .AddInteractiveServerRenderMode();
 
 // ===========================
-// MIGRACIÓN AUTOMÁTICA
+// INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
 // ===========================
 using (var scope = app.Services.CreateScope())
 {
@@ -73,5 +108,4 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// ===========================
 app.Run();

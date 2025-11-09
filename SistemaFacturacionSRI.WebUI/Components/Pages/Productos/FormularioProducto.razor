@@ -3,240 +3,266 @@
 @rendermode InteractiveServer
 @using SistemaFacturacionSRI.Application.DTOs.Producto
 @using SistemaFacturacionSRI.Application.Interfaces.Services
-@using SistemaFacturacionSRI.Domain.Enums
+@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.Application.DTOs.TipoIVA
+@using SistemaFacturacionSRI.WebUI.Services
 @inject IProductoService ProductoService
+@inject ITipoIVAService TipoIVAService
 @inject NavigationManager Navigation
+@inject ICategoriaHttpService CategoriaHttpService
+@inject IJSRuntime JSRuntime
 
-<PageTitle>@(IdProducto.HasValue ? "Editar Producto" : "Nuevo Producto")</PageTitle>
+    <PageTitle>@(IdProducto.HasValue ? "Editar Producto" : "Nuevo Producto")</PageTitle>
 
-<div class="container mt-4">
-    <div class="row mb-3">
-        <div class="col">
-            <h3>@(IdProducto.HasValue ? "Editar Producto" : "Nuevo Producto")</h3>
+    <div class="container mt-4">
+        <div class="row mb-3">
+            <div class="col">
+                <h3>@(IdProducto.HasValue ? "Editar Producto" : "Nuevo Producto")</h3>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-secondary" @onclick="Volver">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </button>
+            </div>
         </div>
-        <div class="col-auto">
-            <button class="btn btn-secondary" @onclick="Volver">
-                <i class="bi bi-arrow-left"></i> Volver
-            </button>
-        </div>
-    </div>
 
-    <EditForm Model="@modelo" OnValidSubmit="GuardarProducto">
-        <DataAnnotationsValidator />
+        <EditForm Model="@modelo" OnValidSubmit="GuardarProducto">
+            <DataAnnotationsValidator />
 
-        <div class="card">
-            <div class="card-body">
-                @if (!string.IsNullOrEmpty(mensajeError))
-                {
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle"></i> @mensajeError
-                        <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(mensajeExito))
-                {
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle"></i> @mensajeExito
-                        <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
-                    </div>
-                }
-
-                <div class="row g-3">
-                    <!-- Código -->
-                    <div class="col-md-6">
-                        <label class="form-label">Código <span class="text-danger">*</span></label>
-                        <InputText class="form-control" @bind-Value="modelo.Codigo" placeholder="PROD-001" />
-                        <ValidationMessage For="@(() => modelo.Codigo)" class="text-danger" />
-                        <small class="form-text text-muted">Formato: Letras mayúsculas, números y guiones</small>
-                    </div>
-
-                    <!-- Nombre -->
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                        <InputText class="form-control" @bind-Value="modelo.Nombre" placeholder="Nombre del producto" />
-                        <ValidationMessage For="@(() => modelo.Nombre)" class="text-danger" />
-                    </div>
-
-                    <!-- Descripción -->
-                    <div class="col-12">
-                        <label class="form-label">Descripción</label>
-                        <InputTextArea class="form-control" @bind-Value="modelo.Descripcion" rows="3" placeholder="Descripción detallada del producto (opcional)" />
-                        <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
-                    </div>
-
-                    <!-- Precio -->
-                    <div class="col-md-4">
-                        <label class="form-label">Precio <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <InputNumber class="form-control" @bind-Value="modelo.Precio" step="0.01" placeholder="0.00" />
+            <div class="card">
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(mensajeError))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle"></i> @mensajeError
+                            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
                         </div>
-                        <ValidationMessage For="@(() => modelo.Precio)" class="text-danger" />
-                    </div>
+                    }
 
-                    <!-- Tipo IVA -->
-                    <div class="col-md-4">
-                        <label class="form-label">Tipo de IVA <span class="text-danger">*</span></label>
-                        <InputSelect class="form-select" @bind-Value="modelo.TipoIVA">
-                            <option value="">-- Seleccione --</option>
-                            <option value="@TipoIVA.IVA_0">IVA 0%</option>
-                            <option value="@TipoIVA.IVA_12">IVA 12%</option>
-                            <option value="@TipoIVA.IVA_15">IVA 15%</option>
-                        </InputSelect>
-                        <ValidationMessage For="@(() => modelo.TipoIVA)" class="text-danger" />
-                    </div>
+                    @if (!string.IsNullOrEmpty(mensajeExito))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle"></i> @mensajeExito
+                            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
+                        </div>
+                    }
 
-                    <!-- Stock -->
-                    <div class="col-md-4">
-                        <label class="form-label">Stock <span class="text-danger">*</span></label>
-                        <InputNumber class="form-control" @bind-Value="modelo.Stock" placeholder="0" />
-                        <ValidationMessage For="@(() => modelo.Stock)" class="text-danger" />
-                    </div>
+                    <div class="row g-3">
+                        <!-- Código -->
+                        <div class="col-md-6">
+                            <label class="form-label">Código <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="modelo.Codigo" placeholder="PROD-001"
+                                    disabled="@IdProducto.HasValue" />
+                            <ValidationMessage For="@(() => modelo.Codigo)" class="text-danger" />
+                            <small class="form-text text-muted">Formato: Letras mayúsculas, números y guiones</small>
+                        </div>
 
-                    <!-- Unidad de Medida -->
-                    <div class="col-md-12">
-                        <label class="form-label">Unidad de Medida</label>
-                        <InputText class="form-control" @bind-Value="modelo.UnidadMedida" placeholder="Unidad" />
-                        <ValidationMessage For="@(() => modelo.UnidadMedida)" class="text-danger" />
-                        <small class="form-text text-muted">Ejemplos: Unidad, Kg, Metro, Litro, Caja</small>
+                        <!-- Nombre -->
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="modelo.Nombre" placeholder="Nombre del producto" />
+                            <ValidationMessage For="@(() => modelo.Nombre)" class="text-danger" />
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="col-12">
+                            <label class="form-label">Descripción <span class="text-danger">*</span></label>
+                            <InputTextArea class="form-control" @bind-Value="modelo.Descripcion" rows="3"
+                                        placeholder="Describe el producto" />
+                            <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
+                        </div>
+
+                        <!-- Tipo de IVA -->
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de IVA <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="modelo.TipoIVAId">
+                                <option value="0">-- Seleccione --</option>
+                                @if (tiposIVA is not null)
+                                {
+                                    @foreach (var t in tiposIVA)
+                                    {
+                                        <option value="@t.TipoIVAId">@t.Descripcion</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => modelo.TipoIVAId)" class="text-danger" />
+                        </div>
+
+                        <!-- Categoría -->
+                        <div class="col-md-6">
+                            <label class="form-label">Categoría <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="modelo.CategoriaId">
+                                <option value="0">-- Seleccione --</option>
+                                @if (categorias is not null)
+                                {
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => modelo.CategoriaId)" class="text-danger" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" @onclick="Volver">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+
+                    <div>
+                        @if (IdProducto.HasValue)
+                        {
+                            <button type="button" class="btn btn-danger me-2" @onclick="EliminarProducto" disabled="@(!SePuedeEliminar)">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        }
+
+                        <button type="submit" class="btn btn-primary" disabled="@guardando">
+                            @if (guardando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Guardando...</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-save"></i>
+                                <span> Guardar</span>
+                            }
+                        </button>
                     </div>
                 </div>
             </div>
+        </EditForm>
+    </div>
 
-            <div class="card-footer d-flex justify-content-between">
-                <button type="button" class="btn btn-secondary" @onclick="Volver">
-                    <i class="bi bi-x-circle"></i> Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary" disabled="@guardando">
-                    @if (guardando)
-                    {
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <span>Guardando...</span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-save"></i>
-                        <span> Guardar</span>
-                    }
-                </button>
-            </div>
-        </div>
-    </EditForm>
-</div>
+    @code {
+        [Parameter] public int? IdProducto { get; set; }
 
-@code {
-    [Parameter]
-    public int? IdProducto { get; set; }
+        private CrearProductoDto modelo = new();
+        private ActualizarProductoDto modeloActualizar = new();
+        private List<CategoriaDto>? categorias;
+        private List<TipoIVADto>? tiposIVA;
+        private bool guardando = false;
+        private string mensajeError = string.Empty;
+        private string mensajeExito = string.Empty;
+        private bool SePuedeEliminar { get; set; } = false;
 
-    private CrearProductoDto modelo = new();
-    private ActualizarProductoDto modeloActualizar = new();
-    private bool guardando = false;
-    private string mensajeError = string.Empty;
-    private string mensajeExito = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (IdProducto.HasValue)
+        protected override async Task OnInitializedAsync()
         {
-            await CargarProducto();
-        }
-        else
-        {
-            // Valores por defecto para nuevo producto
-            modelo.UnidadMedida = "Unidad";
-            modelo.TipoIVA = TipoIVA.IVA_12;
-        }
-    }
-
-    private async Task CargarProducto()
-    {
-        try
-        {
-            var producto = await ProductoService.ObtenerPorIdAsync(IdProducto!.Value);
-            if (producto != null)
-            {
-                modeloActualizar = new ActualizarProductoDto
-                {
-                    Id = producto.Id,
-                    Codigo = producto.Codigo,
-                    Nombre = producto.Nombre,
-                    Descripcion = producto.Descripcion,
-                    Precio = producto.Precio,
-                    TipoIVA = producto.TipoIVA,
-                    Stock = producto.Stock,
-                    UnidadMedida = producto.UnidadMedida
-                };
-
-                // Copiar al modelo de visualización
-                modelo.Codigo = producto.Codigo;
-                modelo.Nombre = producto.Nombre;
-                modelo.Descripcion = producto.Descripcion;
-                modelo.Precio = producto.Precio;
-                modelo.TipoIVA = producto.TipoIVA;
-                modelo.Stock = producto.Stock;
-                modelo.UnidadMedida = producto.UnidadMedida;
-            }
-            else
-            {
-                mensajeError = "Producto no encontrado";
-            }
-        }
-        catch (Exception ex)
-        {
-            mensajeError = $"Error al cargar el producto: {ex.Message}";
-        }
-    }
-
-    private async Task GuardarProducto()
-    {
-        try
-        {
-            guardando = true;
-            mensajeError = string.Empty;
-            mensajeExito = string.Empty;
+            await CargarCategorias();
+            await CargarTiposIVA();
 
             if (IdProducto.HasValue)
             {
-                // Actualizar producto existente
-                modeloActualizar.Codigo = modelo.Codigo;
-                modeloActualizar.Nombre = modelo.Nombre;
-                modeloActualizar.Descripcion = modelo.Descripcion;
-                modeloActualizar.Precio = modelo.Precio;
-                modeloActualizar.TipoIVA = modelo.TipoIVA;
-                modeloActualizar.Stock = modelo.Stock;
-                modeloActualizar.UnidadMedida = modelo.UnidadMedida;
-
-                await ProductoService.ActualizarAsync(modeloActualizar);
-                mensajeExito = "Producto actualizado correctamente";
+                await CargarProducto();
+                await VerificarStock();
             }
             else
             {
-                // Crear nuevo producto
-                await ProductoService.CrearAsync(modelo);
-                mensajeExito = "Producto creado correctamente";
+                modelo.TipoIVAId = 0;
+                modelo.CategoriaId = categorias?.Count > 0 ? 0 : 0;
             }
+        }
 
-            // Esperar 1 segundo para mostrar el mensaje y redirigir
-            await Task.Delay(1000);
-            Navigation.NavigateTo("/productos");
-        }
-        catch (InvalidOperationException ex)
+        private async Task CargarCategorias()
         {
-            mensajeError = ex.Message;
+            try { categorias = await CategoriaHttpService.ObtenerTodasAsync(); }
+            catch (Exception ex) { mensajeError = $"Error al cargar categorías: {ex.Message}"; }
         }
-        catch (Exception ex)
-        {
-            mensajeError = $"Error al guardar: {ex.Message}";
-        }
-        finally
-        {
-            guardando = false;
-        }
-    }
 
-    private void Volver()
-    {
-        Navigation.NavigateTo("/productos");
+        private async Task CargarTiposIVA()
+        {
+            try { tiposIVA = await TipoIVAService.ObtenerTodosAsync(); }
+            catch (Exception ex) { mensajeError = $"Error al cargar tipos de IVA: {ex.Message}"; }
+        }
+
+        private async Task CargarProducto()
+        {
+            try
+            {
+                var producto = await ProductoService.ObtenerPorIdAsync(IdProducto!.Value);
+                if (producto != null)
+                {
+                    modeloActualizar = new ActualizarProductoDto
+                    {
+                        Id = producto.Id,
+                        Codigo = producto.Codigo,
+                        Nombre = producto.Nombre,
+                        Descripcion = producto.Descripcion ?? string.Empty,
+                        TipoIVAId = producto.TipoIVAId,
+                        CategoriaId = producto.CategoriaId
+                    };
+
+                    modelo.Codigo = producto.Codigo;
+                    modelo.Nombre = producto.Nombre;
+                    modelo.Descripcion = producto.Descripcion ?? string.Empty;
+                    modelo.TipoIVAId = producto.TipoIVAId;
+                    modelo.CategoriaId = producto.CategoriaId;
+                }
+                else
+                {
+                    mensajeError = "Producto no encontrado";
+                }
+            }
+            catch (Exception ex) { mensajeError = $"Error al cargar el producto: {ex.Message}"; }
+        }
+
+        private async Task VerificarStock()
+        {
+            try
+            {
+                var cantidadTotal = await ProductoService.ObtenerCantidadTotalLotesAsync(IdProducto!.Value);
+                SePuedeEliminar = cantidadTotal == 0;
+            }
+            catch { SePuedeEliminar = false; }
+        }
+
+        private async Task GuardarProducto()
+        {
+            try
+            {
+                guardando = true;
+                mensajeError = string.Empty;
+                mensajeExito = string.Empty;
+
+                if (IdProducto.HasValue)
+                {
+                    modeloActualizar.Nombre = modelo.Nombre;
+                    modeloActualizar.Descripcion = modelo.Descripcion;
+                    modeloActualizar.TipoIVAId = modelo.TipoIVAId;
+                    modeloActualizar.CategoriaId = modelo.CategoriaId;
+
+                    await ProductoService.ActualizarAsync(modeloActualizar);
+                    mensajeExito = "Producto actualizado correctamente";
+                }
+                else
+                {
+                    await ProductoService.CrearAsync(modelo);
+                    mensajeExito = "Producto creado correctamente";
+                }
+
+                await Task.Delay(1000);
+                Navigation.NavigateTo("/productos");
+            }
+            catch (InvalidOperationException ex) { mensajeError = ex.Message; }
+            catch (Exception ex) { mensajeError = $"Error al guardar: {ex.Message}"; }
+            finally { guardando = false; }
+        }
+
+        private void Volver() => Navigation.NavigateTo("/productos");
+
+        private async Task EliminarProducto()
+        {
+            if (!IdProducto.HasValue) return;
+
+            var confirm = await JSRuntime.InvokeAsync<bool>("confirm", $"¿Desea eliminar este producto?");
+            if (confirm)
+            {
+                await ProductoService.EliminarAsync(IdProducto.Value);
+                Navigation.NavigateTo("/productos");
+            }
+        }
+
     }
-}

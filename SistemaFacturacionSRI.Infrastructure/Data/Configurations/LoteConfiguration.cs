@@ -14,7 +14,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(l => l.PrecioCosto).IsRequired().HasColumnType("DECIMAL(18,2)");
 
             builder.HasOne(l => l.Producto)
-                .WithMany()
+                .WithMany(p => p.Lotes)
                 .HasForeignKey(l => l.ProductoId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Lote_Producto");

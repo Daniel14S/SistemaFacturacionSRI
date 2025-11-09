@@ -1,4 +1,3 @@
-using SistemaFacturacionSRI.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace SistemaFacturacionSRI.Application.DTOs.Producto
@@ -28,39 +27,25 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         public string Nombre { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción del producto (opcional).
-        /// </summary>
-        [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
-        public string? Descripcion { get; set; }
+    /// Descripción del producto.
+    /// Obligatoria.
+    /// </summary>
+    [Required(ErrorMessage = "La descripción del producto es obligatoria")]
+    [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
+    public string Descripcion { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tipo de IVA aplicable (FK del catálogo TiposIVA).
+    /// </summary>
+    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
+    [Range(1, int.MaxValue, ErrorMessage = "Seleccione un tipo de IVA válido")]
+    public int TipoIVAId { get; set; }
 
         /// <summary>
-        /// Precio unitario sin IVA.
-        /// Debe ser mayor a 0.
+        /// Categoría del producto.
         /// </summary>
-        [Required(ErrorMessage = "El precio es obligatorio")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
-        public decimal Precio { get; set; }
-
-        /// <summary>
-        /// Tipo de IVA aplicable.
-        /// Valores válidos: 0 (IVA_0), 12 (IVA_12), 15 (IVA_15)
-        /// </summary>
-        [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-        [EnumDataType(typeof(TipoIVA), ErrorMessage = "Tipo de IVA inválido. Use 0, 12 o 15")]
-        public TipoIVA TipoIVA { get; set; }
-
-        /// <summary>
-        /// Cantidad inicial en stock.
-        /// Por defecto es 0 si no se especifica.
-        /// </summary>
-        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
-        public int Stock { get; set; } = 0;
-
-        /// <summary>
-        /// Unidad de medida del producto.
-        /// Por defecto es "Unidad" si no se especifica.
-        /// </summary>
-        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
-        public string UnidadMedida { get; set; } = "Unidad";
+        [Required(ErrorMessage = "La categoría es obligatoria")]
+        [Range(1, int.MaxValue, ErrorMessage = "Seleccione una categoría válida")]
+        public int CategoriaId { get; set; }
     }
 }

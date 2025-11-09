@@ -22,7 +22,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Categoria", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -39,6 +39,342 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("NVARCHAR");
 
                     b.Property<string>("Descripcion")
+                        .HasMaxLength(250)
+                        .HasColumnType("NVARCHAR");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("NVARCHAR");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Categorias_Codigo");
+
+                    b.ToTable("Categorias", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Codigo = "CAT-001",
+                            Descripcion = "Categoría por defecto",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "General"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Codigo = "CAT-002",
+                            Descripcion = "Productos lácteos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Lacteos"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Codigo = "CAT-003",
+                            Descripcion = "Carnes procesadas y embutidos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Embutidos"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            Codigo = "CAT-004",
+                            Descripcion = "Productos de cadena de frío",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Refrigerados"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Activo = true,
+                            Codigo = "CAT-005",
+                            Descripcion = "Dispositivos y accesorios electrónicos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Electronicos"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Activo = true,
+                            Codigo = "CAT-006",
+                            Descripcion = "Bebidas alcohólicas y no alcohólicas",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Bebidas"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Activo = true,
+                            Codigo = "CAT-007",
+                            Descripcion = "Despensa y abarrotes",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Abarrotes"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Activo = true,
+                            Codigo = "CAT-008",
+                            Descripcion = "Productos de limpieza",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Limpieza"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Activo = true,
+                            Codigo = "CAT-009",
+                            Descripcion = "Cuidado personal e higiene",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Higiene"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Activo = true,
+                            Codigo = "CAT-010",
+                            Descripcion = "Panes y repostería",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "Panaderia"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Activo = true,
+                            Codigo = "CAT-011",
+                            Descripcion = "Productos frescos",
+                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Nombre = "FrutasVerduras"
+                        });
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Cliente", b =>
+                {
+                    b.Property<int>("ClienteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClienteId"));
+
+                    b.Property<string>("Apellidos")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Identificacion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Nombres")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("TipoIdentificacionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ClienteId");
+
+                    b.HasIndex("Identificacion")
+                        .IsUnique();
+
+                    b.HasIndex("TipoIdentificacionId");
+
+                    b.ToTable("Clientes", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>
+                {
+                    b.Property<int>("FacturaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FacturaId"));
+
+                    b.Property<string>("ClaveAccesoSRI")
+                        .HasMaxLength(49)
+                        .HasColumnType("nvarchar(49)");
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Emitida");
+
+                    b.Property<string>("EstadoSRI")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Pendiente");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("NumeroFactura")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<decimal>("TotalIVA")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("FacturaId");
+
+                    b.HasIndex("ClaveAccesoSRI")
+                        .IsUnique()
+                        .HasFilter("[ClaveAccesoSRI] IS NOT NULL");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("NumeroFactura")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("Facturas", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.FacturaDetalle", b =>
+                {
+                    b.Property<int>("FacturaDetalleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FacturaDetalleId"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Descuento")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<int>("FacturaId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("IvaLinea")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SubtotalLinea")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<decimal>("TotalLinea")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.HasKey("FacturaDetalleId");
+
+                    b.HasIndex("FacturaId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("FacturaDetalles", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Lote", b =>
+                {
+                    b.Property<int>("LoteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LoteId"));
+
+                    b.Property<int>("CantidadDisponible")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CantidadInicial")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCompra")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaExpiracion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PrecioCosto")
+                        .HasColumnType("DECIMAL(18,2)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("LoteId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("Lotes", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("CategoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("NVARCHAR");
 
@@ -55,31 +391,304 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("NVARCHAR");
 
-                    b.Property<decimal>("Precio")
-                        .HasColumnType("DECIMAL(18,2)");
-
-                    b.Property<int>("Stock")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<int>("TipoIVA")
+                    b.Property<int>("TipoIVAId")
                         .HasColumnType("int");
 
-                    b.Property<string>("UnidadMedida")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("NVARCHAR")
-                        .HasDefaultValue("Unidad");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoriaId");
 
                     b.HasIndex("Codigo")
                         .IsUnique()
                         .HasDatabaseName("IX_Productos_Codigo");
 
+                    b.HasIndex("TipoIVAId");
+
                     b.ToTable("Productos", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Rol", b =>
+                {
+                    b.Property<int>("RolId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RolId"));
+
+                    b.Property<string>("NombreRol")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("RolId");
+
+                    b.HasIndex("NombreRol")
+                        .IsUnique();
+
+                    b.ToTable("Roles", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", b =>
+                {
+                    b.Property<int>("TipoIVAId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TipoIVAId"));
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Porcentaje")
+                        .HasColumnType("DECIMAL(5,2)");
+
+                    b.HasKey("TipoIVAId");
+
+                    b.ToTable("TiposIVA", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            TipoIVAId = 1,
+                            Descripcion = "IVA 0%",
+                            Porcentaje = 0m
+                        },
+                        new
+                        {
+                            TipoIVAId = 2,
+                            Descripcion = "IVA 5%",
+                            Porcentaje = 5m
+                        },
+                        new
+                        {
+                            TipoIVAId = 3,
+                            Descripcion = "IVA 8%",
+                            Porcentaje = 8m
+                        },
+                        new
+                        {
+                            TipoIVAId = 4,
+                            Descripcion = "IVA 10%",
+                            Porcentaje = 10m
+                        },
+                        new
+                        {
+                            TipoIVAId = 5,
+                            Descripcion = "IVA 12%",
+                            Porcentaje = 12m
+                        },
+                        new
+                        {
+                            TipoIVAId = 6,
+                            Descripcion = "IVA 15%",
+                            Porcentaje = 15m
+                        },
+                        new
+                        {
+                            TipoIVAId = 7,
+                            Descripcion = "IVA 20%",
+                            Porcentaje = 20m
+                        });
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIdentificacion", b =>
+                {
+                    b.Property<int>("TipoIdentificacionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TipoIdentificacionId"));
+
+                    b.Property<string>("CodigoSRI")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("nchar(2)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("TipoIdentificacionId");
+
+                    b.ToTable("TiposIdentificacion", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Usuario", b =>
+                {
+                    b.Property<int>("UsuarioId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UsuarioId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NombreCompleto")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("RolId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("UsuarioId");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("RolId");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Cliente", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIdentificacion", "TipoIdentificacion")
+                        .WithMany("Clientes")
+                        .HasForeignKey("TipoIdentificacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Cliente_TipoIdentificacion");
+
+                    b.Navigation("TipoIdentificacion");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Factura_Cliente");
+
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Factura_Usuario");
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.FacturaDetalle", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Factura", "Factura")
+                        .WithMany("Detalles")
+                        .HasForeignKey("FacturaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Detalle_Factura");
+
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Detalle_Producto");
+
+                    b.Navigation("Factura");
+
+                    b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Lote", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Producto", "Producto")
+                        .WithMany("Lotes")
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Lote_Producto");
+
+                    b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Categoria", "Categoria")
+                        .WithMany("Productos")
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", "TipoIVACatalogo")
+                        .WithMany("Productos")
+                        .HasForeignKey("TipoIVAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Productos_TiposIVA");
+
+                    b.Navigation("Categoria");
+
+                    b.Navigation("TipoIVACatalogo");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Usuario", b =>
+                {
+                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.Rol", "Rol")
+                        .WithMany("Usuarios")
+                        .HasForeignKey("RolId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Usuario_Rol");
+
+                    b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Categoria", b =>
+                {
+                    b.Navigation("Productos");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>
+                {
+                    b.Navigation("Detalles");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>
+                {
+                    b.Navigation("Lotes");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Rol", b =>
+                {
+                    b.Navigation("Usuarios");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", b =>
+                {
+                    b.Navigation("Productos");
+                });
+
+            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIdentificacion", b =>
+                {
+                    b.Navigation("Clientes");
                 });
 #pragma warning restore 612, 618
         }

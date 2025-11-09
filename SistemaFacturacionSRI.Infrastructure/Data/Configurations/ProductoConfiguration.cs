@@ -31,25 +31,48 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(p => p.Descripcion)
                 .HasMaxLength(1000)
                 .HasColumnType("NVARCHAR")
-                .IsRequired(false);
+                .IsRequired();
 
-            builder.Property(p => p.Precio)
+            builder.Property(p => p.TipoIVAId)
+                .IsRequired();
+
+            // UnidadMedida eliminada del modelo
+
+            // Relaciones: FK requerida a TiposIVA (catálogo) y Categorias
+            /*builder.HasOne(p => p.TipoIVACatalogo)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoIVAId)
                 .IsRequired()
-                .HasColumnType("DECIMAL(18,2)");
+                .HasConstraintName("FK_Productos_TiposIVA")
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Property(p => p.TipoIVA)
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
                 .IsRequired()
-                .HasConversion<int>();
+                .HasConstraintName("FK_Productos_Categorias")
+                .OnDelete(DeleteBehavior.Restrict);
+            */
+            // Configuración de la relación con Categoría
+            builder.HasOne(p => p.Categoria)
+                .WithMany(c => c.Productos)
+                .HasForeignKey(p => p.CategoriaId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            builder.Property(p => p.Stock)
-                .IsRequired()
-                .HasDefaultValue(0);
+            builder.HasOne(p => p.TipoIVACatalogo)
+                .WithMany(t => t.Productos)
+                .HasForeignKey(p => p.TipoIVAId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("FK_Productos_TiposIVA");
 
-            builder.Property(p => p.UnidadMedida)
-                .HasMaxLength(20)
-                .HasColumnType("NVARCHAR")
-                .HasDefaultValue("Unidad");
+            builder.HasMany(p => p.Lotes)
+                .WithOne(l => l.Producto)
+                .HasForeignKey(l => l.ProductoId)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Propiedades calculadas, no mapeadas en base de datos
+            builder.Ignore(p => p.PrecioActual);
+            builder.Ignore(p => p.StockDisponible);
             builder.Ignore(p => p.ValorIVA);
             builder.Ignore(p => p.PrecioConIVA);
             builder.Ignore(p => p.TieneStock);

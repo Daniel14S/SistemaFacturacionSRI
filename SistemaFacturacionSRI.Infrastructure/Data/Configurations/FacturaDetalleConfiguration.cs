@@ -12,6 +12,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.HasKey(d => d.FacturaDetalleId);
 
             builder.Property(d => d.PrecioUnitario).IsRequired().HasColumnType("DECIMAL(18,2)");
+            builder.Property(d => d.Descuento).HasColumnType("DECIMAL(18,2)");
             builder.Property(d => d.SubtotalLinea).IsRequired().HasColumnType("DECIMAL(18,2)");
             builder.Property(d => d.IvaLinea).IsRequired().HasColumnType("DECIMAL(18,2)");
             builder.Property(d => d.TotalLinea).IsRequired().HasColumnType("DECIMAL(18,2)");

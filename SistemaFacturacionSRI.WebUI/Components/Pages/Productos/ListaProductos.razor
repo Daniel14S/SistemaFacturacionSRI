@@ -1,7 +1,11 @@
 @page "/productos"
+@rendermode InteractiveServer
 @using SistemaFacturacionSRI.Application.DTOs.Producto
-@using SistemaFacturacionSRI.Application.Interfaces.Services
-@inject IProductoService ProductoService
+@using SistemaFacturacionSRI.Domain.Entities
+@using SistemaFacturacionSRI.WebUI.Services
+@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.WebUI.Controllers
+@inject ProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
 <PageTitle>Productos</PageTitle>
@@ -14,16 +18,38 @@
         </NavLink>
     </div>
 
+    @* Mensajes de éxito/error *@
+    @if (!string.IsNullOrEmpty(mensajeExito))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <strong>Éxito:</strong> @mensajeExito
+            <button type="button" class="btn-close" @onclick="() => mensajeExito = string.Empty"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(mensajeError))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Error:</strong> @mensajeError
+            <button type="button" class="btn-close" @onclick="() => mensajeError = string.Empty"></button>
+        </div>
+    }
+
     <!-- Filtros de búsqueda -->
     <div class="card mb-3">
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label">Buscar por nombre:</label>
-                    <input type="text" class="form-control" @bind="textoBusqueda" @bind:event="oninput" placeholder="Ingrese el nombre del producto...">
+                    <label class="form-label fw-bold">Buscar por nombre o código:</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" @bind="textoBusqueda" @bind:event="oninput" 
+                               placeholder="Ingrese el nombre o código del producto...">
+                    </div>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Filtrar por stock:</label>
+                    <label class="form-label fw-bold">Filtrar por stock:</label>
                     <select class="form-select" @bind="filtroStock">
                         <option value="todos">Todos</option>
                         <option value="conStock">Con Stock</option>
@@ -31,30 +57,53 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Ordenar por:</label>
+                    <label class="form-label fw-bold">Ordenar por:</label>
                     <select class="form-select" @bind="ordenamiento">
                         <option value="nombre">Nombre</option>
                         <option value="codigo">Código</option>
                         <option value="precio">Precio</option>
                         <option value="stock">Stock</option>
+                        <option value="expiracion">Fecha Expiración</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Categoría:</label>
+                    <select class="form-select" @bind="filtroCategoria">
+                        <option value="todas">Todas</option>
+                        @foreach (var categoria in ProductosFiltrados
+                            .Select(p => new CategoriaDto { Id = p.CategoriaId, Nombre = p.CategoriaNombre })
+                            .Distinct()
+                            .OrderBy(c => c.Nombre))
+                        {
+                            <option value="@categoria.Id">@categoria.Nombre</option>
+                        }
                     </select>
                 </div>
             </div>
         </div>
     </div>
 
-    @if (productos == null)
+    @if (cargando)
     {
-        <div class="text-center">
-            <div class="spinner-border" role="status">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                 <span class="visually-hidden">Cargando...</span>
             </div>
+            <p class="mt-3 text-muted">Cargando productos...</p>
+        </div>
+    }
+    else if (productos == null || !productos.Any())
+    {
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle fs-1"></i>
+            <p class="mb-0 mt-2">No hay productos registrados. ¡Crea tu primer producto!</p>
         </div>
     }
     else if (!ProductosFiltrados.Any())
     {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No se encontraron productos con los filtros aplicados.
+        <div class="alert alert-warning text-center">
+            <i class="bi bi-exclamation-triangle fs-1"></i>
+            <p class="mb-0 mt-2">No se encontraron productos con los filtros aplicados.</p>
         </div>
     }
     else
@@ -67,39 +116,131 @@
             <table class="table table-striped table-hover align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-                        <th>Precio</th>
-                        <th>IVA</th>
-                        <th>Precio con IVA</th>
-                        <th>Stock</th>
-                        <th class="text-center">Acciones</th>
+                        <th style="width: 8%;">Código</th>
+                        <th style="width: 15%;">Nombre</th>
+                        <th style="width: 18%;">Descripción</th>
+                        <th style="width: 8%;">Precio/Lote Prioritario</th>
+                        <th style="width: 6%;">IVA</th>
+                        <th style="width: 8%;">Precio c/IVA</th>
+                        <th style="width: 6%;">Stock</th>
+                        <th style="width: 8%;">Categoría</th>
+                        <th style="width: 13%;">Lote Prioritario</th>
+                        <th style="width: 10%;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var producto in ProductosFiltrados)
                     {
                         <tr>
-                            <td>@producto.Codigo</td>
-                            <td>@producto.Nombre</td>
-                            <td>$@producto.Precio.ToString("N2")</td>
-                            <td>@producto.TipoIVADescripcion</td>
-                            <td>$@producto.PrecioConIVA.ToString("N2")</td>
+                            <td><code class="text-primary">@producto.Codigo</code></td>
+                            <td><strong>@producto.Nombre</strong></td>
                             <td>
-                                <span class="badge @(producto.TieneStock ? "bg-success" : "bg-danger")">
-                                    @producto.Stock
-                                </span>
+                                @if (!string.IsNullOrEmpty(producto.Descripcion))
+                                {
+                                    <small class="text-muted">
+                                        @(producto.Descripcion.Length > 50 ? producto.Descripcion.Substring(0, 50) + "..." : producto.Descripcion)
+                                    </small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted fst-italic">Sin descripción</small>
+                                }
                             </td>
+                            <td>
+                                @if (producto.Precio.HasValue)
+                                {
+                                    <strong>$@producto.Precio.Value.ToString("N2")</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td><span class="badge bg-info">@producto.TipoIVADescripcion</span></td>
+                            <td>
+                                @if (producto.PrecioConIVA.HasValue)
+                                {
+                                    <strong class="text-success">$@producto.PrecioConIVA.Value.ToString("N2")</strong>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+                            <td><span class="badge @(producto.TieneStock ? "bg-success" : "bg-danger")">@producto.Stock</span></td>
+                            <td><small>@producto.CategoriaNombre</small></td>
+
+                            <!-- Columna Lote Prioritario con colores -->
+                            <td>
+                                @if (!string.IsNullOrEmpty(producto.LotePrioritario) && producto.FechaExpiracionLotePrioritario.HasValue)
+                                {
+                                    var diasParaVencer = (producto.FechaExpiracionLotePrioritario.Value.Date - DateTime.Today).Days;
+                                    var colorBadge = ObtenerColorLote(diasParaVencer);
+                                    var icono = ObtenerIconoLote(diasParaVencer);
+
+                                    <div class="d-flex flex-column">
+                                        <span class="badge @colorBadge mb-1">
+                                            <i class="bi @icono me-1"></i>
+                                            Lote: @producto.LotePrioritario
+                                        </span>
+                                        <small class="text-muted">
+                                            Vence: @producto.FechaExpiracionLotePrioritario.Value.ToString("dd/MM/yyyy")
+                                        </small>
+                                        @if (diasParaVencer < 0)
+                                        {
+                                            <small class="text-danger fw-bold">
+                                                <i class="bi bi-exclamation-triangle-fill"></i> ¡VENCIDO! (@Math.Abs(diasParaVencer) días)
+                                            </small>
+                                        }
+                                        else if (diasParaVencer <= 7)
+                                        {
+                                            <small class="text-danger fw-bold">
+                                                <i class="bi bi-exclamation-circle-fill"></i> Vence en @diasParaVencer día(s)
+                                            </small>
+                                        }
+                                        else if (diasParaVencer <= 30)
+                                        {
+                                            <small class="text-warning">
+                                                <i class="bi bi-clock-fill"></i> @diasParaVencer días restantes
+                                            </small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-success">
+                                                @diasParaVencer días restantes
+                                            </small>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-box-seam"></i> Sin lotes
+                                    </span>
+                                }
+                            </td>
+
                             <td class="text-center">
-                                <div class="d-flex justify-content-center gap-2">
-                                    <button class="btn btn-sm btn-warning px-3" @onclick="() => EditarProducto(producto.Id)">
-                                        Editar
-                                    </button>
-                                    <button class="btn btn-sm btn-danger px-3" @onclick="() => EliminarProducto(producto.Id)">
-                                        Eliminar
-                                    </button>
-                                </div>
-                            </td>
+    <div class="d-flex flex-column gap-1">
+        <button class="btn btn-sm btn-primary w-100" 
+                @onclick="() => VerDetalle(producto.Id)">
+            <i class="bi bi-eye me-1"></i>
+            Ver Detalles
+        </button>
+        <button class="btn btn-sm btn-warning w-100" 
+                @onclick="() => EditarProducto(producto.Id)">
+            <i class="bi bi-pencil me-1"></i>
+            Editar
+        </button>
+        <button class="btn btn-sm btn-danger w-100" 
+                @onclick="() => MostrarConfirmacionEliminar(producto)" 
+                disabled="@producto.TieneStock"
+                title="@(producto.TieneStock ? "No se puede eliminar: tiene stock disponible" : "")">
+            <i class="bi bi-trash me-1"></i>
+            Eliminar
+        </button>
+    </div>
+</td>
                         </tr>
                     }
                 </tbody>
@@ -108,22 +249,117 @@
     }
 </div>
 
+@* Modal de confirmación para eliminar *@
+@if (mostrarModalEliminar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarEliminar"></button>
+                </div>
+                <div class="modal-body">
+                    @if (productoAEliminar != null)
+                    {
+                        <p class="mb-3">¿Está seguro que desea eliminar el siguiente producto?</p>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-1"><strong>Código:</strong> @productoAEliminar.Codigo</p>
+                                <p class="mb-1"><strong>Nombre:</strong> @productoAEliminar.Nombre</p>
+                                <p class="mb-1"><strong>Categoría:</strong> @productoAEliminar.CategoriaNombre</p>
+                                <p class="mb-0"><strong>Stock:</strong> 
+                                    <span class="badge @(productoAEliminar.TieneStock ? "bg-danger" : "bg-secondary")">
+                                        @productoAEliminar.Stock unidades
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        @if (productoAEliminar.TieneStock)
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">
+                                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                                <strong>¡Atención!</strong> Este producto tiene <strong>@productoAEliminar.Stock unidades</strong> en stock. 
+                                No podrá ser eliminado hasta que agote o elimine los lotes asociados.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Advertencia:</strong> Esta acción no se puede deshacer.
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarEliminar" disabled="@eliminando">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarEliminar" disabled="@GetDisabledEliminar()">
+                        @if (eliminando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            <span>Eliminando...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-trash"></i>
+                            <span> Eliminar</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<ProductoDto>? productos;
     private string textoBusqueda = string.Empty;
     private string filtroStock = "todos";
+    private string filtroCategoria = "todas";
     private string ordenamiento = "nombre";
+    private bool cargando = true;
+    private string mensajeExito = string.Empty;
+    private string mensajeError = string.Empty;
+    private bool mostrarModalEliminar = false;
+    private bool eliminando = false;
+    private ProductoDto? productoAEliminar = null;
+
+    private string ObtenerColorLote(int diasParaVencer)
+    {
+        if (diasParaVencer < 0) return "bg-danger";
+        if (diasParaVencer <= 7) return "bg-danger";
+        if (diasParaVencer <= 30) return "bg-warning";
+        return "bg-success";
+    }
+
+    private string ObtenerIconoLote(int diasParaVencer)
+    {
+        if (diasParaVencer < 0) return "bi-x-circle-fill";
+        if (diasParaVencer <= 7) return "bi-exclamation-triangle-fill";
+        if (diasParaVencer <= 30) return "bi-clock-fill";
+        return "bi-check-circle-fill";
+    }
+
+    private void VerDetalle(int id)
+{
+    Navigation.NavigateTo($"/productos/detalles/{id}");
+}
+
 
     private IEnumerable<ProductoDto> ProductosFiltrados
     {
         get
         {
-            if (productos == null)
-                return Enumerable.Empty<ProductoDto>();
-
+            if (productos == null) return Enumerable.Empty<ProductoDto>();
             var resultado = productos.AsEnumerable();
 
-            // Filtro por texto de búsqueda
             if (!string.IsNullOrWhiteSpace(textoBusqueda))
             {
                 resultado = resultado.Where(p =>
@@ -132,7 +368,6 @@
                 );
             }
 
-            // Filtro por stock
             resultado = filtroStock switch
             {
                 "conStock" => resultado.Where(p => p.TieneStock),
@@ -140,12 +375,17 @@
                 _ => resultado
             };
 
-            // Ordenamiento
+            resultado = filtroCategoria != "todas"
+                ? resultado.Where(p => p.CategoriaId.ToString() == filtroCategoria)
+                : resultado;
+            
+
             resultado = ordenamiento switch
             {
                 "codigo" => resultado.OrderBy(p => p.Codigo),
-                "precio" => resultado.OrderBy(p => p.Precio),
+                "precio" => resultado.OrderBy(p => p.Precio ?? 0m),
                 "stock" => resultado.OrderByDescending(p => p.Stock),
+                "expiracion" => resultado.OrderBy(p => p.FechaExpiracionLotePrioritario ?? DateTime.MaxValue),
                 _ => resultado.OrderBy(p => p.Nombre)
             };
 
@@ -160,13 +400,20 @@
 
     private async Task CargarProductos()
     {
-        var resultado = await ProductoService.ObtenerTodosAsync();
-        productos = resultado.ToList();
-    }
-
-    private void NuevoProducto()
-    {
-        Navigation.NavigateTo("/productos/nuevo");
+        try
+        {
+            cargando = true;
+            mensajeError = string.Empty;
+            productos = (await ProductoService.ObtenerTodosAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al cargar productos: {ex.Message}";
+        }
+        finally
+        {
+            cargando = false;
+        }
     }
 
     private void EditarProducto(int id)
@@ -174,10 +421,60 @@
         Navigation.NavigateTo($"/productos/editar/{id}");
     }
 
-    private async Task EliminarProducto(int id)
+    private void MostrarConfirmacionEliminar(ProductoDto producto)
     {
-        // TODO: Implementar confirmación antes de eliminar
-        await ProductoService.EliminarAsync(id);
-        await CargarProductos();
+        productoAEliminar = producto;
+        mostrarModalEliminar = true;
+    }
+
+    private void CancelarEliminar()
+    {
+        mostrarModalEliminar = false;
+        productoAEliminar = null;
+    }
+
+    private async Task ConfirmarEliminar()
+    {
+        if (productoAEliminar == null) return;
+        var nombreProducto = productoAEliminar.Nombre;
+
+        try
+        {
+            eliminando = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            await ProductoService.EliminarAsync(productoAEliminar.Id);
+            
+            mensajeExito = $"Producto '{nombreProducto}' eliminado exitosamente";
+            mostrarModalEliminar = false;
+            productoAEliminar = null;
+            await CargarProductos();
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("stock disponible") || ex.Message.Contains("tiene stock"))
+            {
+                mensajeError = $"No se puede eliminar '{nombreProducto}' porque tiene stock disponible en lotes.";
+            }
+            else
+            {
+                mensajeError = $"Error al eliminar: {ex.Message}";
+            }
+
+            mostrarModalEliminar = false;
+        }
+        finally
+        {
+            eliminando = false;
+            productoAEliminar = null;
+        }
+    }
+
+    private bool GetDisabledEliminar()
+    {
+        if (eliminando) return true;
+        if (productoAEliminar == null) return false;
+        return productoAEliminar.TieneStock;
     }
 }

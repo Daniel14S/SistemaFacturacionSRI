@@ -16,19 +16,50 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
 
         public async Task<Producto?> ObtenerPorCodigoAsync(string codigo)
         {
-            return await _dbSet.FirstOrDefaultAsync(p => p.Codigo == codigo && p.Activo);
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .FirstOrDefaultAsync(p => p.Codigo == codigo && p.Activo);
         }
 
         public async Task<IEnumerable<Producto>> ObtenerProductosConStockAsync()
         {
-            return await _dbSet.Where(p => p.Stock > 0 && p.Activo).ToListAsync();
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .Where(p => p.Activo && p.Lotes.Any(l => l.CantidadDisponible > 0))
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Producto>> BuscarPorNombreAsync(string nombre)
         {
             return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
                 .Where(p => p.Nombre.Contains(nombre) && p.Activo)
                 .ToListAsync();
+        }
+
+        public override async Task<IEnumerable<Producto>> ObtenerTodosAsync()
+        {
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .Where(p => p.Activo)
+                .ToListAsync();
+        }
+
+        public override async Task<Producto?> ObtenerPorIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .FirstOrDefaultAsync(e => e.Id == id && e.Activo);
         }
     }
 }

@@ -1,5 +1,6 @@
-using SistemaFacturacionSRI.Domain.Enums;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace SistemaFacturacionSRI.Domain.Entities
 {
@@ -27,69 +28,82 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public string Nombre { get; set; } = string.Empty;
 
         /// <summary>
-        /// Descripción detallada del producto (opcional).
-        /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
-        /// </summary>
-        [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
-        public string? Descripcion { get; set; }
+    /// Descripción detallada del producto.
+    /// Ejemplo: "Laptop con procesador Intel Core i5, 8GB RAM, 256GB SSD"
+    /// </summary>
+    [Required(ErrorMessage = "La descripción del producto es obligatoria")]
+    [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
+    public string Descripcion { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Clave foránea al catálogo de Tipos de IVA almacenado en BD.
+    /// Reemplaza el uso del enum TipoIVA y es obligatoria.
+    /// </summary>
+    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
+    public int TipoIVAId { get; set; }
+
+    /// <summary>
+    /// Navegación al catálogo de Tipos de IVA.
+    /// </summary>
+    public TipoIVACatalogo? TipoIVACatalogo { get; set; }
+
+    /// <summary>
+    /// Clave foránea opcional a Categoría del producto.
+    /// </summary>
+    public int? CategoriaId { get; set; }
+
+    /// <summary>
+    /// Navegación a Categoría.
+    /// </summary>
+    public virtual Categoria? Categoria { get; set; }
 
         /// <summary>
-        /// Precio unitario del producto sin IVA.
-        /// Ejemplo: 1000.00
-        /// Debe ser mayor a cero.
+        /// Colección de lotes asociados al producto.
+        /// Cada lote representa una entrada de inventario con su propio costo y cantidades.
         /// </summary>
-        [Required(ErrorMessage = "El precio es obligatorio")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
-        public decimal Precio { get; set; }
+        public ICollection<Lote> Lotes { get; set; } = new List<Lote>();
 
         /// <summary>
-        /// Tipo de IVA aplicable al producto.
-        /// Valores posibles: IVA_0 (0%), IVA_12 (12%), IVA_15 (15%)
+        /// Obtiene el precio actual tomando el costo del lote más reciente.
+        /// Retorna null cuando el producto aún no tiene lotes.
         /// </summary>
-        [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-        public TipoIVA TipoIVA { get; set; }
+        public decimal? PrecioActual => Lotes
+            .OrderByDescending(l => l.FechaCompra)
+            .Select(l => (decimal?)l.PrecioCosto)
+            .FirstOrDefault();
 
         /// <summary>
-        /// Cantidad disponible en inventario.
-        /// Ejemplo: 50 unidades
-        /// Puede ser 0 si no hay stock.
+        /// Calcula el stock disponible sumando la cantidad disponible de cada lote.
         /// </summary>
-        [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
-        public int Stock { get; set; } = 0;
+        public int StockDisponible => Lotes?.Sum(l => l.CantidadDisponible) ?? 0;
 
         /// <summary>
-        /// Unidad de medida del producto.
-        /// Ejemplo: "Unidad", "Kg", "Metro", "Litro"
+        /// Calcula el valor del IVA para una unidad del producto en base al precio actual.
+        /// Retorna null cuando no hay precio vigente o el catálogo no está cargado.
         /// </summary>
-        [StringLength(20, ErrorMessage = "La unidad de medida no puede exceder 20 caracteres")]
-        public string UnidadMedida { get; set; } = "Unidad";
-
-        // Propiedades calculadas (no se guardan en la BD, solo se calculan en memoria)
-
-        /// <summary>
-        /// Calcula el valor del IVA para una unidad del producto.
-        /// Fórmula: Precio × TipoIVA%
-        /// Ejemplo: Si Precio = 100 y TipoIVA = 12%, retorna 12
-        /// </summary>
-        public decimal ValorIVA => TipoIVA.CalcularIVA(Precio);
+        public decimal? ValorIVA => PrecioActual.HasValue && TipoIVACatalogo != null
+            ? PrecioActual.Value * (TipoIVACatalogo.Porcentaje / 100m)
+            : null;
 
         /// <summary>
-        /// Calcula el precio total (precio base + IVA).
-        /// Fórmula: Precio + ValorIVA
-        /// Ejemplo: Si Precio = 100 y ValorIVA = 12, retorna 112
+        /// Calcula el precio final incluyendo IVA.
+        /// Retorna null cuando no hay precio vigente.
         /// </summary>
-        public decimal PrecioConIVA => TipoIVA.CalcularTotal(Precio);
+        public decimal? PrecioConIVA => PrecioActual.HasValue
+            ? PrecioActual + (ValorIVA ?? 0m)
+            : null;
 
         /// <summary>
-        /// Indica si el producto tiene stock disponible.
-        /// Útil para validaciones en la interfaz.
+        /// Indica si existe stock disponible.
         /// </summary>
-        public bool TieneStock => Stock > 0;
+        public bool TieneStock => StockDisponible > 0;
 
         /// <summary>
-        /// Calcula el valor total del inventario (Stock × Precio).
-        /// Ejemplo: Si Stock = 10 y Precio = 100, retorna 1000
+        /// Calcula el valor total del inventario (precio actual × stock disponible).
+        /// Retorna null cuando no hay precio vigente.
         /// </summary>
-        public decimal ValorInventario => Stock * Precio;
+        public decimal? ValorInventario => Lotes != null && Lotes.Any()
+            ? Lotes.Sum(l => l.CantidadDisponible * l.PrecioCosto)
+            : null;
     }
 }
