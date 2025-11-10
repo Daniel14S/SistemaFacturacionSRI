@@ -72,7 +72,7 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
         /// <summary>
 /// Obtiene todos los productos activos CON su lote prioritario.
 /// El lote prioritario es el que tiene la fecha de expiración más cercana.
-/// ✅ NUEVO: Necesario para mostrar lote próximo a vencer en la interfaz.
+/// NUEVO: Necesario para mostrar lote próximo a vencer en la interfaz.
 /// </summary>
 /// <returns>Lista de productos con información del lote más próximo a expirar</returns>
 Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync();

@@ -12,7 +12,7 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
         Task<LoteDto?> ObtenerLotePrioritarioAsync(int idProducto);
         Task<IEnumerable<LoteDto>> ObtenerPorProductoAsync(int productoId);
         
-        // ✅ NUEVOS MÉTODOS
+        //  NUEVOS MÉTODOS
         Task<LoteDto?> ObtenerPorIdAsync(int loteId);
         Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto);
         Task EliminarAsync(int loteId);

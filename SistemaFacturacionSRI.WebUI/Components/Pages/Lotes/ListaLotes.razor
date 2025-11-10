@@ -782,7 +782,7 @@
             mensajeError = string.Empty;
             mensajeExito = string.Empty;
 
-            // ✅ VALIDAR FECHA DE COMPRA (no puede ser futura)
+            // VALIDAR FECHA DE COMPRA (no puede ser futura)
             if (loteForm.FechaCompra.HasValue)
             {
                 if (loteForm.FechaCompra.Value.Date > DateTime.Today)
@@ -793,7 +793,7 @@
                 }
             }
 
-            // ✅ VALIDAR FECHA DE EXPIRACIÓN
+            //  VALIDAR FECHA DE EXPIRACIÓN
             if (loteForm.FechaExpiracion.HasValue && loteForm.FechaCompra.HasValue)
             {
                 if (loteForm.FechaExpiracion.Value < loteForm.FechaCompra.Value)
@@ -806,7 +806,7 @@
 
             if (esModoEdicion)
             {
-                // ✅ ACTUALIZAR (solo precio, cantidad y fecha expiración)
+                //  ACTUALIZAR (solo precio, cantidad y fecha expiración)
                 if (loteForm.CantidadDisponible is null)
                 {
                     mensajeError = "Ingrese la cantidad disponible del lote.";
@@ -850,7 +850,7 @@
             }
             else
             {
-                // ✅ CREAR NUEVO
+                //  CREAR NUEVO
                 if (loteForm.ProductoId is null || loteForm.FechaCompra is null || 
                     loteForm.PrecioCosto is null || loteForm.CantidadInicial is null) return;
 
