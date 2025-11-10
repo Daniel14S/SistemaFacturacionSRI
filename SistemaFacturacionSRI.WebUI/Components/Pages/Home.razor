@@ -1,5 +1,9 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 @using SistemaFacturacionSRI.Domain.Entities
+@using SistemaFacturacionSRI.WebUI.Services
+@inject ProductoHttpService ProductoService
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
@@ -16,41 +20,24 @@
 
     <!-- Cards con métricas clave -->
     <div class="row g-4">
-        <!-- Total Ventas -->
-        <div class="col-md-3 col-sm-6">
+        <div class="col-md-4 col-sm-6">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary">
-                    <h5>Total Ventas</h5>
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Productos registrados</h5>
                 </div>
                 <div class="card-body">
-                    <h4 class="text-success">$12,540</h4>
-                    <p class="text-muted small">Ventas acumuladas este mes</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Productos en Stock -->
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary">
-                    <h5>Productos en Stock</h5>
-                </div>
-                <div class="card-body">
-                    <h4 class="text-primary">1,245</h4>
-                    <p class="text-muted small">Productos disponibles</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Clientes -->
-        <div class="col-md-3 col-sm-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info">
-                    <h5>Clientes Registrados</h5>
-                </div>
-                <div class="card-body">
-                    <h4 class="text-primary">324</h4>
-                    <p class="text-muted small">Clientes activos</p>
+                    @if (cargandoProductos)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h4 class="text-primary mb-0">@totalProductos</h4>
+                    }
+                    <p class="text-muted small mb-0">Total de productos registrados en el sistema</p>
                 </div>
             </div>
         </div>
@@ -61,24 +48,106 @@
     <h4 class="mb-3">Accesos rápidos</h4>
     <div class="row g-3">
         <div class="col-md-3 col-sm-6">
-            <button class="btn btn-primary w-100 py-3">
-                <i class="bi bi-plus-square-fill me-2"></i> Nueva Factura
+            <button type="button" class="btn btn-primary w-100 py-3" @onclick="MostrarProximamente">
+                <i class="bi bi-plus-square-fill me-2"></i> Nueva Factura (Próximamente)
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
-            <button class="btn btn-secondary w-100 py-3">
+            <button type="button" class="btn btn-primary w-100 py-3" @onclick="IrAProductos">
                 <i class="bi bi-box-seam me-2"></i> Productos
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
-            <button class="btn btn-info w-100 py-3">
-                <i class="bi bi-people me-2"></i> Clientes
+            <button type="button" class="btn btn-primary w-100 py-3" @onclick="MostrarProximamente">
+                <i class="bi bi-people me-2"></i> Clientes (Próximamente)
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
-            <button class="btn btn-warning w-100 py-3">
-                <i class="bi bi-receipt me-2"></i> Facturas
+            <button type="button" class="btn btn-primary w-100 py-3" @onclick="MostrarProximamente">
+                <i class="bi bi-receipt me-2"></i> Facturas (Próximamente)
             </button>
         </div>
     </div>
+
+    @if (mostrarMensaje)
+    {
+        <div class="home-overlay" @onclick="CerrarMensaje">
+            <div class="home-overlay-content" @onclick:stopPropagation="true">
+                <i class="bi bi-info-circle-fill display-6 text-primary mb-3"></i>
+                <p class="lead text-center mb-4">@mensajeProximamente</p>
+                <button type="button" class="btn btn-light" @onclick="CerrarMensaje">Entendido</button>
+            </div>
+        </div>
+    }
 </div>
+ 
+@code {
+    private int totalProductos = 0;
+    private bool cargandoProductos = true;
+    private bool mostrarMensaje = false;
+    private string mensajeProximamente = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarTotalProductos();
+    }
+
+    private async Task CargarTotalProductos()
+    {
+        try
+        {
+            cargandoProductos = true;
+            var productos = await ProductoService.ObtenerTodosAsync();
+            totalProductos = productos?.Count ?? 0;
+        }
+        catch (Exception)
+        {
+            // Si hay error, dejamos el conteo en 0 y no interrumpimos la UI
+            totalProductos = 0;
+        }
+        finally
+        {
+            cargandoProductos = false;
+        }
+    }
+
+    private async Task MostrarProximamente()
+    {
+        mensajeProximamente = "Esta función se agregará próximamente";
+        mostrarMensaje = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void IrAProductos()
+    {
+        Navigation.NavigateTo("/productos");
+    }
+
+    private void CerrarMensaje()
+    {
+        mostrarMensaje = false;
+        mensajeProximamente = string.Empty;
+        _ = InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .home-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .home-overlay-content {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        width: min(90vw, 420px);
+        text-align: center;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
+    }
+</style>
