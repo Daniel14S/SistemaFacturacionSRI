@@ -1,9 +1,9 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 @using SistemaFacturacionSRI.Domain.Entities
-@using Microsoft.JSInterop
 @using SistemaFacturacionSRI.WebUI.Services
 @inject ProductoHttpService ProductoService
-@inject IJSRuntime JsRuntime
+@inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
 
@@ -53,8 +53,8 @@
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
-            <button type="button" class="btn btn-primary w-100 py-3" @onclick="MostrarProximamente">
-                <i class="bi bi-box-seam me-2"></i> Productos (Próximamente)
+            <button type="button" class="btn btn-primary w-100 py-3" @onclick="IrAProductos">
+                <i class="bi bi-box-seam me-2"></i> Productos
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
@@ -69,11 +69,23 @@
         </div>
     </div>
 
+    @if (mostrarMensaje)
+    {
+        <div class="home-overlay" @onclick="CerrarMensaje">
+            <div class="home-overlay-content" @onclick:stopPropagation="true">
+                <i class="bi bi-info-circle-fill display-6 text-primary mb-3"></i>
+                <p class="lead text-center mb-4">@mensajeProximamente</p>
+                <button type="button" class="btn btn-light" @onclick="CerrarMensaje">Entendido</button>
+            </div>
+        </div>
+    }
 </div>
  
 @code {
     private int totalProductos = 0;
     private bool cargandoProductos = true;
+    private bool mostrarMensaje = false;
+    private string mensajeProximamente = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,6 +113,41 @@
 
     private async Task MostrarProximamente()
     {
-        await JsRuntime.InvokeVoidAsync("alert", "Esta función se agregará próximamente");
+        mensajeProximamente = "Esta función se agregará próximamente";
+        mostrarMensaje = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void IrAProductos()
+    {
+        Navigation.NavigateTo("/productos");
+    }
+
+    private void CerrarMensaje()
+    {
+        mostrarMensaje = false;
+        mensajeProximamente = string.Empty;
+        _ = InvokeAsync(StateHasChanged);
     }
 }
+
+<style>
+    .home-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .home-overlay-content {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        width: min(90vw, 420px);
+        text-align: center;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
+    }
+</style>
