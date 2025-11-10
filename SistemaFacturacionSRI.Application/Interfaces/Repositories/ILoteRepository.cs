@@ -12,7 +12,7 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         Task<IEnumerable<Lote>> ObtenerLotesPorProductoAsync(int idProducto);
         Task<IEnumerable<Lote>> ObtenerPorProductoAsync(int productoId);
         
-        // ✅ NUEVOS MÉTODOS
+        // NUEVOS MÉTODOS
         Task<Lote?> ObtenerPorIdAsync(int loteId);
         Task ActualizarAsync(Lote lote);
         Task EliminarAsync(int loteId);

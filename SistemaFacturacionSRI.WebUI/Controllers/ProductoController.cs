@@ -66,7 +66,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             {
                 _logger.LogInformation("GET /api/producto - Obteniendo todos los productos con lote prioritario");
 
-                // ✅ CAMBIO CRÍTICO: Usar método que incluye lote prioritario
+                // CAMBIO CRÍTICO: Usar método que incluye lote prioritario
                 // Esto calcula automáticamente cuál lote está más próximo a vencer
                 var productos = await _productoService.ObtenerTodosConLotePrioritarioAsync();
                 
