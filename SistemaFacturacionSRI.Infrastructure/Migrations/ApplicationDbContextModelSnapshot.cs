@@ -478,27 +478,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         },
                         new
                         {
-                            TipoIVAId = 4,
-                            Descripcion = "IVA 10%",
-                            Porcentaje = 10m
-                        },
-                        new
-                        {
-                            TipoIVAId = 5,
-                            Descripcion = "IVA 12%",
-                            Porcentaje = 12m
-                        },
-                        new
-                        {
                             TipoIVAId = 6,
                             Descripcion = "IVA 15%",
                             Porcentaje = 15m
-                        },
-                        new
-                        {
-                            TipoIVAId = 7,
-                            Descripcion = "IVA 20%",
-                            Porcentaje = 20m
                         });
                 });
 
