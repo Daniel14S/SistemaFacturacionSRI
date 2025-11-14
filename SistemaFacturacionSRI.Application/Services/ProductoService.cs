@@ -140,7 +140,8 @@ namespace SistemaFacturacionSRI.Application.Services
 
 public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync()
 {
-    var productos = await _productoRepository.ObtenerTodosAsync();
+    // Traer TODOS los productos (activos e inactivos) desde el repositorio base
+    var productos = await _productoRepository.ObtenerTodosIncluyendoInactivosAsync();
     var productosDto = _mapper.Map<List<ProductoDto>>(productos);
 
     foreach (var producto in productosDto)
@@ -163,9 +164,11 @@ public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync(
 
             producto.LotePrioritario = lotePrioritario.LoteId.ToString();
             producto.FechaExpiracionLotePrioritario = lotePrioritario.FechaExpiracion;
-            producto.Precio = lotePrioritario.PrecioCosto;
 
-            // ✅ CALCULAR IVA Y PRECIO CON IVA DEL LOTE PRIORITARIO
+            // ✅ Usar el PVP del lote prioritario como precio base para la vista de productos
+            producto.Precio = lotePrioritario.PVP;
+
+            // ✅ CALCULAR IVA Y PRECIO CON IVA DEL PVP DEL LOTE PRIORITARIO
             if (producto.Precio.HasValue && productoOriginal.TipoIVACatalogo != null)
             {
                 decimal porcentajeIVA = productoOriginal.TipoIVACatalogo.Porcentaje;
@@ -194,7 +197,7 @@ public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync(
             producto.Stock = lotesDisponibles.Sum(l => l.CantidadDisponible);
             producto.TieneStock = producto.Stock > 0;
             
-            // ✅ CALCULAR VALOR DEL INVENTARIO CON EL PRECIO DEL LOTE PRIORITARIO
+            // ✅ CALCULAR VALOR DEL INVENTARIO CON EL PVP DEL LOTE PRIORITARIO
             producto.ValorInventario = producto.Precio.HasValue 
                 ? producto.Stock * producto.Precio.Value 
                 : null;
@@ -241,6 +244,21 @@ public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync(
 
             var productos = await _productoRepository.SearchByCodeOrNameAsync(term);
             return _mapper.Map<IEnumerable<ProductoDto>>(productos);
+        }
+
+        /// <summary>
+        /// Reactiva un producto previamente inactivado (Activo = true).
+        /// </summary>
+        public async Task ReactivarAsync(int id)
+        {
+            // Necesitamos incluir también los inactivos; el repositorio base filtra por Activo,
+            // por lo que aquí asumimos que existe un método específico o usamos un repositorio especializado.
+            var producto = await _productoRepository.ObtenerPorIdIncluyendoInactivosAsync(id);
+            if (producto == null)
+                throw new KeyNotFoundException($"No existe un producto con Id {id}");
+
+            producto.Activo = true;
+            await _productoRepository.ActualizarAsync(producto);
         }
     }
 }

@@ -122,6 +122,28 @@ namespace SistemaFacturacionSRI.WebUI.Services
         }
 
         /// <summary>
+        /// Reactiva un producto previamente inactivo.
+        /// PUT /api/producto/{id}/reactivar
+        /// </summary>
+        public async Task ReactivarAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsync($"{API_BASE_URL}/{id}/reactivar", null);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Error al reactivar producto: {error}");
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error de conexión al reactivar producto: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// Busca productos por nombre.
         /// </summary>
         public async Task<List<ProductoDto>> BuscarPorNombreAsync(string nombre)

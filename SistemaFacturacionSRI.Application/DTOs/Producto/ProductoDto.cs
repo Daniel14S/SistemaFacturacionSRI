@@ -76,6 +76,11 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         /// </summary>
         public bool TieneStock { get; set; }
 
+    /// <summary>
+    /// Indica si el producto está activo (visible para venta) o inactivo.
+    /// </summary>
+    public bool Activo { get; set; }
+
         /// <summary>
         /// Valor total del inventario (Stock × Precio actual).
         /// </summary>
