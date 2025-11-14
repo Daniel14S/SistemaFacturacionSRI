@@ -234,5 +234,13 @@ public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync(
     await _productoRepository.EliminarAsync(id);
 }
 
+        public async Task<IEnumerable<ProductoDto>> SearchByCodeOrNameAsync(string term)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return new List<ProductoDto>();
+
+            var productos = await _productoRepository.SearchByCodeOrNameAsync(term);
+            return _mapper.Map<IEnumerable<ProductoDto>>(productos);
+        }
     }
 }

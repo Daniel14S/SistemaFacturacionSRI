@@ -22,5 +22,10 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         /// Busca productos por nombre (búsqueda parcial).
         /// </summary>
         Task<IEnumerable<Producto>> BuscarPorNombreAsync(string nombre);
+
+        /// <summary>
+        /// Busca productos por código o nombre.
+        /// </summary>
+        Task<IEnumerable<Producto>> SearchByCodeOrNameAsync(string term);
     }
 }

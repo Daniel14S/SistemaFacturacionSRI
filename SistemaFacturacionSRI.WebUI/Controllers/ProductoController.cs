@@ -351,7 +351,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// </summary>
         /// <param name="termino">Término de búsqueda</param>
         /// <returns>Lista de productos que coinciden con el término</returns>
-        [HttpGet("buscar")]
+        [HttpGet("search")]
         [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<IEnumerable<ProductoDto>>> Buscar([FromQuery] string termino)
@@ -365,7 +365,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
                 _logger.LogInformation("Buscando productos con término: {Termino}", termino);
                 
-                var productos = await _productoService.BuscarPorNombreAsync(termino);
+                var productos = await _productoService.SearchByCodeOrNameAsync(termino);
                 
                 return Ok(productos);
             }

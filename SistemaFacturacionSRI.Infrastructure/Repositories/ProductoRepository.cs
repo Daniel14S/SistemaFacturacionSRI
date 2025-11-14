@@ -43,6 +43,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Producto>> SearchByCodeOrNameAsync(string term)
+        {
+            var searchTerm = term.ToLower();
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Where(p => p.Activo && (p.Codigo.ToLower().Contains(searchTerm) || p.Nombre.ToLower().Contains(searchTerm)))
+                .ToListAsync();
+        }
+
         public override async Task<IEnumerable<Producto>> ObtenerTodosAsync()
         {
             return await _dbSet

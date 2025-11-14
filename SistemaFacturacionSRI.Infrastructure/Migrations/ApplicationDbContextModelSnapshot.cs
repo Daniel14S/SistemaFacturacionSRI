@@ -350,6 +350,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<DateTime?>("FechaExpiracion")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("PVP")
+                        .HasColumnType("DECIMAL(18,2)");
+
                     b.Property<decimal>("PrecioCosto")
                         .HasColumnType("DECIMAL(18,2)");
 

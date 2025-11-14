@@ -139,6 +139,23 @@ namespace SistemaFacturacionSRI.WebUI.Services
             }
         }
 
-        
+        public async Task<List<ProductoDto>> SearchProductosAsync(string searchTerm)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"{API_BASE_URL}/search?termino={searchTerm}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Error al buscar productos: {error}");
+                }
+                var productos = await response.Content.ReadFromJsonAsync<List<ProductoDto>>();
+                return productos ?? new List<ProductoDto>();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error de conexión al buscar productos: {ex.Message}", ex);
+            }
+        }
     }
 }

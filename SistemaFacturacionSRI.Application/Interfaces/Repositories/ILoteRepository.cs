@@ -16,5 +16,6 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         Task<Lote?> ObtenerPorIdAsync(int loteId);
         Task ActualizarAsync(Lote lote);
         Task EliminarAsync(int loteId);
+        Task ActualizarPVPDeLotesPorProductoAsync(int productoId, decimal nuevoPVP, int? loteExcluidoId = null);
     }
 }

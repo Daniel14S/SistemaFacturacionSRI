@@ -95,6 +95,16 @@ public async Task EliminarAsync(int loteId)
     }
 }
 
+public async Task ActualizarPVPDeLotesPorProductoAsync(int productoId, decimal nuevoPVP, int? loteExcluidoId = null)
+{
+    var query = _context.Lotes.Where(l => l.ProductoId == productoId);
 
+    if (loteExcluidoId.HasValue)
+    {
+        query = query.Where(l => l.LoteId != loteExcluidoId.Value);
+    }
+
+    await query.ExecuteUpdateAsync(s => s.SetProperty(l => l.PVP, nuevoPVP));
+}
     }
 }

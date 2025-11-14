@@ -15,6 +15,7 @@ namespace SistemaFacturacionSRI.Application.DTOs.Lote
         public DateTime FechaCompra { get; set; }
         public DateTime? FechaExpiracion { get; set; }
         public decimal PrecioCosto { get; set; }
+        public decimal PVP { get; set; }
         public int CantidadInicial { get; set; }
         public int CantidadDisponible { get; set; }
     }

@@ -36,7 +36,6 @@ builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
 builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
 builder.Services.AddScoped<ILoteRepository, LoteRepository>();
 builder.Services.AddScoped<ILoteService, LoteService>();
-builder.Services.AddScoped<ProductoHttpService>();
 
 
 // ✅ Cliente HTTP para consumir la API desde Blazor
