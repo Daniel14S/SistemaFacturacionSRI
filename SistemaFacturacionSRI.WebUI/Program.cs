@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
+using SistemaFacturacionSRI.Application.Interfaces;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
+using SistemaFacturacionSRI.Application.Interfaces.Security;
+using SistemaFacturacionSRI.Application.Security;
 using SistemaFacturacionSRI.WebUI.Services;
 using SistemaFacturacionSRI.WebUI.Components;
+using SistemaFacturacionSRI.WebUI.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +40,10 @@ builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
 builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
 builder.Services.AddScoped<ILoteRepository, LoteRepository>();
 builder.Services.AddScoped<ILoteService, LoteService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddSingleton<JwtTokenGenerator>();
 
 
 // ✅ Cliente HTTP para consumir la API desde Blazor
@@ -87,6 +95,8 @@ app.UseStaticFiles();
 
 // ✅ Orden correcto del pipeline
 app.UseRouting();
+
+app.UseAuthErrorHandling();
 
 // 🔒 Antiforgery debe ir después de UseRouting()
 app.UseAntiforgery();
