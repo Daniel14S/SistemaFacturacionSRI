@@ -77,6 +77,17 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
 /// <returns>Lista de productos con información del lote más próximo a expirar</returns>
 Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync();
 
+/// <summary>
+/// Busca productos por código o nombre.
+/// </summary>
+/// <param name="term">Término de búsqueda</param>
+/// <returns>Lista de productos que coinciden</returns>
+Task<IEnumerable<ProductoDto>> SearchByCodeOrNameAsync(string term);
 
+        /// <summary>
+        /// Reactiva un producto previamente inactivado (Activo = true).
+        /// </summary>
+        /// <param name="id">Identificador del producto a reactivar</param>
+        Task ReactivarAsync(int id);
     }
 }

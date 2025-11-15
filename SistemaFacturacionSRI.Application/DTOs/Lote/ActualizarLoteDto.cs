@@ -14,8 +14,14 @@ namespace SistemaFacturacionSRI.Application.DTOs.Lote
     [Range(0.01, double.MaxValue, ErrorMessage = "El precio de costo debe ser mayor a 0")]
     public decimal PrecioCosto { get; set; }
 
+    [Required(ErrorMessage = "El PVP es obligatorio")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "El PVP debe ser mayor a 0")]
+    public decimal PVP { get; set; }
+
     [Required(ErrorMessage = "La cantidad disponible es obligatoria")]
     [Range(0, int.MaxValue, ErrorMessage = "La cantidad disponible no puede ser negativa")]
     public int CantidadDisponible { get; set; }
+
+    public bool ForzarActualizacionPVP { get; set; } = false;
     }
 }

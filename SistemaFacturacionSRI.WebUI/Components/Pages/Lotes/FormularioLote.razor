@@ -1,0 +1,385 @@
+@page "/lotes/nuevo"
+@page "/lotes/editar/{IdLote:int}"
+@rendermode InteractiveServer
+
+@using SistemaFacturacionSRI.Application.DTOs.Lote
+@using SistemaFacturacionSRI.Application.DTOs.Producto
+@using SistemaFacturacionSRI.WebUI.Services
+@using System.ComponentModel.DataAnnotations
+@using SistemaFacturacionSRI.Application.Interfaces.Services
+@inject ILoteService LoteService
+@inject ProductoHttpService ProductoHttpService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>@(IdLote.HasValue ? "Editar Lote" : "Nuevo Lote")</PageTitle>
+
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>@(IdLote.HasValue ? "Editar Lote" : "Nuevo Lote")</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick="Volver">
+                <i class="bi bi-arrow-left"></i> Volver
+            </button>
+        </div>
+    </div>
+
+    <EditForm Model="@modelo" OnValidSubmit="GuardarLote">
+        <DataAnnotationsValidator />
+        <CustomValidation @ref="customValidation" />
+
+        <div class="card">
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(mensajeError))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @mensajeError
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <!-- Búsqueda de Producto -->
+                    <div class="col-md-12">
+                        <label class="form-label">Producto <span class="text-danger">*</span></label>
+                        @if (IdLote.HasValue)
+                        {
+                            <input type="text" class="form-control" value="@terminoBusquedaProducto" disabled />
+                        }
+                        else
+                        {
+                            <div class="input-group">
+                                <input type="text" class="form-control" value="@terminoBusquedaProducto" @oninput="OnProductoSearchInput" placeholder="Escriba para buscar por Código o Nombre..." />
+                            </div>
+                            @if (productosEncontrados.Any())
+                            {
+                                <ul class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
+                                    @foreach (var producto in productosEncontrados)
+                                    {
+                                        <li class="list-group-item list-group-item-action" @onclick="() => SeleccionarProducto(producto)">
+                                            <strong>@producto.Codigo</strong> - @producto.Nombre
+                                            <p class="mb-0 text-muted"><small>@producto.Descripcion</small></p>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        }
+                        <ValidationMessage For="@(() => modelo.ProductoId)" />
+                    </div>
+
+                    <!-- Fecha de Compra -->
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de Compra <span class="text-danger">*</span></label>
+                        <InputDate class="form-control" @bind-Value="modelo.FechaCompra" />
+                        <ValidationMessage For="@(() => modelo.FechaCompra)" />
+                    </div>
+
+                    <!-- Fecha de Expiración -->
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha de Expiración</label>
+                        <InputDate class="form-control" @bind-Value="modelo.FechaExpiracion" />
+                        <ValidationMessage For="@(() => modelo.FechaExpiracion)" />
+                    </div>
+
+                    <!-- Precio de Costo -->
+                    <div class="col-md-4">
+                        <label class="form-label">Precio de Costo <span class="text-danger">*</span></label>
+                        <InputNumber class="form-control" @bind-Value="modelo.PrecioCosto" />
+                        <ValidationMessage For="@(() => modelo.PrecioCosto)" />
+                    </div>
+
+                    <!-- PVP -->
+                    <div class="col-md-4">
+                        <label class="form-label">PVP <span class="text-danger">*</span></label>
+                        <InputNumber class="form-control" @bind-Value="modelo.PVP" />
+                        <ValidationMessage For="@(() => modelo.PVP)" />
+                    </div>
+
+                    <!-- Cantidad Inicial -->
+                    <div class="col-md-4">
+                        <label class="form-label">Cantidad Inicial <span class="text-danger">*</span></label>
+                        <InputNumber class="form-control" @bind-Value="modelo.CantidadInicial" />
+                        <ValidationMessage For="@(() => modelo.CantidadInicial)" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer text-end">
+                <button type="submit" class="btn btn-primary" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    public int? IdLote { get; set; }
+
+    private CrearLoteDto modelo = new() { FechaCompra = DateTime.Today };
+    private string mensajeError = string.Empty;
+    private bool guardando = false;
+    private bool mostrarConfirmacionPVP = false;
+    private decimal pvpAnterior = 0m;
+    private decimal pvpNuevo = 0m;
+
+    private string terminoBusquedaProducto = string.Empty;
+    private List<ProductoDto> productosEncontrados = new();
+    private CustomValidation? customValidation;
+    private CancellationTokenSource? _debounceTokenSource;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IdLote.HasValue)
+        {
+            var loteDto = await LoteService.ObtenerPorIdAsync(IdLote.Value);
+            if (loteDto != null)
+            {
+                pvpAnterior = loteDto.PVP;
+                modelo = new CrearLoteDto
+                {
+                    ProductoId = loteDto.ProductoId,
+                    FechaCompra = loteDto.FechaCompra,
+                    FechaExpiracion = loteDto.FechaExpiracion,
+                    PrecioCosto = loteDto.PrecioCosto,
+                    PVP = loteDto.PVP,
+                    CantidadInicial = loteDto.CantidadInicial
+                };
+                var producto = await ProductoHttpService.ObtenerPorIdAsync(loteDto.ProductoId);
+                if(producto != null)
+                {
+                    terminoBusquedaProducto = $"{producto.Codigo} - {producto.Nombre}";
+                }
+            }
+        }
+    }
+
+    private async Task OnProductoSearchInput(ChangeEventArgs e)
+    {
+        terminoBusquedaProducto = e.Value?.ToString() ?? string.Empty;
+
+        _debounceTokenSource?.Cancel();
+        _debounceTokenSource = new CancellationTokenSource();
+        var cancellationToken = _debounceTokenSource.Token;
+
+        await Task.Delay(300, cancellationToken);
+
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            await BuscarProductos();
+        }
+    }
+
+    private async Task BuscarProductos()
+    {
+        productosEncontrados.Clear();
+        if (string.IsNullOrWhiteSpace(terminoBusquedaProducto) || terminoBusquedaProducto.Length < 2)
+        {
+            StateHasChanged();
+            return;
+        }
+        productosEncontrados = (await ProductoHttpService.SearchProductosAsync(terminoBusquedaProducto)).ToList();
+        StateHasChanged();
+    }
+
+    private void SeleccionarProducto(ProductoDto producto)
+    {
+        modelo.ProductoId = producto.Id;
+        terminoBusquedaProducto = $"{producto.Codigo} - {producto.Nombre}";
+        productosEncontrados.Clear();
+    }
+
+    private bool isRetryingWithForce = false;
+
+    private async Task GuardarLote()
+    {
+        guardando = true;
+        mensajeError = string.Empty;
+        customValidation?.ClearErrors();
+
+        if (modelo.PVP <= modelo.PrecioCosto)
+        {
+            var errors = new Dictionary<string, List<string>>
+            {
+                { nameof(modelo.PVP), new List<string> { "El PVP debe ser mayor que el Precio de Costo." } }
+            };
+            customValidation?.DisplayErrors(errors);
+            guardando = false;
+            return;
+        }
+
+        try
+        {
+            if (IdLote.HasValue)
+            {
+                var actualizarDto = new ActualizarLoteDto {
+                    LoteId = IdLote.Value,
+                    FechaExpiracion = modelo.FechaExpiracion,
+                    PrecioCosto = modelo.PrecioCosto,
+                    PVP = modelo.PVP,
+                    CantidadDisponible = modelo.CantidadInicial,
+                    ForzarActualizacionPVP = isRetryingWithForce
+                };
+                await LoteService.ActualizarAsync(actualizarDto);
+            }
+            else
+            {
+                modelo.ForzarActualizacionPVP = isRetryingWithForce;
+                await LoteService.CrearAsync(modelo);
+            }
+            Navigation.NavigateTo("/lotes");
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "PVP_VARIANCE_DETECTED")
+        {
+            // Nuevo PVP es el que el usuario acaba de ingresar
+            pvpNuevo = modelo.PVP;
+
+            // Si es un lote nuevo, buscamos el PVP actual desde otros lotes del producto
+            if (!IdLote.HasValue && modelo.ProductoId != 0)
+            {
+                var lotesProducto = await LoteService.ObtenerPorProductoAsync(modelo.ProductoId);
+                var loteReferencia = lotesProducto.FirstOrDefault();
+                if (loteReferencia != null)
+                {
+                    pvpAnterior = loteReferencia.PVP;
+                }
+            }
+
+            mostrarConfirmacionPVP = true;
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al guardar el lote: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+            isRetryingWithForce = false;
+        }
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/lotes");
+    }
+
+    private async Task ConfirmarActualizacionPVP()
+    {
+        mostrarConfirmacionPVP = false;
+
+        try
+        {
+            guardando = true;
+            mensajeError = string.Empty;
+
+            if (IdLote.HasValue)
+            {
+                // Reutilizamos el DTO pero ya forzando el PVP
+                var actualizarDto = new ActualizarLoteDto
+                {
+                    LoteId = IdLote.Value,
+                    FechaExpiracion = modelo.FechaExpiracion,
+                    PrecioCosto = modelo.PrecioCosto,
+                    PVP = modelo.PVP,
+                    CantidadDisponible = modelo.CantidadInicial,
+                    ForzarActualizacionPVP = true
+                };
+
+                await LoteService.ActualizarAsync(actualizarDto);
+            }
+            else
+            {
+                modelo.ForzarActualizacionPVP = true;
+                await LoteService.CrearAsync(modelo);
+            }
+
+            Navigation.NavigateTo("/lotes");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al guardar el lote: {ex.Message}";
+        }
+        finally
+        {
+            guardando = false;
+            isRetryingWithForce = false;
+        }
+    }
+
+    private void CancelarActualizacionPVP()
+    {
+        mostrarConfirmacionPVP = false;
+        isRetryingWithForce = false;
+    }
+}
+
+@if (mostrarConfirmacionPVP)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Actualizar PVP del producto
+                    </h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CancelarActualizacionPVP"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">
+                        El PVP ingresado es diferente al que tienen otros lotes de este producto.
+                        ¿Desea actualizar el PVP de <strong>todos los lotes</strong> con el nuevo valor?
+                    </p>
+
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-5">
+                            <div class="card border-danger h-100">
+                                <div class="card-header bg-danger text-white py-2">
+                                    <small class="fw-bold">
+                                        <i class="bi bi-arrow-down-circle me-1"></i>
+                                        PVP actual
+                                    </small>
+                                </div>
+                                <div class="card-body py-3 text-center">
+                                    <div class="text-muted small">Antes</div>
+                                    <div class="fs-4 text-danger fw-bold">
+                                        $@pvpAnterior.ToString("N2")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <i class="bi bi-arrow-right fs-3 text-muted"></i>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="card border-success h-100">
+                                <div class="card-header bg-success text-white py-2">
+                                    <small class="fw-bold">
+                                        <i class="bi bi-arrow-up-circle me-1"></i>
+                                        Nuevo PVP
+                                    </small>
+                                </div>
+                                <div class="card-body py-3 text-center">
+                                    <div class="text-muted small">Después</div>
+                                    <div class="fs-4 text-success fw-bold">
+                                        $@pvpNuevo.ToString("N2")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarActualizacionPVP">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="ConfirmarActualizacionPVP">
+                        Sí, actualizar PVP de todos los lotes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

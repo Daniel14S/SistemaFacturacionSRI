@@ -350,6 +350,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<DateTime?>("FechaExpiracion")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("PVP")
+                        .HasColumnType("DECIMAL(18,2)");
+
                     b.Property<decimal>("PrecioCosto")
                         .HasColumnType("DECIMAL(18,2)");
 
@@ -516,18 +519,39 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UsuarioId"));
 
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
+                    b.Property<string>("Apellido1")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Apellido2")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NombreCompleto")
+                    b.Property<bool>("Estado")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IntentosLogin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<string>("Nombre1")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre2")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -536,6 +560,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.Property<int>("RolId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UltimoAcceso")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Username")
                         .IsRequired()

@@ -43,6 +43,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Producto>> SearchByCodeOrNameAsync(string term)
+        {
+            var searchTerm = term.ToLower();
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Where(p => p.Activo && (p.Codigo.ToLower().Contains(searchTerm) || p.Nombre.ToLower().Contains(searchTerm)))
+                .ToListAsync();
+        }
+
         public override async Task<IEnumerable<Producto>> ObtenerTodosAsync()
         {
             return await _dbSet
@@ -60,6 +70,31 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .Include(p => p.TipoIVACatalogo)
                 .Include(p => p.Lotes)
                 .FirstOrDefaultAsync(e => e.Id == id && e.Activo);
+        }
+
+        /// <summary>
+        /// Obtiene un producto por Id incluyendo también los inactivos.
+        /// Útil para reactivación.
+        /// </summary>
+        public async Task<Producto?> ObtenerPorIdIncluyendoInactivosAsync(int id)
+        {
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .FirstOrDefaultAsync(e => e.Id == id);
+        }
+
+        /// <summary>
+        /// Obtiene todos los productos incluyendo también los inactivos.
+        /// </summary>
+        public async Task<IEnumerable<Producto>> ObtenerTodosIncluyendoInactivosAsync()
+        {
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.TipoIVACatalogo)
+                .Include(p => p.Lotes)
+                .ToListAsync();
         }
     }
 }

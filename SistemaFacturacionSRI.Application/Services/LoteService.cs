@@ -54,23 +54,31 @@ namespace SistemaFacturacionSRI.Application.Services
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
-            // Verificar que el producto exista y esté activo
             var producto = await _productoRepository.ObtenerPorIdAsync(dto.ProductoId);
             if (producto == null)
                 throw new KeyNotFoundException($"El producto con ID {dto.ProductoId} no existe o está inactivo.");
 
-            // Validar fechas
             if (dto.FechaExpiracion.HasValue && dto.FechaExpiracion.Value.Date < dto.FechaCompra.Date)
                 throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
 
-            // Mapear DTO a entidad Lote
+            var otrosLotes = await _loteRepository.ObtenerLotesPorProductoAsync(dto.ProductoId);
+            var hayVariacionPVP = otrosLotes.Any(l => l.PVP != dto.PVP);
+
+            if (hayVariacionPVP && !dto.ForzarActualizacionPVP)
+            {
+                throw new InvalidOperationException("PVP_VARIANCE_DETECTED");
+            }
+
             var nuevoLote = _mapper.Map<Lote>(dto);
             nuevoLote.CantidadDisponible = dto.CantidadInicial;
 
-            // Guardar en base de datos
             var loteCreado = await _loteRepository.CrearAsync(nuevoLote);
 
-            // Mapear de vuelta a DTO y devolver
+            if (hayVariacionPVP && dto.ForzarActualizacionPVP)
+            {
+                await _loteRepository.ActualizarPVPDeLotesPorProductoAsync(dto.ProductoId, dto.PVP, loteCreado.LoteId);
+            }
+
             return _mapper.Map<LoteDto>(loteCreado);
         }
 
@@ -136,11 +144,25 @@ namespace SistemaFacturacionSRI.Application.Services
             if (dto.FechaExpiracion.HasValue && dto.FechaExpiracion.Value.Date < lote.FechaCompra.Date)
                 throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
 
+            var otrosLotes = await _loteRepository.ObtenerLotesPorProductoAsync(lote.ProductoId);
+            var hayVariacionPVP = otrosLotes.Any(l => l.LoteId != dto.LoteId && l.PVP != dto.PVP);
+
+            if (hayVariacionPVP && !dto.ForzarActualizacionPVP)
+            {
+                throw new InvalidOperationException("PVP_VARIANCE_DETECTED");
+            }
+
             lote.FechaExpiracion = dto.FechaExpiracion;
             lote.PrecioCosto = dto.PrecioCosto;
+            lote.PVP = dto.PVP;
             lote.CantidadDisponible = dto.CantidadDisponible;
 
             await _loteRepository.ActualizarAsync(lote);
+
+            if (hayVariacionPVP && dto.ForzarActualizacionPVP)
+            {
+                await _loteRepository.ActualizarPVPDeLotesPorProductoAsync(lote.ProductoId, dto.PVP, dto.LoteId);
+            }
 
             return _mapper.Map<LoteDto>(lote);
         }

@@ -57,17 +57,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
                 }
             }
 
-            // SPRINT 1: Solo aplicar configuración de Producto
-            modelBuilder.ApplyConfiguration(new ProductoConfiguration());
-            modelBuilder.ApplyConfiguration(new RolConfiguration());
-            modelBuilder.ApplyConfiguration(new UsuarioConfiguration());
-            modelBuilder.ApplyConfiguration(new TipoIdentificacionConfiguration());
-            modelBuilder.ApplyConfiguration(new ClienteConfiguration());
-            modelBuilder.ApplyConfiguration(new TipoIVACatalogoConfiguration());
-            modelBuilder.ApplyConfiguration(new CategoriaConfiguration());
-            modelBuilder.ApplyConfiguration(new LoteConfiguration());
-            modelBuilder.ApplyConfiguration(new FacturaConfiguration());
-            modelBuilder.ApplyConfiguration(new FacturaDetalleConfiguration());
+            // Registra todas las configuraciones Fluent API ubicadas en el ensamblado Infrastructure
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
         }
 
         /// <summary>

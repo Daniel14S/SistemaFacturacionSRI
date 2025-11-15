@@ -341,6 +341,47 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
         }
 
+        /// <summary>
+        /// PUT /api/producto/{id}/reactivar
+        /// Reactiva lógicamente un producto previamente inactivo.
+        /// </summary>
+        [HttpPut("{id}/reactivar")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> Reactivar(int id)
+        {
+            try
+            {
+                _logger.LogInformation("PUT /api/producto/{Id}/reactivar - Reactivando producto", id);
+
+                if (id <= 0)
+                {
+                    _logger.LogWarning("Intento de reactivar producto con ID inválido: {Id}", id);
+                    return BadRequest(new { error = "El ID debe ser mayor a 0" });
+                }
+
+                await _productoService.ReactivarAsync(id);
+
+                return Ok(new { mensaje = "Producto reactivado correctamente" });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Producto {Id} no encontrado para reactivar", id);
+                return NotFound(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reactivar producto {Id}", id);
+                return StatusCode(500, new
+                {
+                    error = "Error interno al reactivar producto",
+                    mensaje = "Ocurrió un error inesperado. Por favor contacte al administrador."
+                });
+            }
+        }
+
         // ============================================
         // ENDPOINTS ADICIONALES (ÚTILES PARA EL SISTEMA)
         // ============================================
@@ -351,7 +392,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// </summary>
         /// <param name="termino">Término de búsqueda</param>
         /// <returns>Lista de productos que coinciden con el término</returns>
-        [HttpGet("buscar")]
+        [HttpGet("search")]
         [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<IEnumerable<ProductoDto>>> Buscar([FromQuery] string termino)
@@ -365,7 +406,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
                 _logger.LogInformation("Buscando productos con término: {Termino}", termino);
                 
-                var productos = await _productoService.BuscarPorNombreAsync(termino);
+                var productos = await _productoService.SearchByCodeOrNameAsync(termino);
                 
                 return Ok(productos);
             }

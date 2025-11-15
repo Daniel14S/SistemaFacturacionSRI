@@ -22,5 +22,21 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         /// Busca productos por nombre (búsqueda parcial).
         /// </summary>
         Task<IEnumerable<Producto>> BuscarPorNombreAsync(string nombre);
+
+        /// <summary>
+        /// Busca productos por código o nombre.
+        /// </summary>
+        Task<IEnumerable<Producto>> SearchByCodeOrNameAsync(string term);
+
+        /// <summary>
+        /// Obtiene un producto por Id incluyendo también los inactivos.
+        /// </summary>
+        Task<Producto?> ObtenerPorIdIncluyendoInactivosAsync(int id);
+
+        /// <summary>
+        /// Obtiene todos los productos incluyendo también los inactivos.
+        /// Útil para vistas que necesitan filtrar por Activo/Inactivo en la capa superior.
+        /// </summary>
+        Task<IEnumerable<Producto>> ObtenerTodosIncluyendoInactivosAsync();
     }
 }

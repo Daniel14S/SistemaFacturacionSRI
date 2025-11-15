@@ -122,6 +122,28 @@ namespace SistemaFacturacionSRI.WebUI.Services
         }
 
         /// <summary>
+        /// Reactiva un producto previamente inactivo.
+        /// PUT /api/producto/{id}/reactivar
+        /// </summary>
+        public async Task ReactivarAsync(int id)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsync($"{API_BASE_URL}/{id}/reactivar", null);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Error al reactivar producto: {error}");
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error de conexión al reactivar producto: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// Busca productos por nombre.
         /// </summary>
         public async Task<List<ProductoDto>> BuscarPorNombreAsync(string nombre)
@@ -139,6 +161,23 @@ namespace SistemaFacturacionSRI.WebUI.Services
             }
         }
 
-        
+        public async Task<List<ProductoDto>> SearchProductosAsync(string searchTerm)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"{API_BASE_URL}/search?termino={searchTerm}");
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    throw new Exception($"Error al buscar productos: {error}");
+                }
+                var productos = await response.Content.ReadFromJsonAsync<List<ProductoDto>>();
+                return productos ?? new List<ProductoDto>();
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new Exception($"Error de conexión al buscar productos: {ex.Message}", ex);
+            }
+        }
     }
 }
