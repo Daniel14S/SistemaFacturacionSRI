@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces;
@@ -45,6 +48,75 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
 
+// 🔐 Configuración de autenticación JWT
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secretKey = jwtSettings["SecretKey"];
+
+    if (string.IsNullOrEmpty(secretKey))
+    {
+        throw new InvalidOperationException("JWT SecretKey no está configurada en appsettings.json");
+    }
+
+    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+            System.Text.Encoding.UTF8.GetBytes(secretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidateAudience = true,
+        ValidAudience = jwtSettings["Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero // Sin tolerancia de tiempo
+    };
+
+    // Configuración para APIs
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Intentar obtener el token del header Authorization
+            var authorization = context.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Token = authorization.Substring("Bearer ".Length).Trim();
+            }
+
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            if (context.Exception.GetType() == typeof(Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException))
+            {
+                context.Response.Headers.Add("Token-Expired", "true");
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
+
+// 🔐 Configuración de autorización con políticas
+builder.Services.AddAuthorization(options =>
+{
+    // Política para administradores
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Administrador"));
+
+    // Política para vendedores
+    options.AddPolicy("VendedorOnly", policy =>
+        policy.RequireRole("Vendedor"));
+
+    // Política para admin o vendedor
+    options.AddPolicy("AdminOrVendedor", policy =>
+        policy.RequireRole("Administrador", "Vendedor"));
+});
 
 // ✅ Cliente HTTP para consumir la API desde Blazor
 builder.Services.AddScoped<ProductoHttpService>(sp =>
@@ -95,6 +167,10 @@ app.UseStaticFiles();
 
 // ✅ Orden correcto del pipeline
 app.UseRouting();
+
+// 🔒 Autenticación y Autorización (DESPUÉS de UseRouting)
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAuthErrorHandling();
 
