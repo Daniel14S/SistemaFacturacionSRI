@@ -31,5 +31,18 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         /// Actualiza los datos del usuario.
         /// </summary>
         Task ActualizarAsync(Usuario usuario);
-    }
+
+        /// <summary>
+        /// Lista usuarios con filtros y paginación.
+        /// </summary>
+        Task<(List<Usuario> Usuarios, int TotalRegistros)> ListarConFiltrosAsync(
+            string? busqueda,
+            int? rolId,
+            bool? estado,
+            bool? soloBloqueados,
+            int pageNumber,
+            int pageSize,
+            string? orderBy,
+            bool orderAscending);
+        }
 }

@@ -128,6 +128,27 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         /// <summary>
+        /// Mapea una entidad Usuario a UsuarioListDto (versión simplificada para listas).
+        /// </summary>
+        private UsuarioListDto MapearUsuarioListDto(Usuario usuario)
+        {
+            return new UsuarioListDto
+            {
+                UsuarioId = usuario.UsuarioId,
+                Username = usuario.Username,
+                Email = usuario.Email,
+                NombreCompleto = ConstruirNombreCompleto(usuario) ?? "Sin nombre",
+                Rol = usuario.Rol?.NombreRol ?? "Sin Rol",
+                RolId = usuario.RolId,
+                Estado = usuario.Estado,
+                FechaCreacion = usuario.FechaCreacion,
+                UltimoAcceso = usuario.UltimoAcceso,
+                EstaBloqueado = usuario.IntentosLogin >= 5,
+                IntentosLogin = usuario.IntentosLogin
+            };
+        }
+
+        /// <summary>
         /// Construye el nombre completo concatenando nombres y apellidos.
         /// </summary>
         private string? ConstruirNombreCompleto(Usuario usuario)
@@ -146,9 +167,39 @@ namespace SistemaFacturacionSRI.Application.Services
 
         // ========== MÉTODOS PENDIENTES (implementaremos después) ==========
 
-        public Task<PagedResultDto<UsuarioListDto>> ListarUsuariosAsync(FiltroUsuarioDto filtro)
+        /// <inheritdoc />
+        public async Task<PagedResultDto<UsuarioListDto>> ListarUsuariosAsync(FiltroUsuarioDto filtro)
         {
-            throw new NotImplementedException("Implementaremos en T-23");
+            // 1. VALIDAR PARÁMETROS DE PAGINACIÓN
+            if (filtro.PageNumber < 1)
+                filtro.PageNumber = 1;
+            
+            if (filtro.PageSize < 1)
+                filtro.PageSize = 10;
+
+            // 2. LLAMAR AL REPOSITORIO CON FILTROS
+            var (usuarios, totalRegistros) = await _usuarioRepository.ListarConFiltrosAsync(
+                filtro.Busqueda,
+                filtro.RolId,
+                filtro.Estado,
+                filtro.SoloBloqueados,
+                filtro.PageNumber,
+                filtro.PageSize,
+                filtro.OrderBy,
+                filtro.OrderAscending
+            );
+
+            // 3. MAPEAR A DTOs
+            var usuariosDto = usuarios.Select(u => MapearUsuarioListDto(u)).ToList();
+
+            // 4. CREAR RESULTADO PAGINADO
+            return new PagedResultDto<UsuarioListDto>
+            {
+                Items = usuariosDto,
+                TotalItems = totalRegistros,
+                PageNumber = filtro.PageNumber,
+                PageSize = filtro.PageSize
+            };
         }
 
         public Task<UsuarioDto?> ObtenerUsuarioPorIdAsync(int usuarioId)
