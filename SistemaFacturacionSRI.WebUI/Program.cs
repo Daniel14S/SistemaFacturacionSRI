@@ -168,6 +168,9 @@ app.UseStaticFiles();
 // ✅ Orden correcto del pipeline
 app.UseRouting();
 
+// 🔒 JWT Middleware (procesa tokens en cada petición)
+app.UseJwtMiddleware();  
+
 // 🔒 Autenticación y Autorización (DESPUÉS de UseRouting)
 app.UseAuthentication();
 app.UseAuthorization();
