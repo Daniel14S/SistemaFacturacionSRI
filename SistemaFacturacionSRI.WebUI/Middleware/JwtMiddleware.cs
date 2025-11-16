@@ -67,7 +67,10 @@ namespace SistemaFacturacionSRI.WebUI.Middleware
                     _logger.LogWarning("Token JWT inválido o expirado en {Path}", context.Request.Path);
                     
                     // Agregar header indicando que el token es inválido
-                    context.Response.Headers.Add("Token-Invalid", "true");
+                    if (!context.Response.HasStarted)
+                    {
+                        context.Response.Headers["Token-Invalid"] = "true";
+                    }          
                 }
             }
 
