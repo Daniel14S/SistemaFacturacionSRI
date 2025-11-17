@@ -2,10 +2,15 @@
 @rendermode InteractiveServer
 @using SistemaFacturacionSRI.Domain.Entities
 @using SistemaFacturacionSRI.WebUI.Services
-@inject ProductoHttpService ProductoService
+@inject IProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
 <PageTitle>Home</PageTitle>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
 
 <div class="container py-4">
     <!-- Header principal -->
@@ -87,9 +92,22 @@
     private bool mostrarMensaje = false;
     private string mensajeProximamente = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await CargarTotalProductos();
+        if (firstRender)
+        {
+            try
+            {
+                await CargarTotalProductos();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+            }
+            StateHasChanged();
+        }
     }
 
     private async Task CargarTotalProductos()

@@ -9,8 +9,8 @@
 @using SistemaFacturacionSRI.Application.DTOs.Lote
 @using SistemaFacturacionSRI.Application.DTOs.Producto
 @using SistemaFacturacionSRI.WebUI.Services
-@inject LoteHttpService LoteService
-@inject ProductoHttpService ProductoService
+@inject ILoteHttpService LoteService
+@inject IProductoHttpService ProductoService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 
@@ -461,9 +461,13 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await CargarDatos();
+        if (firstRender)
+        {
+            await CargarDatos();
+            StateHasChanged();
+        }
     }
 
     private async Task CargarDatos()

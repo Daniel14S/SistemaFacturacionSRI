@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaFacturacionSRI.Application.DTOs.Lote;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
@@ -10,6 +11,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// <summary>
     /// Endpoints REST para consultar lotes y su información asociada.
     /// </summary>
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class LoteController : ControllerBase

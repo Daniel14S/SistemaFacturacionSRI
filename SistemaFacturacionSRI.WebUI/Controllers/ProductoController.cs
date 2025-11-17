@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Application.DTOs;
@@ -10,6 +11,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// CAPA DE PRESENTACIÓN en Arquitectura Onion.
     /// Solo orquesta las llamadas a la capa de Application (IProductoService).
     /// </summary>
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class ProductoController : ControllerBase

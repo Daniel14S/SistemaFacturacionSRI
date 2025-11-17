@@ -3,12 +3,17 @@
 @using SistemaFacturacionSRI.Application.DTOs.Producto
 @using SistemaFacturacionSRI.Application.DTOs.Lote
 @using SistemaFacturacionSRI.WebUI.Services
-@inject ProductoHttpService ProductoService
-@inject LoteHttpService LoteService
+@inject IProductoHttpService ProductoService
+@inject ILoteHttpService LoteService
 @inject NavigationManager Navigation
 
 
 <PageTitle>Detalle de Producto</PageTitle>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
 
 <div class="container-fluid py-4">
     @if (cargando)
@@ -378,21 +383,27 @@ else
     private List<LoteDto>? lotes;
     private bool cargando = true;
 
-    protected override async Task OnInitializedAsync()
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        try
+        if (firstRender)
         {
-            cargando = true;
-            producto = await ProductoService.ObtenerPorIdAsync(Id);
-            lotes = (await LoteService.ObtenerLotesPorProductoAsync(Id))?.ToList();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error al cargar producto: {ex.Message}");
-        }
-        finally
-        {
-            cargando = false;
+            try
+            {
+                cargando = true;
+                producto = await ProductoService.ObtenerPorIdAsync(Id);
+                lotes = (await LoteService.ObtenerLotesPorProductoAsync(Id))?.ToList();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+            }
+            finally
+            {
+                cargando = false;
+                StateHasChanged();
+            }
         }
     }
 

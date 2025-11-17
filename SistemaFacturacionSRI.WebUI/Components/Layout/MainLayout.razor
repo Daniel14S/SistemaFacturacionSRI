@@ -1,5 +1,6 @@
 ﻿@namespace SistemaFacturacionSRI.WebUI.Components.Layout
 @inherits LayoutComponentBase
+@inject IAutoLoginService AutoLoginService
 
 <div class="page">
     <div class="sidebar">
@@ -7,6 +8,22 @@
     </div>
 
     <main>
+        <div class="top-row px-4">
+            <span class="fw-semibold">Acceso automático como Administrador</span>
+        </div>
+
+        @if (!string.IsNullOrEmpty(authStatusMessage))
+        {
+            <div class="auth-status-bar alert @AuthStatusCss mx-4" role="status" aria-live="polite">
+                <div class="d-flex align-items-center gap-2">
+                    @if (isAuthenticating)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    <span>@authStatusMessage</span>
+                </div>
+            </div>
+        }
 
         <article class="content px-4">
             @Body
@@ -19,3 +36,35 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    private bool isAuthenticating = true;
+    private string? authStatusMessage;
+    private bool authStatusIsError;
+    private string AuthStatusCss => authStatusIsError ? "alert-danger" : "alert-primary";
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateStatus("Preparando sesión administrativa...", false);
+
+        try
+        {
+            await AutoLoginService.EnsureAdminTokenAsync();
+            UpdateStatus("Sesión iniciada automáticamente como administrador.", false);
+        }
+        catch (Exception ex)
+        {
+            UpdateStatus($"No se pudo iniciar sesión automáticamente: {ex.Message}", true);
+        }
+        finally
+        {
+            isAuthenticating = false;
+        }
+    }
+
+    private void UpdateStatus(string message, bool isError)
+    {
+        authStatusMessage = message;
+        authStatusIsError = isError;
+    }
+}

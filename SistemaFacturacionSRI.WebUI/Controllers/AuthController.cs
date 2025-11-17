@@ -107,7 +107,6 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         {
             try
             {
-                // Obtener el ID del usuario desde los claims del token JWT
                 var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "userId")?.Value;
 
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))

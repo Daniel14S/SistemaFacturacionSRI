@@ -5,7 +5,7 @@
 @using SistemaFacturacionSRI.WebUI.Services
 @using SistemaFacturacionSRI.Application.DTOs.Categoria
 @using SistemaFacturacionSRI.WebUI.Controllers
-@inject ProductoHttpService ProductoService
+@inject IProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
 <PageTitle>Productos</PageTitle>
@@ -555,9 +555,13 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await CargarProductos();
+        if (firstRender)
+        {
+            await CargarProductos();
+            StateHasChanged();
+        }
     }
 
     private async Task CargarProductos()
