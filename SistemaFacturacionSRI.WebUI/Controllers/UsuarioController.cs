@@ -4,6 +4,7 @@ using SistemaFacturacionSRI.Application.DTOs.Auth;
 using SistemaFacturacionSRI.Application.DTOs.Common;
 using SistemaFacturacionSRI.Application.DTOs.Usuario;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.WebUI.Authorization;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
 {
@@ -13,7 +14,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Administrador")]
+    [AdminAuthorize]
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _usuarioService;
@@ -134,24 +135,91 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// Actualiza la información de un usuario existente.
         /// </summary>
         [HttpPut("{id}")]
-        public ActionResult<UsuarioDto> ActualizarUsuario(int id, [FromBody] ActualizarUsuarioDto dto)
+        [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
+        public async Task<ActionResult<UsuarioDto>> ActualizarUsuario(int id, [FromBody] ActualizarUsuarioDto dto)
         {
-            return StatusCode(StatusCodes.Status501NotImplemented, new
+            try
             {
-                message = "Funcionalidad pendiente de implementar"
-            });
+                if (dto == null)
+                {
+                    return BadRequest(new { message = "Los datos del usuario son requeridos" });
+                }
+
+                if (id <= 0)
+                {
+                    return BadRequest(new { message = "El ID debe ser mayor a cero" });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Datos inválidos",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
+                }
+
+                if (dto.UsuarioId != 0 && dto.UsuarioId != id)
+                {
+                    return BadRequest(new { message = "El ID de la ruta debe coincidir con el ID del usuario" });
+                }
+
+                dto.UsuarioId = id;
+
+                var usuarioActualizado = await _usuarioService.ActualizarUsuarioAsync(dto);
+
+                return Ok(usuarioActualizado);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar usuario");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error interno al actualizar usuario" });
+            }
         }
 
         /// <summary>
         /// Desactiva un usuario (soft delete).
         /// </summary>
         [HttpDelete("{id}")]
-        public ActionResult DesactivarUsuario(int id)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult> DesactivarUsuario(int id)
         {
-            return StatusCode(StatusCodes.Status501NotImplemented, new
+            try
             {
-                message = "Funcionalidad pendiente de implementar"
-            });
+                if (id <= 0)
+                {
+                    return BadRequest(new { message = "El ID debe ser mayor a cero" });
+                }
+
+                await _usuarioService.DesactivarUsuarioAsync(id);
+
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desactivar usuario");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error interno al desactivar usuario" });
+            }
         }
 
         /// <summary>
@@ -170,12 +238,53 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// Cambia el rol de un usuario.
         /// </summary>
         [HttpPut("{id}/rol")]
-        public ActionResult CambiarRol(int id, [FromBody] CambiarRolDto dto)
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<ActionResult> CambiarRol(int id, [FromBody] CambiarRolDto dto)
         {
-            return StatusCode(StatusCodes.Status501NotImplemented, new
+            try
             {
-                message = "Funcionalidad pendiente de implementar"
-            });
+                if (dto == null)
+                {
+                    return BadRequest(new { message = "Los datos del cambio de rol son requeridos" });
+                }
+
+                if (id <= 0)
+                {
+                    return BadRequest(new { message = "El ID debe ser mayor a cero" });
+                }
+
+                dto.UsuarioId = id;
+                ModelState.Remove(nameof(CambiarRolDto.UsuarioId));
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Datos inválidos",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
+                }
+
+                await _usuarioService.CambiarRolAsync(dto);
+
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar rol");
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error interno al cambiar el rol" });
+            }
         }
     }
 }

@@ -7,10 +7,11 @@ namespace SistemaFacturacionSRI.WebUI.Services
     /// Servicio cliente HTTP para consumir la API de Productos.
     /// Este servicio se comunica con ProductoController en el backend.
     /// </summary>
-    public class ProductoHttpService
+    public class ProductoHttpService : IProductoHttpService
     {
         private readonly HttpClient _httpClient;
         private const string API_BASE_URL = "/api/producto";
+
         public ProductoHttpService(HttpClient httpClient)
         {
             _httpClient = httpClient;

@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaFacturacionSRI.Application.DTOs.Categoria;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class CategoriaController : ControllerBase

@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
-    public class LoteHttpService
+    public class LoteHttpService : ILoteHttpService
     {
         private readonly HttpClient _httpClient;
 

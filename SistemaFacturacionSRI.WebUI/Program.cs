@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -14,6 +15,7 @@ using SistemaFacturacionSRI.Application.Security;
 using SistemaFacturacionSRI.WebUI.Services;
 using SistemaFacturacionSRI.WebUI.Components;
 using SistemaFacturacionSRI.WebUI.Middleware;
+using SistemaFacturacionSRI.WebUI.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
+builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
+builder.Services.AddScoped<IAutoLoginService, AutoLoginService>();
 
 // 🔐 Configuración de autenticación JWT
 builder.Services.AddAuthentication(options =>
@@ -107,43 +111,43 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     // Política para administradores
-    options.AddPolicy("AdminOnly", policy =>
+    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
         policy.RequireRole("Administrador"));
 
     // Política para vendedores
-    options.AddPolicy("VendedorOnly", policy =>
+    options.AddPolicy(AuthorizationPolicies.VendedorOnly, policy =>
         policy.RequireRole("Vendedor"));
 
     // Política para admin o vendedor
-    options.AddPolicy("AdminOrVendedor", policy =>
+    options.AddPolicy(AuthorizationPolicies.AdminOrVendedor, policy =>
         policy.RequireRole("Administrador", "Vendedor"));
 });
 
-// ✅ Cliente HTTP para consumir la API desde Blazor
-builder.Services.AddScoped<ProductoHttpService>(sp =>
+builder.Services.AddHttpClient<IProductoHttpService, ProductoHttpService>(client =>
 {
-    var httpClient = new HttpClient
-    {
-        BaseAddress = new Uri("http://localhost:5293")
-    };
-    return new ProductoHttpService(httpClient);
-});
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-// ✅ Cliente HTTP para lotes
-builder.Services.AddScoped<LoteHttpService>(sp =>
+builder.Services.AddHttpClient<ILoteHttpService, LoteHttpService>(client =>
 {
-    var httpClient = new HttpClient
-    {
-        BaseAddress = new Uri("http://localhost:5293")
-    };
-    return new LoteHttpService(httpClient);
-});
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-// ✅ Cliente HTTP para categorías
 builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5293");
-});
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient<IAuthHttpService, AuthHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddTransient<AuthHeaderHandler>();
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();
