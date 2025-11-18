@@ -52,6 +52,8 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
 builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
 builder.Services.AddScoped<IAutoLoginService, AutoLoginService>();
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
 
 // 🔐 Configuración de autenticación JWT
 builder.Services.AddAuthentication(options =>
