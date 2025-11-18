@@ -32,54 +32,7 @@ namespace SistemaFacturacionSRI.Application.Validators
         /// <summary>
         /// Valida formato de cédula ecuatoriana (10 dígitos)
         /// </summary>
-        private static bool ValidarCedula(string cedula)
-        {
-            if (string.IsNullOrWhiteSpace(cedula))
-                return false;
-
-            cedula = cedula.Trim();
-
-            // Debe tener exactamente 10 dígitos
-            if (cedula.Length != 10 || !cedula.All(char.IsDigit))
-                return false;
-
-            // Los dos primeros dígitos deben corresponder a una provincia válida (01-24)
-            if (!int.TryParse(cedula.Substring(0, 2), out int provincia))
-                return false;
-
-            if (provincia < 1 || provincia > 24)
-                return false;
-
-            // Validación del dígito verificador (algoritmo módulo 10)
-            return ValidarDigitoVerificadorCedula(cedula);
-        }
-
-        /// <summary>
-        /// Valida el dígito verificador de la cédula ecuatoriana
-        /// </summary>
-        private static bool ValidarDigitoVerificadorCedula(string cedula)
-        {
-            try
-            {
-                int[] coeficientes = { 2, 1, 2, 1, 2, 1, 2, 1, 2 };
-                int suma = 0;
-
-                for (int i = 0; i < 9; i++)
-                {
-                    int valor = int.Parse(cedula[i].ToString()) * coeficientes[i];
-                    suma += (valor > 9) ? valor - 9 : valor;
-                }
-
-                int residuo = suma % 10;
-                int digitoVerificador = (residuo == 0) ? 0 : 10 - residuo;
-
-                return digitoVerificador == int.Parse(cedula[9].ToString());
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        private static bool ValidarCedula(string cedula) => CedulaEcuadorValidator.EsValida(cedula);
 
         /// <summary>
         /// Valida formato de RUC ecuatoriano (13 dígitos)
