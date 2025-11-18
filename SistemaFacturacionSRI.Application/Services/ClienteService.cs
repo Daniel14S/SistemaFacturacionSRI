@@ -61,15 +61,44 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         /// <inheritdoc />
-        public Task<PagedResultDto<ClienteListDto>> ListarClientesAsync(FiltroClienteDto filtro)
+        /// <inheritdoc />
+        public async Task<PagedResultDto<ClienteListDto>> ListarClientesAsync(FiltroClienteDto filtro)
         {
-            throw new NotImplementedException("Se implementará en T-47");
+            // 1. VALIDAR PARÁMETROS DE PAGINACIÓN
+            if (filtro.PageNumber < 1)
+                filtro.PageNumber = 1;
+            
+            if (filtro.PageSize < 1)
+                filtro.PageSize = 10;
+
+            // 2. LLAMAR AL REPOSITORIO CON FILTROS
+            var (clientes, totalRegistros) = await _clienteRepository.ListarConFiltrosAsync(
+                filtro.Busqueda,
+                filtro.TipoIdentificacionId,
+                filtro.PageNumber,
+                filtro.PageSize,
+                filtro.OrderBy,
+                filtro.OrderAscending
+            );
+
+            // 3. MAPEAR A DTOs
+            var clientesDto = clientes.Select(c => MapearClienteListDto(c)).ToList();
+
+            // 4. CREAR RESULTADO PAGINADO
+            return new PagedResultDto<ClienteListDto>
+            {
+                Items = clientesDto,
+                TotalItems = totalRegistros,
+                PageNumber = filtro.PageNumber,
+                PageSize = filtro.PageSize
+            };
         }
 
         /// <inheritdoc />
-        public Task<ClienteDto?> ObtenerClientePorIdAsync(int clienteId)
+        public async Task<ClienteDto?> ObtenerClientePorIdAsync(int clienteId)
         {
-            throw new NotImplementedException();
+            var cliente = await _clienteRepository.ObtenerPorIdAsync(clienteId);
+            return cliente == null ? null : MapearClienteDto(cliente);
         }
 
         /// <inheritdoc />
@@ -102,5 +131,22 @@ namespace SistemaFacturacionSRI.Application.Services
                 Email = cliente.Email
             };
         }
+
+        /// <summary>
+        /// Mapea una entidad Cliente a ClienteListDto (versión simplificada para listas).
+        /// </summary>
+        private ClienteListDto MapearClienteListDto(Cliente cliente)
+        {
+            return new ClienteListDto
+            {
+                ClienteId = cliente.ClienteId,
+                TipoIdentificacion = cliente.TipoIdentificacion?.Nombre ?? "Sin tipo",
+                Identificacion = cliente.Identificacion,
+                NombreCompleto = $"{cliente.Nombres} {cliente.Apellidos}".Trim(),
+                Email = cliente.Email,
+                Telefono = cliente.Telefono
+            };
+        }
+
     }
 }
