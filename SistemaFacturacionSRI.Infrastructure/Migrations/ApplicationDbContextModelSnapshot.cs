@@ -220,6 +220,228 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.HasIndex("TipoIdentificacionId");
 
                     b.ToTable("Clientes", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            ClienteId = 1,
+                            Apellidos = "Pérez",
+                            Direccion = "Av. Amazonas 123, Quito",
+                            Email = "juan.perez@example.com",
+                            Identificacion = "0102030405",
+                            Nombres = "Juan",
+                            Telefono = "+593999999999",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 2,
+                            Apellidos = "García",
+                            Direccion = "Calle 10 de Agosto 456, Cuenca",
+                            Email = "maria.garcia@example.com",
+                            Identificacion = "0607080910",
+                            Nombres = "María",
+                            Telefono = "+593988888888",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 3,
+                            Apellidos = "Lopez",
+                            Direccion = "Av. 9 de Octubre 789, Guayaquil",
+                            Email = "carlos.lopez@example.com",
+                            Identificacion = "1718192021",
+                            Nombres = "Carlos",
+                            Telefono = "+593977777777",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 4,
+                            Apellidos = "Salazar",
+                            Direccion = "Av. de los Shyris 321, Quito",
+                            Email = "andrea.salazar@example.com",
+                            Identificacion = "2122232425",
+                            Nombres = "Andrea",
+                            Telefono = "+593966666666",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 5,
+                            Apellidos = "Vera",
+                            Direccion = "Km 6.5 Via Daule, Guayaquil",
+                            Email = "miguel.vera@example.com",
+                            Identificacion = "2627282930",
+                            Nombres = "Miguel",
+                            Telefono = "+593955555555",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 6,
+                            Apellidos = "Ortiz",
+                            Direccion = "Av. Loja 12-34, Loja",
+                            Email = "fernanda.ortiz@example.com",
+                            Identificacion = "3132333435",
+                            Nombres = "Fernanda",
+                            Telefono = "+593944444444",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 7,
+                            Apellidos = "Cedeño",
+                            Direccion = "Malecón 2000, Guayaquil",
+                            Email = "jorge.cedeno@example.com",
+                            Identificacion = "3637383940",
+                            Nombres = "Jorge",
+                            Telefono = "+593933333333",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 8,
+                            Apellidos = "Morales",
+                            Direccion = "Av. Pedro Vicente Maldonado 123, Latacunga",
+                            Email = "lucia.morales@example.com",
+                            Identificacion = "4142434445",
+                            Nombres = "Lucía",
+                            Telefono = "+593922222222",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 9,
+                            Apellidos = "Suárez",
+                            Direccion = "Av. Solano 987, Cuenca",
+                            Email = "ricardo.suarez@example.com",
+                            Identificacion = "4647484950",
+                            Nombres = "Ricardo",
+                            Telefono = "+593911111111",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 10,
+                            Apellidos = "Martínez",
+                            Direccion = "Av. Esmeraldas 456, Esmeraldas",
+                            Email = "veronica.martinez@example.com",
+                            Identificacion = "5152535455",
+                            Nombres = "Verónica",
+                            Telefono = "+593900000000",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 11,
+                            Apellidos = "Aguirre",
+                            Direccion = "Av. 6 de Diciembre 100, Quito",
+                            Email = "patricio.aguirre@example.com",
+                            Identificacion = "5657585960",
+                            Nombres = "Patricio",
+                            Telefono = "+593989898989",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 12,
+                            Apellidos = "Reyes",
+                            Direccion = "Ruta del Sol, Santa Elena",
+                            Email = "gabriela.reyes@example.com",
+                            Identificacion = "6162636465",
+                            Nombres = "Gabriela",
+                            Telefono = "+593979797979",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 13,
+                            Apellidos = "Villalba",
+                            Direccion = "Av. Universitaria 567, Ambato",
+                            Email = "hector.villalba@example.com",
+                            Identificacion = "6667686970",
+                            Nombres = "Héctor",
+                            Telefono = "+593969696969",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 14,
+                            Apellidos = "Correa",
+                            Direccion = "Av. González Suárez 135, Quito",
+                            Email = "paola.correa@example.com",
+                            Identificacion = "7172737475",
+                            Nombres = "Paola",
+                            Telefono = "+593959595959",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 15,
+                            Apellidos = "Paredes",
+                            Direccion = "Av. Amazonas y República, Quito",
+                            Email = "diego.paredes@example.com",
+                            Identificacion = "7677787980",
+                            Nombres = "Diego",
+                            Telefono = "+593949494949",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 16,
+                            Apellidos = "Carrillo",
+                            Direccion = "Av. Bolivariana 345, Riobamba",
+                            Email = "natalia.carrillo@example.com",
+                            Identificacion = "8182838485",
+                            Nombres = "Natalia",
+                            Telefono = "+593939393939",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 17,
+                            Apellidos = "Yánez",
+                            Direccion = "Av. Manabí 456, Portoviejo",
+                            Email = "sebastian.yanez@example.com",
+                            Identificacion = "8687888990",
+                            Nombres = "Sebastián",
+                            Telefono = "+593929292929",
+                            TipoIdentificacionId = 2
+                        },
+                        new
+                        {
+                            ClienteId = 18,
+                            Apellidos = "Pico",
+                            Direccion = "Av. 24 de Mayo 678, Ibarra",
+                            Email = "daniela.pico@example.com",
+                            Identificacion = "9192939495",
+                            Nombres = "Daniela",
+                            Telefono = "+593919191919",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 19,
+                            Apellidos = "Montero",
+                            Direccion = "Av. Quito 123, Santo Domingo",
+                            Email = "gustavo.montero@example.com",
+                            Identificacion = "9697989991",
+                            Nombres = "Gustavo",
+                            Telefono = "+593909090909",
+                            TipoIdentificacionId = 1
+                        },
+                        new
+                        {
+                            ClienteId = 20,
+                            Apellidos = "Peñafiel",
+                            Direccion = "Av. Olmedo 345, Machala",
+                            Email = "silvia.penafiel@example.com",
+                            Identificacion = "0192837465",
+                            Nombres = "Silvia",
+                            Telefono = "+593998877665",
+                            TipoIdentificacionId = 2
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>

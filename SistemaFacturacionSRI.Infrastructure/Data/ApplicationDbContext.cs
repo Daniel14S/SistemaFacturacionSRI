@@ -59,6 +59,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
 
             // Registra todas las configuraciones Fluent API ubicadas en el ensamblado Infrastructure
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+            // Restricción de unicidad para la identificación de clientes
+            modelBuilder.Entity<Cliente>()
+                .HasIndex(c => c.Identificacion)
+                .IsUnique();
         }
 
         /// <summary>
