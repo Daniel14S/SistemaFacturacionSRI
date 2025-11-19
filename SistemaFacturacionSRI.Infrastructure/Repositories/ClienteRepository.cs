@@ -43,6 +43,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
         public async Task<(List<Cliente> Clientes, int TotalRegistros)> ListarConFiltrosAsync(
             string? busqueda,
             int? tipoIdentificacionId,
+            bool? estado,
             int pageNumber,
             int pageSize,
             string? orderBy,
@@ -58,8 +59,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 var busquedaLower = busqueda.ToLower();
                 query = query.Where(c =>
                     c.Identificacion.ToLower().Contains(busquedaLower) ||
-                    c.Nombres.ToLower().Contains(busquedaLower) ||
-                    c.Apellidos.ToLower().Contains(busquedaLower) ||
+                    c.Nombre1.ToLower().Contains(busquedaLower) ||
+                    (c.Nombre2 != null && c.Nombre2.ToLower().Contains(busquedaLower)) ||
+                    c.Apellido1.ToLower().Contains(busquedaLower) ||
+                    (c.Apellido2 != null && c.Apellido2.ToLower().Contains(busquedaLower)) ||
                     (c.Email != null && c.Email.ToLower().Contains(busquedaLower))
                 );
             }
@@ -70,6 +73,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 query = query.Where(c => c.TipoIdentificacionId == tipoIdentificacionId.Value);
             }
 
+            if (estado.HasValue)
+            {
+                query = query.Where(c => c.Estado == estado.Value);
+            }
+
             // Contar total
             var totalRegistros = await query.CountAsync();
 
@@ -77,12 +85,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             query = orderBy?.ToLower() switch
             {
                 "nombres" => orderAscending
-                    ? query.OrderBy(c => c.Nombres)
-                    : query.OrderByDescending(c => c.Nombres),
+                    ? query.OrderBy(c => c.Nombre1)
+                    : query.OrderByDescending(c => c.Nombre1),
                 "identificacion" => orderAscending
                     ? query.OrderBy(c => c.Identificacion)
                     : query.OrderByDescending(c => c.Identificacion),
-                _ => query.OrderBy(c => c.Nombres) // Por defecto: orden alfabético
+                _ => query.OrderBy(c => c.Nombre1) // Por defecto: orden alfabético
             };
 
             // Paginación
@@ -96,26 +104,29 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
 
 
         public async Task<List<Cliente>> BuscarAsync(string termino, int limite)
-{
-    if (string.IsNullOrWhiteSpace(termino))
-    {
-        return new List<Cliente>();
-    }
+        {
+            if (string.IsNullOrWhiteSpace(termino))
+            {
+                return new List<Cliente>();
+            }
 
-    var terminoLower = termino.ToLower().Trim();
+            var terminoLower = termino.ToLower().Trim();
 
-    return await _context.Clientes
-        .Include(c => c.TipoIdentificacion)
-        .Where(c =>
-            c.Identificacion.ToLower().Contains(terminoLower) ||
-            c.Nombres.ToLower().Contains(terminoLower) ||
-            c.Apellidos.ToLower().Contains(terminoLower) ||
-            (c.Email != null && c.Email.ToLower().Contains(terminoLower))
-        )
-        .OrderBy(c => c.Nombres)
-        .Take(limite)
-        .ToListAsync();
-}
+            return await _context.Clientes
+                .Include(c => c.TipoIdentificacion)
+                .Where(c =>
+                    c.Identificacion.ToLower().Contains(terminoLower) ||
+                    c.Nombre1.ToLower().Contains(terminoLower) ||
+                    (c.Nombre2 != null && c.Nombre2.ToLower().Contains(terminoLower)) ||
+                    c.Apellido1.ToLower().Contains(terminoLower) ||
+                    (c.Apellido2 != null && c.Apellido2.ToLower().Contains(terminoLower)) ||
+                    (c.Email != null && c.Email.ToLower().Contains(terminoLower))
+                )
+                .OrderBy(c => c.Nombre1)
+                .ThenBy(c => c.Apellido1)
+                .Take(limite)
+                .ToListAsync();
+        }
 
     }
 }

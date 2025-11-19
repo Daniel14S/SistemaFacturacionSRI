@@ -16,6 +16,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .HasMaxLength(50);
 
             builder.HasIndex(r => r.NombreRol).IsUnique();
+
+            builder.HasData(
+                new Rol
+                {
+                    RolId = 1,
+                    NombreRol = "Administrador"
+                },
+                new Rol
+                {
+                    RolId = 2,
+                    NombreRol = "Vendedor"
+                }
+            );
         }
     }
 }

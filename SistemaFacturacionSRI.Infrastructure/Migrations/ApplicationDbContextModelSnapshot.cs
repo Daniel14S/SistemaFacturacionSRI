@@ -182,10 +182,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClienteId"));
 
-                    b.Property<string>("Apellidos")
+                    b.Property<string>("Apellido1")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Apellido2")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Direccion")
                         .HasMaxLength(500)
@@ -195,15 +199,24 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("Estado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Identificacion")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("Nombres")
+                    b.Property<string>("Nombre1")
                         .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre2")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Telefono")
                         .HasMaxLength(20)
@@ -225,220 +238,240 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         new
                         {
                             ClienteId = 1,
-                            Apellidos = "Pérez",
+                            Apellido1 = "Perez",
                             Direccion = "Av. Amazonas 123, Quito",
                             Email = "juan.perez@example.com",
+                            Estado = true,
                             Identificacion = "0102030405",
-                            Nombres = "Juan",
+                            Nombre1 = "Juan",
                             Telefono = "+593999999999",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 2,
-                            Apellidos = "García",
+                            Apellido1 = "Garcia",
                             Direccion = "Calle 10 de Agosto 456, Cuenca",
                             Email = "maria.garcia@example.com",
+                            Estado = true,
                             Identificacion = "0607080910",
-                            Nombres = "María",
+                            Nombre1 = "Maria",
                             Telefono = "+593988888888",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 3,
-                            Apellidos = "Lopez",
+                            Apellido1 = "Lopez",
                             Direccion = "Av. 9 de Octubre 789, Guayaquil",
                             Email = "carlos.lopez@example.com",
+                            Estado = true,
                             Identificacion = "1718192021",
-                            Nombres = "Carlos",
+                            Nombre1 = "Carlos",
                             Telefono = "+593977777777",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 4,
-                            Apellidos = "Salazar",
+                            Apellido1 = "Salazar",
                             Direccion = "Av. de los Shyris 321, Quito",
                             Email = "andrea.salazar@example.com",
+                            Estado = true,
                             Identificacion = "2122232425",
-                            Nombres = "Andrea",
+                            Nombre1 = "Andrea",
                             Telefono = "+593966666666",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 5,
-                            Apellidos = "Vera",
+                            Apellido1 = "Vera",
                             Direccion = "Km 6.5 Via Daule, Guayaquil",
                             Email = "miguel.vera@example.com",
+                            Estado = true,
                             Identificacion = "2627282930",
-                            Nombres = "Miguel",
+                            Nombre1 = "Miguel",
                             Telefono = "+593955555555",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 6,
-                            Apellidos = "Ortiz",
+                            Apellido1 = "Ortiz",
                             Direccion = "Av. Loja 12-34, Loja",
                             Email = "fernanda.ortiz@example.com",
+                            Estado = true,
                             Identificacion = "3132333435",
-                            Nombres = "Fernanda",
+                            Nombre1 = "Fernanda",
                             Telefono = "+593944444444",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 7,
-                            Apellidos = "Cedeño",
-                            Direccion = "Malecón 2000, Guayaquil",
+                            Apellido1 = "Cedeno",
+                            Direccion = "Malecon 2000, Guayaquil",
                             Email = "jorge.cedeno@example.com",
+                            Estado = true,
                             Identificacion = "3637383940",
-                            Nombres = "Jorge",
+                            Nombre1 = "Jorge",
                             Telefono = "+593933333333",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 8,
-                            Apellidos = "Morales",
+                            Apellido1 = "Morales",
                             Direccion = "Av. Pedro Vicente Maldonado 123, Latacunga",
                             Email = "lucia.morales@example.com",
+                            Estado = true,
                             Identificacion = "4142434445",
-                            Nombres = "Lucía",
+                            Nombre1 = "Lucia",
                             Telefono = "+593922222222",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 9,
-                            Apellidos = "Suárez",
+                            Apellido1 = "Suarez",
                             Direccion = "Av. Solano 987, Cuenca",
                             Email = "ricardo.suarez@example.com",
+                            Estado = true,
                             Identificacion = "4647484950",
-                            Nombres = "Ricardo",
+                            Nombre1 = "Ricardo",
                             Telefono = "+593911111111",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 10,
-                            Apellidos = "Martínez",
+                            Apellido1 = "Martinez",
                             Direccion = "Av. Esmeraldas 456, Esmeraldas",
                             Email = "veronica.martinez@example.com",
+                            Estado = true,
                             Identificacion = "5152535455",
-                            Nombres = "Verónica",
+                            Nombre1 = "Veronica",
                             Telefono = "+593900000000",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 11,
-                            Apellidos = "Aguirre",
+                            Apellido1 = "Aguirre",
                             Direccion = "Av. 6 de Diciembre 100, Quito",
                             Email = "patricio.aguirre@example.com",
+                            Estado = true,
                             Identificacion = "5657585960",
-                            Nombres = "Patricio",
+                            Nombre1 = "Patricio",
                             Telefono = "+593989898989",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 12,
-                            Apellidos = "Reyes",
+                            Apellido1 = "Reyes",
                             Direccion = "Ruta del Sol, Santa Elena",
                             Email = "gabriela.reyes@example.com",
+                            Estado = true,
                             Identificacion = "6162636465",
-                            Nombres = "Gabriela",
+                            Nombre1 = "Gabriela",
                             Telefono = "+593979797979",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 13,
-                            Apellidos = "Villalba",
+                            Apellido1 = "Villalba",
                             Direccion = "Av. Universitaria 567, Ambato",
                             Email = "hector.villalba@example.com",
+                            Estado = true,
                             Identificacion = "6667686970",
-                            Nombres = "Héctor",
+                            Nombre1 = "Hector",
                             Telefono = "+593969696969",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 14,
-                            Apellidos = "Correa",
-                            Direccion = "Av. González Suárez 135, Quito",
+                            Apellido1 = "Correa",
+                            Direccion = "Av. Gonzalez Suarez 135, Quito",
                             Email = "paola.correa@example.com",
+                            Estado = true,
                             Identificacion = "7172737475",
-                            Nombres = "Paola",
+                            Nombre1 = "Paola",
                             Telefono = "+593959595959",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 15,
-                            Apellidos = "Paredes",
-                            Direccion = "Av. Amazonas y República, Quito",
+                            Apellido1 = "Paredes",
+                            Direccion = "Av. Amazonas y Republica, Quito",
                             Email = "diego.paredes@example.com",
+                            Estado = true,
                             Identificacion = "7677787980",
-                            Nombres = "Diego",
+                            Nombre1 = "Diego",
                             Telefono = "+593949494949",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 16,
-                            Apellidos = "Carrillo",
+                            Apellido1 = "Carrillo",
                             Direccion = "Av. Bolivariana 345, Riobamba",
                             Email = "natalia.carrillo@example.com",
+                            Estado = true,
                             Identificacion = "8182838485",
-                            Nombres = "Natalia",
+                            Nombre1 = "Natalia",
                             Telefono = "+593939393939",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 17,
-                            Apellidos = "Yánez",
-                            Direccion = "Av. Manabí 456, Portoviejo",
+                            Apellido1 = "Yanez",
+                            Direccion = "Av. Manabi 456, Portoviejo",
                             Email = "sebastian.yanez@example.com",
+                            Estado = true,
                             Identificacion = "8687888990",
-                            Nombres = "Sebastián",
+                            Nombre1 = "Sebastian",
                             Telefono = "+593929292929",
                             TipoIdentificacionId = 2
                         },
                         new
                         {
                             ClienteId = 18,
-                            Apellidos = "Pico",
+                            Apellido1 = "Pico",
                             Direccion = "Av. 24 de Mayo 678, Ibarra",
                             Email = "daniela.pico@example.com",
+                            Estado = true,
                             Identificacion = "9192939495",
-                            Nombres = "Daniela",
+                            Nombre1 = "Daniela",
                             Telefono = "+593919191919",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 19,
-                            Apellidos = "Montero",
+                            Apellido1 = "Montero",
                             Direccion = "Av. Quito 123, Santo Domingo",
                             Email = "gustavo.montero@example.com",
+                            Estado = true,
                             Identificacion = "9697989991",
-                            Nombres = "Gustavo",
+                            Nombre1 = "Gustavo",
                             Telefono = "+593909090909",
                             TipoIdentificacionId = 1
                         },
                         new
                         {
                             ClienteId = 20,
-                            Apellidos = "Peñafiel",
+                            Apellido1 = "Penafiel",
                             Direccion = "Av. Olmedo 345, Machala",
                             Email = "silvia.penafiel@example.com",
+                            Estado = true,
                             Identificacion = "0192837465",
-                            Nombres = "Silvia",
+                            Nombre1 = "Silvia",
                             Telefono = "+593998877665",
                             TipoIdentificacionId = 2
                         });
@@ -660,6 +693,18 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            RolId = 1,
+                            NombreRol = "Administrador"
+                        },
+                        new
+                        {
+                            RolId = 2,
+                            NombreRol = "Vendedor"
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", b =>
@@ -731,6 +776,20 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.HasKey("TipoIdentificacionId");
 
                     b.ToTable("TiposIdentificacion", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            TipoIdentificacionId = 1,
+                            CodigoSRI = "05",
+                            Nombre = "Cedula"
+                        },
+                        new
+                        {
+                            TipoIdentificacionId = 2,
+                            CodigoSRI = "04",
+                            Nombre = "RUC"
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Usuario", b =>
@@ -802,6 +861,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Usuarios", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UsuarioId = 1,
+                            Apellido1 = "Principal",
+                            Email = "admin@sistemafacturacion.com",
+                            Estado = true,
+                            FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IntentosLogin = 0,
+                            Nombre1 = "Admin",
+                            Nombre2 = "Sistema",
+                            PasswordHash = "ClvD40JDLxutkv/VG3hTQ+xykGzbpqJhMQYLAI54ZlY=",
+                            RolId = 1,
+                            Username = "admin"
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Cliente", b =>

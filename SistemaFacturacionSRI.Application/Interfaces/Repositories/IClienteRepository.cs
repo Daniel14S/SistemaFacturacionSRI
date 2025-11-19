@@ -33,6 +33,7 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         Task<(List<Cliente> Clientes, int TotalRegistros)> ListarConFiltrosAsync(
             string? busqueda,
             int? tipoIdentificacionId,
+            bool? estado,
             int pageNumber,
             int pageSize,
             string? orderBy,

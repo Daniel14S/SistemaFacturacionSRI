@@ -22,21 +22,35 @@ namespace SistemaFacturacionSRI.Application.DTOs.Cliente
         [StringLength(20, MinimumLength = 6, ErrorMessage = "La identificación debe tener entre 6 y 20 caracteres")]
         public string Identificacion { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Nombres del cliente
-        /// </summary>
-        [Required(ErrorMessage = "Los nombres son obligatorios")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los nombres deben tener entre 2 y 100 caracteres")]
-        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "Los nombres solo pueden contener letras")]
-        public string Nombres { get; set; } = string.Empty;
+    /// <summary>
+    /// Primer nombre del cliente (obligatorio)
+    /// </summary>
+    [Required(ErrorMessage = "El primer nombre es obligatorio")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "El primer nombre debe tener entre 2 y 100 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El primer nombre solo puede contener letras")]
+    public string Nombre1 { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Apellidos del cliente
-        /// </summary>
-        [Required(ErrorMessage = "Los apellidos son obligatorios")]
-        [StringLength(100, MinimumLength = 2, ErrorMessage = "Los apellidos deben tener entre 2 y 100 caracteres")]
-        [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "Los apellidos solo pueden contener letras")]
-        public string Apellidos { get; set; } = string.Empty;
+    /// <summary>
+    /// Segundo nombre del cliente (opcional)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "El segundo nombre no puede exceder 100 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$", ErrorMessage = "El segundo nombre solo puede contener letras")]
+    public string? Nombre2 { get; set; }
+
+    /// <summary>
+    /// Primer apellido del cliente (obligatorio)
+    /// </summary>
+    [Required(ErrorMessage = "El primer apellido es obligatorio")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "El primer apellido debe tener entre 2 y 100 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", ErrorMessage = "El primer apellido solo puede contener letras")]
+    public string Apellido1 { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Segundo apellido del cliente (opcional)
+    /// </summary>
+    [StringLength(100, ErrorMessage = "El segundo apellido no puede exceder 100 caracteres")]
+    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$", ErrorMessage = "El segundo apellido solo puede contener letras")]
+    public string? Apellido2 { get; set; }
 
         /// <summary>
         /// Dirección del cliente
