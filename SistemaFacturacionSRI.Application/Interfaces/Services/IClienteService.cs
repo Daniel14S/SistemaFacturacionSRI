@@ -46,5 +46,16 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
         /// <param name="identificacion">Número de identificación a buscar</param>
         /// <returns>Cliente encontrado o null</returns>
         Task<ClienteDto?> BuscarPorIdentificacionAsync(string identificacion);
+
+        /// <summary>
+/// Busca clientes por nombre o identificación (sin paginación).
+/// Útil para autocompletado y búsquedas rápidas.
+/// </summary>
+/// <param name="termino">Término de búsqueda</param>
+/// <param name="limite">Número máximo de resultados (por defecto 10)</param>
+/// <returns>Lista de clientes que coinciden con el término</returns>
+Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int limite = 10);
+
+        
     }
 }

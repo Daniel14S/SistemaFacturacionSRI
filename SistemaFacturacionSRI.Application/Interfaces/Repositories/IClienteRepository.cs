@@ -37,5 +37,13 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
             int pageSize,
             string? orderBy,
             bool orderAscending);
+
+        /// <summary>
+/// Busca clientes por nombre o identificación (sin paginación).
+/// </summary>
+/// <param name="termino">Término de búsqueda</param>
+/// <param name="limite">Límite de resultados</param>
+Task<List<Cliente>> BuscarAsync(string termino, int limite);
+
     }
 }

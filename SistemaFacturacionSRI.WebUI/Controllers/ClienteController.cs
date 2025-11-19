@@ -124,6 +124,65 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         }
 
         /// <summary>
+/// Actualiza un cliente existente.
+/// </summary>
+[HttpPut("{id}")]
+[ProducesResponseType(typeof(ClienteDto), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<ActionResult<ClienteDto>> ActualizarCliente(int id, [FromBody] ActualizarClienteDto dto)
+{
+    try
+    {
+        // Validar que el DTO no sea nulo
+        if (dto == null)
+        {
+            return BadRequest(new { message = "Los datos del cliente son requeridos" });
+        }
+
+        // Validar que el ID de la ruta coincida con el ID del DTO
+        if (id != dto.ClienteId)
+        {
+            return BadRequest(new { message = "El ID de la ruta no coincide con el ID del cliente" });
+        }
+
+        // Validar ModelState
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new
+            {
+                message = "Datos inválidos",
+                errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+            });
+        }
+
+        // Llamar al servicio
+        var clienteActualizado = await _clienteService.ActualizarClienteAsync(dto);
+
+        return Ok(clienteActualizado);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return NotFound(new { message = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return BadRequest(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al actualizar cliente {ClienteId}", id);
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno al actualizar cliente"
+        });
+    }
+}
+
+
+        /// <summary>
         /// Busca un cliente por su identificación.
         /// </summary>
         [HttpGet("buscar/{identificacion}")]
@@ -151,5 +210,37 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 });
             }
         }
+
+        /// <summary>
+/// Busca clientes por nombre o identificación (búsqueda rápida).
+/// </summary>
+[HttpGet("buscar")]
+[ProducesResponseType(typeof(List<ClienteListDto>), StatusCodes.Status200OK)]
+public async Task<ActionResult<List<ClienteListDto>>> BuscarClientes(
+    [FromQuery] string termino,
+    [FromQuery] int limite = 10)
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            return Ok(new List<ClienteListDto>());
+        }
+
+        var clientes = await _clienteService.BuscarClientesAsync(termino, limite);
+        return Ok(clientes);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al buscar clientes con término: {Termino}", termino);
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno al buscar clientes"
+        });
+    }
+}
+
+
+
     }
 }
