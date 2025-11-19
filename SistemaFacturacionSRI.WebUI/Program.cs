@@ -129,25 +129,26 @@ builder.Services.AddHttpClient<IProductoHttpService, ProductoHttpService>(client
 {
     client.BaseAddress = new Uri("http://localhost:5293");
 })
-.AddHttpMessageHandler<AuthHeaderHandler>();
+.AddHttpMessageHandler<AuthHeaderHandler>(); 
 
 builder.Services.AddHttpClient<ILoteHttpService, LoteHttpService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5293");
 })
-.AddHttpMessageHandler<AuthHeaderHandler>();
+.AddHttpMessageHandler<AuthHeaderHandler>(); 
 
 builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5293");
 })
-.AddHttpMessageHandler<AuthHeaderHandler>();
+.AddHttpMessageHandler<AuthHeaderHandler>(); 
 
 builder.Services.AddHttpClient<IAuthHttpService, AuthHttpService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5293");
 })
 .AddHttpMessageHandler<AuthHeaderHandler>();
+
 
 builder.Services.AddTransient<AuthHeaderHandler>();
 
