@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SistemaFacturacionSRI.Application.DTOs.Cliente;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.WebUI.Authorization;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
 {
@@ -75,12 +76,13 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
         }
 
-        /// <summary>
-        /// Crea un nuevo cliente.
-        /// </summary>
-        [HttpPost]
-        [ProducesResponseType(typeof(ClienteDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    /// <summary>
+    /// Crea un nuevo cliente.
+    /// </summary>
+    [HttpPost]
+    [AdminAuthorize]
+    [ProducesResponseType(typeof(ClienteDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ClienteDto>> CrearCliente([FromBody] CrearClienteDto dto)
         {
             try
@@ -123,63 +125,118 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
         }
 
-        /// <summary>
-/// Actualiza un cliente existente.
-/// </summary>
-[HttpPut("{id}")]
-[ProducesResponseType(typeof(ClienteDto), StatusCodes.Status200OK)]
-[ProducesResponseType(StatusCodes.Status400BadRequest)]
-[ProducesResponseType(StatusCodes.Status404NotFound)]
-public async Task<ActionResult<ClienteDto>> ActualizarCliente(int id, [FromBody] ActualizarClienteDto dto)
-{
-    try
-    {
-        // Validar que el DTO no sea nulo
-        if (dto == null)
-        {
-            return BadRequest(new { message = "Los datos del cliente son requeridos" });
-        }
+                /// <summary>
+                /// Actualiza un cliente existente.
+                /// </summary>
+                [HttpPut("{id}")]
+                [AdminAuthorize]
+                [ProducesResponseType(typeof(ClienteDto), StatusCodes.Status200OK)]
+                [ProducesResponseType(StatusCodes.Status400BadRequest)]
+                [ProducesResponseType(StatusCodes.Status404NotFound)]
+                public async Task<ActionResult<ClienteDto>> ActualizarCliente(int id, [FromBody] ActualizarClienteDto dto)
+                {
+                    try
+                    {
+                        if (dto == null)
+                        {
+                            return BadRequest(new { message = "Los datos del cliente son requeridos" });
+                        }
 
-        // Validar que el ID de la ruta coincida con el ID del DTO
-        if (id != dto.ClienteId)
-        {
-            return BadRequest(new { message = "El ID de la ruta no coincide con el ID del cliente" });
-        }
+                        if (dto.ClienteId == 0)
+                        {
+                            dto.ClienteId = id;
+                        }
+                        else if (dto.ClienteId != id)
+                        {
+                            return BadRequest(new { message = "El ID de la ruta no coincide con el ID del cliente" });
+                        }
 
-        // Validar ModelState
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(new
-            {
-                message = "Datos inválidos",
-                errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-            });
-        }
+                        if (!ModelState.IsValid)
+                        {
+                            return BadRequest(new
+                            {
+                                message = "Datos inválidos",
+                                errors = ModelState.Values
+                                    .SelectMany(v => v.Errors)
+                                    .Select(e => e.ErrorMessage)
+                            });
+                        }
 
-        // Llamar al servicio
-        var clienteActualizado = await _clienteService.ActualizarClienteAsync(dto);
+                        var clienteActualizado = await _clienteService.ActualizarClienteAsync(dto);
 
-        return Ok(clienteActualizado);
-    }
-    catch (KeyNotFoundException ex)
-    {
-        return NotFound(new { message = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return BadRequest(new { message = ex.Message });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error al actualizar cliente {ClienteId}", id);
-        return StatusCode(StatusCodes.Status500InternalServerError, new
-        {
-            message = "Error interno al actualizar cliente"
-        });
-    }
-}
+                        return Ok(clienteActualizado);
+                    }
+                    catch (KeyNotFoundException ex)
+                    {
+                        return NotFound(new { message = ex.Message });
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        return BadRequest(new { message = ex.Message });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al actualizar cliente {ClienteId}", id);
+                        return StatusCode(StatusCodes.Status500InternalServerError, new
+                        {
+                            message = "Error interno al actualizar cliente"
+                        });
+                    }
+                }
+
+                /// <summary>
+                /// Cambia el estado (activo/inactivo) de un cliente.
+                /// </summary>
+                [HttpPatch("{id}/estado")]
+                [AdminAuthorize]
+                [ProducesResponseType(StatusCodes.Status204NoContent)]
+                [ProducesResponseType(StatusCodes.Status400BadRequest)]
+                [ProducesResponseType(StatusCodes.Status404NotFound)]
+                public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoClienteDto dto)
+                {
+                    try
+                    {
+                        if (dto == null)
+                        {
+                            return BadRequest(new { message = "Los datos del cambio de estado son requeridos" });
+                        }
+
+                        if (dto.ClienteId == 0)
+                        {
+                            dto.ClienteId = id;
+                        }
+                        else if (dto.ClienteId != id)
+                        {
+                            return BadRequest(new { message = "El ID del cuerpo no coincide con el de la ruta" });
+                        }
+
+                        if (!ModelState.IsValid)
+                        {
+                            return BadRequest(new
+                            {
+                                message = "Datos inválidos",
+                                errors = ModelState.Values
+                                    .SelectMany(v => v.Errors)
+                                    .Select(e => e.ErrorMessage)
+                            });
+                        }
+
+                        await _clienteService.CambiarEstadoClienteAsync(dto);
+                        return NoContent();
+                    }
+                    catch (KeyNotFoundException ex)
+                    {
+                        return NotFound(new { message = ex.Message });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al cambiar estado del cliente {ClienteId}", id);
+                        return StatusCode(StatusCodes.Status500InternalServerError, new
+                        {
+                            message = "Error interno al cambiar estado del cliente"
+                        });
+                    }
+                }
 
 
         /// <summary>

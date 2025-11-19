@@ -11,5 +11,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Cliente
         public string NombreCompleto { get; set; } = string.Empty;
         public string? Email { get; set; }
         public string? Telefono { get; set; }
+        public bool Estado { get; set; }
     }
 }

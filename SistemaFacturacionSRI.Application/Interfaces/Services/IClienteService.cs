@@ -56,6 +56,10 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
 /// <returns>Lista de clientes que coinciden con el término</returns>
 Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int limite = 10);
 
-        
+        /// <summary>
+        /// Cambia el estado Activo/Inactivo de un cliente.
+        /// </summary>
+        /// <param name="dto">Datos necesarios para el cambio de estado</param>
+        Task CambiarEstadoClienteAsync(CambiarEstadoClienteDto dto);
     }
 }

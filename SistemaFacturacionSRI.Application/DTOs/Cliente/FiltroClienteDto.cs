@@ -16,5 +16,10 @@ namespace SistemaFacturacionSRI.Application.DTOs.Cliente
         /// Filtrar por tipo de identificación específico
         /// </summary>
         public int? TipoIdentificacionId { get; set; }
+
+        /// <summary>
+        /// Filtrar por estado activo/inactivo
+        /// </summary>
+        public bool? Estado { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SistemaFacturacionSRI.Domain.Entities;
@@ -33,6 +34,25 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .HasForeignKey(u => u.RolId)
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Usuario_Rol");
+
+            builder.HasData(
+                new Usuario
+                {
+                    UsuarioId = 1,
+                    RolId = 1,
+                    Username = "admin",
+                    PasswordHash = "ClvD40JDLxutkv/VG3hTQ+xykGzbpqJhMQYLAI54ZlY=",
+                    Nombre1 = "Admin",
+                    Nombre2 = "Sistema",
+                    Apellido1 = "Principal",
+                    Apellido2 = null,
+                    Email = "admin@sistemafacturacion.com",
+                    Estado = true,
+                    FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    UltimoAcceso = null,
+                    IntentosLogin = 0
+                }
+            );
         }
     }
 }

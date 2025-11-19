@@ -57,7 +57,7 @@ namespace SistemaFacturacionSRI.WebUI.Services
         private void AttachToken(HttpRequestMessage request)
         {
             var token = _tokenStorage.Token;
-            if (!string.IsNullOrEmpty(token))
+            if (string.IsNullOrEmpty(token))
             {
                 _logger.LogDebug("No hay token disponible para adjuntar a {RequestUri}", request.RequestUri);
                 return;

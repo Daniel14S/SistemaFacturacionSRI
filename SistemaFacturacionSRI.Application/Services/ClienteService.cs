@@ -38,11 +38,14 @@ namespace SistemaFacturacionSRI.Application.Services
             {
                 TipoIdentificacionId = dto.TipoIdentificacionId,
                 Identificacion = dto.Identificacion.Trim(),
-                Nombres = dto.Nombres.Trim(),
-                Apellidos = dto.Apellidos.Trim(),
+                Nombre1 = dto.Nombre1.Trim(),
+                Nombre2 = dto.Nombre2?.Trim(),
+                Apellido1 = dto.Apellido1.Trim(),
+                Apellido2 = dto.Apellido2?.Trim(),
                 Direccion = dto.Direccion?.Trim(),
                 Telefono = dto.Telefono?.Trim(),
-                Email = dto.Email?.Trim()?.ToLower()
+                Email = dto.Email?.Trim()?.ToLower(),
+                Estado = true
             };
 
             // 4. GUARDAR EN BASE DE DATOS
@@ -75,6 +78,7 @@ namespace SistemaFacturacionSRI.Application.Services
             var (clientes, totalRegistros) = await _clienteRepository.ListarConFiltrosAsync(
                 filtro.Busqueda,
                 filtro.TipoIdentificacionId,
+                filtro.Estado,
                 filtro.PageNumber,
                 filtro.PageSize,
                 filtro.OrderBy,
@@ -126,8 +130,10 @@ public async Task<ClienteDto> ActualizarClienteAsync(ActualizarClienteDto dto)
     // 3. ACTUALIZAR LOS DATOS DEL CLIENTE
     clienteExistente.TipoIdentificacionId = dto.TipoIdentificacionId;
     clienteExistente.Identificacion = dto.Identificacion.Trim();
-    clienteExistente.Nombres = dto.Nombres.Trim();
-    clienteExistente.Apellidos = dto.Apellidos.Trim();
+    clienteExistente.Nombre1 = dto.Nombre1.Trim();
+    clienteExistente.Nombre2 = dto.Nombre2?.Trim();
+    clienteExistente.Apellido1 = dto.Apellido1.Trim();
+    clienteExistente.Apellido2 = dto.Apellido2?.Trim();
     clienteExistente.Direccion = dto.Direccion?.Trim();
     clienteExistente.Telefono = dto.Telefono?.Trim();
     clienteExistente.Email = dto.Email?.Trim()?.ToLower();
@@ -181,6 +187,23 @@ public async Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int 
     return clientes.Select(c => MapearClienteListDto(c)).ToList();
 }
 
+        /// <inheritdoc />
+        public async Task CambiarEstadoClienteAsync(CambiarEstadoClienteDto dto)
+        {
+            var cliente = await _clienteRepository.ObtenerPorIdAsync(dto.ClienteId);
+
+            if (cliente == null)
+            {
+                throw new KeyNotFoundException($"No se encontró el cliente con ID {dto.ClienteId}");
+            }
+
+            if (cliente.Estado != dto.Estado)
+            {
+                cliente.Estado = dto.Estado;
+                await _clienteRepository.ActualizarAsync(cliente);
+            }
+        }
+
 
         // ========== MÉTODOS AUXILIARES ==========
 
@@ -192,11 +215,14 @@ public async Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int 
                 TipoIdentificacionId = cliente.TipoIdentificacionId,
                 TipoIdentificacionNombre = cliente.TipoIdentificacion?.Nombre ?? "Sin tipo",
                 Identificacion = cliente.Identificacion,
-                Nombres = cliente.Nombres,
-                Apellidos = cliente.Apellidos,
+                Nombre1 = cliente.Nombre1,
+                Nombre2 = cliente.Nombre2,
+                Apellido1 = cliente.Apellido1,
+                Apellido2 = cliente.Apellido2,
                 Direccion = cliente.Direccion,
                 Telefono = cliente.Telefono,
-                Email = cliente.Email
+                Email = cliente.Email,
+                Estado = cliente.Estado
             };
         }
 
@@ -210,9 +236,10 @@ public async Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int 
                 ClienteId = cliente.ClienteId,
                 TipoIdentificacion = cliente.TipoIdentificacion?.Nombre ?? "Sin tipo",
                 Identificacion = cliente.Identificacion,
-                NombreCompleto = $"{cliente.Nombres} {cliente.Apellidos}".Trim(),
+                NombreCompleto = cliente.NombreCompleto(),
                 Email = cliente.Email,
-                Telefono = cliente.Telefono
+                Telefono = cliente.Telefono,
+                Estado = cliente.Estado
             };
         }
 
