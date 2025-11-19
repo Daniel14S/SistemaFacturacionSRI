@@ -102,10 +102,51 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         /// <inheritdoc />
-        public Task<ClienteDto> ActualizarClienteAsync(ActualizarClienteDto dto)
+public async Task<ClienteDto> ActualizarClienteAsync(ActualizarClienteDto dto)
+{
+    // 1. VALIDAR QUE EL CLIENTE EXISTA
+    var clienteExistente = await _clienteRepository.ObtenerPorIdAsync(dto.ClienteId);
+    if (clienteExistente == null)
+    {
+        throw new KeyNotFoundException($"No se encontró el cliente con ID {dto.ClienteId}");
+    }
+
+    // 2. VALIDAR QUE LA IDENTIFICACIÓN NO ESTÉ EN USO POR OTRO CLIENTE
+    // Solo validamos si cambió la identificación
+    if (clienteExistente.Identificacion != dto.Identificacion.Trim())
+    {
+        var clienteConMismaIdentificacion = await _clienteRepository.ObtenerPorIdentificacionAsync(dto.Identificacion.Trim());
+        
+        if (clienteConMismaIdentificacion != null && clienteConMismaIdentificacion.ClienteId != dto.ClienteId)
         {
-            throw new NotImplementedException();
+            throw new InvalidOperationException($"Ya existe otro cliente con la identificación {dto.Identificacion}");
         }
+    }
+
+    // 3. ACTUALIZAR LOS DATOS DEL CLIENTE
+    clienteExistente.TipoIdentificacionId = dto.TipoIdentificacionId;
+    clienteExistente.Identificacion = dto.Identificacion.Trim();
+    clienteExistente.Nombres = dto.Nombres.Trim();
+    clienteExistente.Apellidos = dto.Apellidos.Trim();
+    clienteExistente.Direccion = dto.Direccion?.Trim();
+    clienteExistente.Telefono = dto.Telefono?.Trim();
+    clienteExistente.Email = dto.Email?.Trim()?.ToLower();
+
+    // 4. GUARDAR CAMBIOS EN LA BASE DE DATOS
+    await _clienteRepository.ActualizarAsync(clienteExistente);
+
+    // 5. RECARGAR EL CLIENTE CON TIPOIDENTIFICACION INCLUIDO
+    var clienteActualizado = await _clienteRepository.ObtenerPorIdAsync(dto.ClienteId);
+
+    if (clienteActualizado == null)
+    {
+        throw new InvalidOperationException("Error al actualizar el cliente");
+    }
+
+    // 6. MAPEAR Y RETORNAR
+    return MapearClienteDto(clienteActualizado);
+}
+
 
         /// <inheritdoc />
         public async Task<ClienteDto?> BuscarPorIdentificacionAsync(string identificacion)
@@ -113,6 +154,33 @@ namespace SistemaFacturacionSRI.Application.Services
             var cliente = await _clienteRepository.ObtenerPorIdentificacionAsync(identificacion);
             return cliente == null ? null : MapearClienteDto(cliente);
         }
+
+        /// <inheritdoc />
+public async Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int limite = 10)
+{
+    // 1. VALIDAR PARÁMETROS
+    if (string.IsNullOrWhiteSpace(termino))
+    {
+        return new List<ClienteListDto>();
+    }
+
+    if (limite < 1)
+    {
+        limite = 10;
+    }
+
+    if (limite > 50)
+    {
+        limite = 50; // Límite máximo para evitar consultas muy grandes
+    }
+
+    // 2. BUSCAR EN EL REPOSITORIO
+    var clientes = await _clienteRepository.BuscarAsync(termino, limite);
+
+    // 3. MAPEAR Y RETORNAR
+    return clientes.Select(c => MapearClienteListDto(c)).ToList();
+}
+
 
         // ========== MÉTODOS AUXILIARES ==========
 

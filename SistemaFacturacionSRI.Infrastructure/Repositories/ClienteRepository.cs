@@ -93,5 +93,29 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
 
             return (clientes, totalRegistros);
         }
+
+
+        public async Task<List<Cliente>> BuscarAsync(string termino, int limite)
+{
+    if (string.IsNullOrWhiteSpace(termino))
+    {
+        return new List<Cliente>();
+    }
+
+    var terminoLower = termino.ToLower().Trim();
+
+    return await _context.Clientes
+        .Include(c => c.TipoIdentificacion)
+        .Where(c =>
+            c.Identificacion.ToLower().Contains(terminoLower) ||
+            c.Nombres.ToLower().Contains(terminoLower) ||
+            c.Apellidos.ToLower().Contains(terminoLower) ||
+            (c.Email != null && c.Email.ToLower().Contains(terminoLower))
+        )
+        .OrderBy(c => c.Nombres)
+        .Take(limite)
+        .ToListAsync();
+}
+
     }
 }
