@@ -63,6 +63,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
         {
             return await _context.Lotes
                 .Include(l => l.Producto)
+                .ThenInclude(p => p!.Categoria)
+                .AsNoTracking()
                 .Where(l => l.ProductoId == productoId)
                 .ToListAsync();
         }
