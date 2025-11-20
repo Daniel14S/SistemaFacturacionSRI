@@ -12,7 +12,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// Controlador para la gestión de usuarios del sistema.
     /// Solo accesible para usuarios con rol Administrador.
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/usuarios")]
     [ApiController]
     [AdminAuthorize]
     public class UsuarioController : ControllerBase
@@ -30,8 +30,12 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
         // ================= T-32: LISTAR USUARIOS =================
 
+        /// <summary>
+        /// Lista todos los usuarios del sistema con filtros y paginación.
+        /// </summary>
         [HttpGet]
         [ProducesResponseType(typeof(PagedResultDto<UsuarioListDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<PagedResultDto<UsuarioListDto>>> ListarUsuarios(
             [FromQuery] string? busqueda = null,
             [FromQuery] int? rolId = null,
@@ -62,45 +66,64 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al listar usuarios");
-                return StatusCode(500, new { message = "Error interno al listar usuarios" });
+                return StatusCode(StatusCodes.Status500InternalServerError, 
+                    new { message = "Error interno al listar usuarios" });
             }
         }
 
         // ================= T-33: OBTENER POR ID =================
 
+        /// <summary>
+        /// Obtiene un usuario específico por su ID.
+        /// </summary>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<UsuarioDto>> ObtenerUsuarioPorId(int id)
         {
             try
             {
                 if (id <= 0)
+                {
                     return BadRequest(new { message = "El ID debe ser mayor a cero" });
+                }
 
                 var usuario = await _usuarioService.ObtenerUsuarioPorIdAsync(id);
 
                 if (usuario == null)
+                {
                     return NotFound(new { message = $"No se encontró el usuario con ID {id}" });
+                }
 
                 return Ok(usuario);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener usuario");
-                return StatusCode(500, new { message = "Error interno" });
+                _logger.LogError(ex, "Error al obtener usuario {UsuarioId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, 
+                    new { message = "Error interno al obtener usuario" });
             }
         }
 
         // ================= T-34: CREAR USUARIO =================
 
+        /// <summary>
+        /// Crea un nuevo usuario en el sistema.
+        /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<UsuarioDto>> CrearUsuario([FromBody] CrearUsuarioDto dto)
         {
             try
             {
                 if (dto == null)
+                {
                     return BadRequest(new { message = "Los datos del usuario son requeridos" });
+                }
 
                 if (!ModelState.IsValid)
                 {
@@ -115,8 +138,11 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
                 var usuario = await _usuarioService.CrearUsuarioAsync(dto);
 
-                return CreatedAtAction(nameof(ObtenerUsuarioPorId),
-                    new { id = usuario.Id }, usuario);
+                return CreatedAtAction(
+                    nameof(ObtenerUsuarioPorId),
+                    new { id = usuario.Id }, 
+                    usuario
+                );
             }
             catch (InvalidOperationException ex)
             {
@@ -125,17 +151,21 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al crear usuario");
-                return StatusCode(500, new { message = "Error inesperado" });
+                return StatusCode(StatusCodes.Status500InternalServerError, 
+                    new { message = "Error interno al crear usuario" });
             }
         }
 
-        // ================= ENDPOINTS PENDIENTES (SIN ASYNC) =================
+        // ================= T-35: ACTUALIZAR USUARIO =================
 
         /// <summary>
         /// Actualiza la información de un usuario existente.
         /// </summary>
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<UsuarioDto>> ActualizarUsuario(int id, [FromBody] ActualizarUsuarioDto dto)
         {
             try
@@ -182,17 +212,22 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar usuario");
+                _logger.LogError(ex, "Error al actualizar usuario {UsuarioId}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { message = "Error interno al actualizar usuario" });
             }
         }
 
+        // ================= T-36: DESACTIVAR USUARIO (SOFT DELETE) =================
+
         /// <summary>
-        /// Desactiva un usuario (soft delete).
+        /// Desactiva un usuario (soft delete). No se elimina físicamente de la BD.
         /// </summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> DesactivarUsuario(int id)
         {
             try
@@ -216,29 +251,62 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar usuario");
+                _logger.LogError(ex, "Error al desactivar usuario {UsuarioId}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { message = "Error interno al desactivar usuario" });
             }
         }
 
-        /// <summary>
-        /// Activa un usuario previamente desactivado.
-        /// </summary>
-        [HttpPut("{id}/activar")]
-        public ActionResult ActivarUsuario(int id)
-        {
-            return StatusCode(StatusCodes.Status501NotImplemented, new
-            {
-                message = "Funcionalidad pendiente de implementar"
-            });
-        }
+        // ================= T-27: ACTIVAR USUARIO =================
 
         /// <summary>
-        /// Cambia el rol de un usuario.
+        /// Activa un usuario previamente desactivado y resetea intentos de login.
+        /// </summary>
+        [HttpPut("{id}/activar")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> ActivarUsuario(int id)
+        {
+            try
+            {
+                if (id <= 0)
+                {
+                    return BadRequest(new { message = "El ID debe ser mayor a cero" });
+                }
+
+                await _usuarioService.ActivarUsuarioAsync(id);
+
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al activar usuario {UsuarioId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Error interno al activar usuario" });
+            }
+        }
+
+        // ================= T-37: CAMBIAR ROL =================
+
+        /// <summary>
+        /// Cambia el rol de un usuario (solo Admin).
+        /// No permite degradar al último administrador del sistema.
         /// </summary>
         [HttpPut("{id}/rol")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> CambiarRol(int id, [FromBody] CambiarRolDto dto)
         {
             try
@@ -281,7 +349,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cambiar rol");
+                _logger.LogError(ex, "Error al cambiar rol del usuario {UsuarioId}", id);
                 return StatusCode(StatusCodes.Status500InternalServerError,
                     new { message = "Error interno al cambiar el rol" });
             }
