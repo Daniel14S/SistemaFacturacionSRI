@@ -117,6 +117,62 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             }
         }
 
+        /// <summary>
+        /// GET /api/producto/search?termino=laptop
+        /// Busca productos por nombre o código.
+        /// PERMISOS: Administrador ✅ | Vendedor ✅
+        /// </summary>
+        [HttpGet("search")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+        [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<ProductoDto>>> Buscar([FromQuery] string termino)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(termino))
+                {
+                    return BadRequest(new { error = "El término de búsqueda es requerido" });
+                }
+
+                _logger.LogInformation("Buscando productos con término: {Termino}", termino);
+                
+                var productos = await _productoService.SearchByCodeOrNameAsync(termino);
+                
+                return Ok(productos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al buscar productos");
+                return StatusCode(500, new { error = "Error en búsqueda" });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/producto/con-stock
+        /// Obtiene solo los productos que tienen stock disponible.
+        /// PERMISOS: Administrador ✅ | Vendedor ✅
+        /// </summary>
+        [HttpGet("con-stock")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+        [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<IEnumerable<ProductoDto>>> ObtenerConStock()
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo productos con stock disponible");
+                
+                var productos = await _productoService.ObtenerProductosConStockAsync();
+                
+                return Ok(productos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener productos con stock");
+                return StatusCode(500, new { error = "Error al obtener productos con stock" });
+            }
+        }
+
         // ========== ENDPOINTS DE ESCRITURA (Solo Administrador) ==========
 
         /// <summary>
@@ -302,65 +358,5 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 });
             }
         }
-   
-        // ============================================
-        // ENDPOINTS ADICIONALES (ÚTILES PARA EL SISTEMA)
-        // ============================================
-
-        /// <summary>
-        /// GET /api/producto/buscar?termino=laptop
-        /// Busca productos por nombre o código.
-        /// </summary>
-        /// <param name="termino">Término de búsqueda</param>
-        /// <returns>Lista de productos que coinciden con el término</returns>
-        [HttpGet("search")]
-        [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<IEnumerable<ProductoDto>>> Buscar([FromQuery] string termino)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(termino))
-                {
-                    return BadRequest(new { error = "El término de búsqueda es requerido" });
-                }
-
-                _logger.LogInformation("Buscando productos con término: {Termino}", termino);
-                
-                var productos = await _productoService.SearchByCodeOrNameAsync(termino);
-                
-                return Ok(productos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al buscar productos");
-                return StatusCode(500, new { error = "Error en búsqueda" });
-            }
-        }
-
-        /// <summary>
-        /// GET /api/producto/con-stock
-        /// Obtiene solo los productos que tienen stock disponible.
-        /// </summary>
-        /// <returns>Lista de productos con stock</returns>
-        [HttpGet("con-stock")]
-        [ProducesResponseType(typeof(IEnumerable<ProductoDto>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<ProductoDto>>> ObtenerConStock()
-        {
-            try
-            {
-                _logger.LogInformation("Obteniendo productos con stock disponible");
-                
-                var productos = await _productoService.ObtenerProductosConStockAsync();
-                
-                return Ok(productos);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener productos con stock");
-                return StatusCode(500, new { error = "Error al obtener productos con stock" });
-            }
-        }
-        
     }
 }
