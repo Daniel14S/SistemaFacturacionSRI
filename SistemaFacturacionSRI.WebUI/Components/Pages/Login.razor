@@ -1,0 +1,83 @@
+@page "/login"
+@using SistemaFacturacionSRI.WebUI.Services
+@inject WebAuthService AuthService
+
+
+
+@inject NavigationManager Nav
+
+<h3 class="text-center">Iniciar sesión</h3>
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+<EditForm Model="@model" OnValidSubmit="@HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label class="form-label">Usuario</label>
+        <InputText class="form-control" @bind-Value="model.Username" />
+        <ValidationMessage For="@(() => model.Username)" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Contraseña</label>
+        <InputText type="password" class="form-control" @bind-Value="model.Password" />
+        <ValidationMessage For="@(() => model.Password)" />
+    </div>
+
+    <button class="btn btn-primary w-100" disabled="@isLoading">
+        @if (isLoading)
+        {
+            <span>Cargando...</span>
+        }
+        else
+        {
+            <span>Ingresar</span>
+        }
+    </button>
+</EditForm>
+
+@code {
+    private LoginModel model = new();
+    private bool isLoading = false;
+    private string? ErrorMessage;
+
+    private async Task HandleLogin()
+    {
+        ErrorMessage = null;
+        isLoading = true;
+
+        try
+        {
+            // Si tu AuthService.Login devuelve LoginResult (como en la versión optimizada)
+            var result = await AuthService.Login(model.Username, model.Password);
+
+            isLoading = false;
+
+            if (result == null)
+            {
+                ErrorMessage = "Respuesta inválida del servidor.";
+                return;
+            }
+
+            if (!result.Success)
+            {
+                // Mensaje detallado (por ejemplo: credenciales incorrectas, cuenta bloqueada, etc.)
+                ErrorMessage = result.Message ?? "No se pudo iniciar sesión.";
+                return;
+            }
+
+            // Login exitoso: redirigir
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            isLoading = false;
+            ErrorMessage = $"Error inesperado: {ex.Message}";
+        }
+    }
+}
