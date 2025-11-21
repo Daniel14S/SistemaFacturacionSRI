@@ -1,0 +1,41 @@
+@namespace SistemaFacturacionSRI.WebUI.Components.Auth
+@rendermode InteractiveServer
+@inject WebAuthService AuthService
+@inject NavigationManager Navigation
+
+@if (isChecking)
+{
+    <div class="d-flex justify-content-center align-items-center" style="height: 100vh;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Verificando autenticación...</span>
+        </div>
+    </div>
+}
+else if (isAuthenticated)
+{
+    @ChildContent
+}
+else
+{
+    <!-- No renderizamos nada, ya redirigimos -->
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool isChecking = true;
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticated();
+
+        if (!isAuthenticated)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+
+        isChecking = false;
+    }
+}

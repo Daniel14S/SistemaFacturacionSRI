@@ -49,7 +49,6 @@
     builder.Services.AddScoped<ILoteRepository, LoteRepository>();
     builder.Services.AddScoped<ILoteService, LoteService>();
     builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-    builder.Services.AddScoped<WebAuthService>();
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
     builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
     builder.Services.AddSingleton<JwtTokenGenerator>();
@@ -59,6 +58,20 @@
     builder.Services.AddScoped<IClienteService, ClienteService>();
     builder.Services.AddBlazoredLocalStorage();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    // HttpClient factory
+builder.Services.AddHttpClient();
+
+// WebAuthService con HttpClient configurado
+builder.Services.AddScoped<WebAuthService>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient();
+    httpClient.BaseAddress = new Uri("http://localhost:5293");
+    var jsRuntime = sp.GetRequiredService<IJSRuntime>();
+    
+    return new WebAuthService(httpClient, jsRuntime);
+});
+
 
     // 🔐 Configuración de autenticación JWT
     builder.Services.AddAuthentication(options =>

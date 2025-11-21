@@ -1,83 +1,112 @@
 @page "/login"
+@rendermode InteractiveServer
+@layout EmptyLayout
 @using SistemaFacturacionSRI.WebUI.Services
 @inject WebAuthService AuthService
-
-
-
 @inject NavigationManager Nav
 
-<h3 class="text-center">Iniciar sesión</h3>
+<PageTitle>Iniciar Sesión</PageTitle>
 
-@if (!string.IsNullOrEmpty(ErrorMessage))
-{
-    <div class="alert alert-danger">@ErrorMessage</div>
-}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3 class="text-center mb-4">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
+                    </h3>
 
-<EditForm Model="@model" OnValidSubmit="@HandleLogin">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-x-circle"></i> @ErrorMessage
+                            <button type="button" class="btn-close" @onclick="@(() => ErrorMessage = null)"></button>
+                        </div>
+                    }
 
-    <div class="mb-3">
-        <label class="form-label">Usuario</label>
-        <InputText class="form-control" @bind-Value="model.Username" />
-        <ValidationMessage For="@(() => model.Username)" />
+                    @if (!string.IsNullOrEmpty(SuccessMessage))
+                    {
+                        <div class="alert alert-success" role="alert">
+                            <i class="bi bi-check-circle"></i> @SuccessMessage
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Usuario</label>
+                        <input type="text" class="form-control" @bind="username" placeholder="admin" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Contraseña</label>
+                        <input type="password" class="form-control" @bind="password" placeholder="Admin123*" />
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-100" @onclick="HandleLogin" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Iniciando sesión...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            <span> Ingresar</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="mb-3">
-        <label class="form-label">Contraseña</label>
-        <InputText type="password" class="form-control" @bind-Value="model.Password" />
-        <ValidationMessage For="@(() => model.Password)" />
-    </div>
-
-    <button class="btn btn-primary w-100" disabled="@isLoading">
-        @if (isLoading)
-        {
-            <span>Cargando...</span>
-        }
-        else
-        {
-            <span>Ingresar</span>
-        }
-    </button>
-</EditForm>
+</div>
 
 @code {
-    private LoginModel model = new();
+    private string username = "admin";
+    private string password = "Admin123*";
     private bool isLoading = false;
     private string? ErrorMessage;
+    private string? SuccessMessage;
 
     private async Task HandleLogin()
     {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+        {
+            ErrorMessage = "Usuario y contraseña son requeridos.";
+            return;
+        }
+
         ErrorMessage = null;
+        SuccessMessage = null;
         isLoading = true;
 
         try
         {
-            // Si tu AuthService.Login devuelve LoginResult (como en la versión optimizada)
-            var result = await AuthService.Login(model.Username, model.Password);
-
-            isLoading = false;
+            var result = await AuthService.Login(username.Trim(), password);
 
             if (result == null)
             {
                 ErrorMessage = "Respuesta inválida del servidor.";
+                isLoading = false;
                 return;
             }
 
             if (!result.Success)
             {
-                // Mensaje detallado (por ejemplo: credenciales incorrectas, cuenta bloqueada, etc.)
                 ErrorMessage = result.Message ?? "No se pudo iniciar sesión.";
+                isLoading = false;
                 return;
             }
 
-            // Login exitoso: redirigir
-            Nav.NavigateTo("/");
+            // Login exitoso
+            SuccessMessage = "¡Login exitoso! Redirigiendo...";
+            StateHasChanged();
+            
+            await Task.Delay(500);
+            Nav.NavigateTo("/", forceLoad: true);
         }
         catch (Exception ex)
         {
+            ErrorMessage = $"Error: {ex.Message}";
             isLoading = false;
-            ErrorMessage = $"Error inesperado: {ex.Message}";
         }
     }
 }

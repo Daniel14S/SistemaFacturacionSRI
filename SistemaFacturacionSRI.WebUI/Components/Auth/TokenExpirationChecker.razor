@@ -1,0 +1,56 @@
+@namespace SistemaFacturacionSRI.WebUI.Components.Auth
+@rendermode InteractiveServer
+@inject WebAuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+@code {
+    private System.Threading.Timer? _timer;
+    private bool _isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_isInitialized)
+        {
+            _isInitialized = true;
+            
+            // Verificar cada 30 segundos si el token sigue válido
+            _timer = new System.Threading.Timer(async _ =>
+            {
+                await InvokeAsync(async () =>
+                {
+                    await CheckTokenExpiration();
+                });
+            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        }
+    }
+
+    private async Task CheckTokenExpiration()
+    {
+        try
+        {
+            var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+            
+            // No verificar si ya está en login
+            if (currentPath.ToLower().StartsWith("login"))
+                return;
+
+            var isAuthenticated = await AuthService.IsAuthenticated();
+            
+            if (!isAuthenticated)
+            {
+                await AuthService.Logout();
+                Navigation.NavigateTo("/login?expired=true", forceLoad: true);
+            }
+        }
+        catch
+        {
+            // Ignorar errores durante la verificación
+        }
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}
