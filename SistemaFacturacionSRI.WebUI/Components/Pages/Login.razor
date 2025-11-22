@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject WebAuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS 
 
 <PageTitle>Iniciar Sesión</PageTitle>
 
@@ -214,6 +215,7 @@
         }
     }
 
+
 private async Task HandleLogin()
 {
     if (string.IsNullOrWhiteSpace(loginModel.Username) || 
@@ -245,38 +247,38 @@ private async Task HandleLogin()
             return;
         }
 
-        // Login exitoso
+        // ✅ Login exitoso
         SuccessMessage = "¡Login exitoso! Redirigiendo...";
         StateHasChanged();
 
-        await Task.Delay(500);
+        // ⏱️ ESPERAR A QUE SE PROPAGUE EL ESTADO
+        await Task.Delay(2000);
 
-        // 🔥 Redirección según ROLES
+        // 🔥 FORZAR REFRESH COMPLETO DE LA PÁGINA
+        string targetUrl = "/";
+        
         if (!string.IsNullOrEmpty(result.Role))
         {
             if (result.Role.Equals("Administrador", StringComparison.OrdinalIgnoreCase))
             {
-                Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
-                return;
+                targetUrl = "/admin/dashboard";
             }
-
-            if (result.Role.Equals("Vendedor", StringComparison.OrdinalIgnoreCase))
+            else if (result.Role.Equals("Vendedor", StringComparison.OrdinalIgnoreCase))
             {
-                Navigation.NavigateTo("/vendedor/dashboard", forceLoad: true);
-                return;
+                targetUrl = "/vendedor/dashboard";
             }
         }
+        else if (!string.IsNullOrEmpty(returnUrl))
+        {
+            targetUrl = returnUrl;
+        }
 
-        // Si no hay rol → usar returnUrl o ir a inicio
-        var destination = !string.IsNullOrEmpty(returnUrl) ? returnUrl : "/";
-        Navigation.NavigateTo(destination, forceLoad: true);
+        // ✅ USAR forceLoad: true PARA RECARGAR TODO
+        Navigation.NavigateTo(targetUrl, forceLoad: true);
     }
     catch (Exception ex)
     {
         ErrorMessage = $"Error: {ex.Message}";
-    }
-    finally
-    {
         isLoading = false;
     }
 }

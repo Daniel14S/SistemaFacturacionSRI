@@ -47,32 +47,40 @@ namespace SistemaFacturacionSRI.WebUI.Services
         }
 
         /// <summary>
-        /// Cierra sesión del usuario actual.
-        /// </summary>
-        public async Task Logout()
+/// Cierra sesión del usuario actual.
+/// </summary>
+public async Task Logout()
+{
+    try
+    {
+        // Intentar logout en el servidor (actualizar último acceso)
+        var authState = await _authStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int userIdInt))
         {
             try
             {
-                // Intentar logout en el servidor (actualizar último acceso)
-                var authState = await _authStateProvider.GetAuthenticationStateAsync();
-                var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-                if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int userIdInt))
-                {
-                    await _authService.LogoutAsync(userIdInt);
-                }
+                await _authService.LogoutAsync(userIdInt);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error al hacer logout en el servidor");
-            }
-            finally
-            {
-                // Siempre limpiar el estado local
-                _authStateProvider.MarkUserAsLoggedOut();
-                _logger.LogInformation("Usuario cerró sesión");
+                _logger.LogWarning(ex, "Error al hacer logout en el servidor, continuando con logout local");
             }
         }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Error al obtener estado de autenticación");
+    }
+    finally
+    {
+        // SIEMPRE limpiar el estado local, pase lo que pase
+        _authStateProvider.MarkUserAsLoggedOut();
+        _logger.LogInformation("Usuario cerró sesión");
+    }
+}
+
 
         /// <summary>
         /// Verifica si el usuario está autenticado.

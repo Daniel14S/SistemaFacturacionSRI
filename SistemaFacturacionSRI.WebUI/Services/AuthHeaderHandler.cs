@@ -7,10 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
-    /// <summary>
-    /// Handler que adjunta el token JWT a las peticiones HTTP cuando existe.
-    /// NO intenta generar tokens automáticamente.
-    /// </summary>
     public class AuthHeaderHandler : DelegatingHandler
     {
         private readonly ITokenStorage _tokenStorage;
@@ -51,16 +47,16 @@ namespace SistemaFacturacionSRI.WebUI.Services
 
         private void AttachTokenIfAvailable(HttpRequestMessage request)
         {
-            // Solo adjuntar token si existe
+            // ✅ Leer token directamente de la propiedad
             var token = _tokenStorage.Token;
             
             if (string.IsNullOrEmpty(token))
             {
-                _logger.LogDebug("No hay token disponible para adjuntar a {RequestUri}", request.RequestUri);
+                _logger.LogWarning("⚠️ No hay token disponible para adjuntar a {RequestUri}", request.RequestUri);
                 return;
             }
 
-            // Verificar si el token ha expirado antes de adjuntarlo
+            // Verificar si el token ha expirado
             if (_tokenStorage.TokenExpiresAt.HasValue && _tokenStorage.TokenExpiresAt.Value <= DateTime.UtcNow)
             {
                 _logger.LogWarning("Token expirado detectado. No se adjuntará a la petición.");
@@ -70,7 +66,7 @@ namespace SistemaFacturacionSRI.WebUI.Services
 
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            _logger.LogDebug("Token JWT adjuntado a la petición {Method} {RequestUri}", 
+            _logger.LogInformation("✅ Token JWT adjuntado a la petición {Method} {RequestUri}", 
                 request.Method, 
                 request.RequestUri);
         }
@@ -83,7 +79,6 @@ namespace SistemaFacturacionSRI.WebUI.Services
                     _logger.LogWarning("Respuesta 401 Unauthorized de {RequestUri}. Token inválido o expirado.", 
                         request.RequestUri);
                     
-                    // Limpiar token inválido
                     _tokenStorage.Clear();
                     
                     if (response.Headers.Contains("Token-Expired"))

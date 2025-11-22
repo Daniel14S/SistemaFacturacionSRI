@@ -1,0 +1,47 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+@if (MostrarBoton)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? RequiredRole { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private bool MostrarBoton { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthenticationState == null)
+        {
+            MostrarBoton = false;
+            return;
+        }
+
+        var authState = await AuthenticationState;
+        var user = authState.User;
+
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            MostrarBoton = false;
+            return;
+        }
+
+        // Si no hay restricción de roles, mostrar siempre
+        if (string.IsNullOrEmpty(RequiredRole))
+        {
+            MostrarBoton = true;
+            return;
+        }
+
+        // Verificar rol
+        MostrarBoton = user.IsInRole(RequiredRole);
+    }
+}

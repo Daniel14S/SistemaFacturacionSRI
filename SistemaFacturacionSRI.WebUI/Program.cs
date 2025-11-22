@@ -52,17 +52,29 @@ builder.Services.AddScoped<WebAuthService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
-builder.Services.AddScoped<ITokenStorage, TokenStorage>();
+builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorizationCore();
 
+
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
+
+
+// Después de las líneas existentes, agregar:
+builder.Services.AddScoped<ToastService>();
+
+builder.Services.AddHttpClient<IUsuarioHttpService, UsuarioHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
+
 
 // ✅ CORS - Configuración para desarrollo local
 builder.Services.AddCors(options =>
@@ -170,6 +182,13 @@ builder.Services.AddHttpClient<IAuthHttpService, AuthHttpService>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5293");
 });
+
+// ✅ Cliente HttpClient con AuthHeaderHandler
+builder.Services.AddHttpClient<IClienteHttpService, ClienteHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Controladores (para los endpoints API)
 builder.Services.AddControllers();

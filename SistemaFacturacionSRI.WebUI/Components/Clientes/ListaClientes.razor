@@ -1,0 +1,466 @@
+@page "/clientes"
+@rendermode InteractiveServer
+@using SistemaFacturacionSRI.Application.DTOs.Cliente
+@using SistemaFacturacionSRI.Application.DTOs.Common
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IClienteHttpService ClienteService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>Gestión de Clientes</PageTitle>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="bi bi-people-fill me-2"></i>
+                Gestión de Clientes
+            </h2>
+            <p class="text-muted">Administra los clientes del sistema</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @onclick="CrearNuevoCliente">
+                <i class="bi bi-plus-circle me-1"></i>
+                Nuevo Cliente
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros y búsqueda -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Búsqueda -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Buscar:</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               placeholder="Nombre, identificación..." 
+                               @bind="_searchTerm"
+                               @bind:event="oninput"
+                               @onkeyup="OnSearchChanged" />
+                        @if (!string.IsNullOrEmpty(_searchTerm))
+                        {
+                            <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Filtro por Tipo de Identificación -->
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Tipo de Identificación:</label>
+                    <select class="form-select" @bind="_filtroTipoId" @bind:after="OnFiltroChanged">
+                        <option value="">Todos</option>
+                        <option value="1">Cédula</option>
+                        <option value="2">RUC</option>
+                        <option value="3">Pasaporte</option>
+                    </select>
+                </div>
+
+                <!-- Filtro por Estado -->
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Estado:</label>
+                    <select class="form-select" @bind="_filtroEstado" @bind:after="OnFiltroChanged">
+                        <option value="">Todos</option>
+                        <option value="true">Activos</option>
+                        <option value="false">Inactivos</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando clientes...</p>
+        </div>
+    }
+    else if (_clientes == null || !_clientes.Items.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No se encontraron clientes con los criterios seleccionados.
+        </div>
+    }
+    else
+    {
+        <!-- Contador -->
+        <div class="alert alert-secondary">
+            Mostrando <strong>@_clientes.Items.Count</strong> de <strong>@_clientes.TotalItems</strong> clientes
+        </div>
+
+        <!-- Tabla Desktop -->
+        <div class="d-none d-md-block">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo ID</th>
+                            <th>Identificación</th>
+                            <th>Nombre Completo</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cliente in _clientes.Items)
+                        {
+                            <tr>
+                                <td>@cliente.ClienteId</td>
+                                <td>
+                                    <span class="badge @GetTipoIdBadgeClass(cliente.TipoIdentificacion)">
+                                        @cliente.TipoIdentificacion
+                                    </span>
+                                </td>
+                                <td>
+                                    <strong>@cliente.Identificacion</strong>
+                                </td>
+                                <td>@cliente.NombreCompleto</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(cliente.Telefono))
+                                    {
+                                        <a href="tel:@cliente.Telefono">@cliente.Telefono</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(cliente.Email))
+                                    {
+                                        <a href="mailto:@cliente.Email">@cliente.Email</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(cliente.Estado ? "bg-success" : "bg-danger")">
+                                        @(cliente.Estado ? "Activo" : "Inactivo")
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                @onclick="() => EditarCliente(cliente.ClienteId)"
+                                                title="Editar">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        
+                                        @if (cliente.Estado)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, false, cliente.NombreCompleto)"
+                                                    title="Desactivar">
+                                                <i class="bi bi-x-circle-fill"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" 
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, true, cliente.NombreCompleto)"
+                                                    title="Activar">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Vista Mobile (Cards) -->
+        <div class="d-md-none">
+            @foreach (var cliente in _clientes.Items)
+            {
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="card-title mb-1">@cliente.NombreCompleto</h5>
+                                <span class="badge @GetTipoIdBadgeClass(cliente.TipoIdentificacion)">
+                                    @cliente.TipoIdentificacion
+                                </span>
+                            </div>
+                            <span class="badge @(cliente.Estado ? "bg-success" : "bg-danger") fs-6">
+                                @(cliente.Estado ? "Activo" : "Inactivo")
+                            </span>
+                        </div>
+
+                        <div class="mb-2">
+                            <small class="text-muted">Identificación:</small>
+                            <p class="mb-1"><strong>@cliente.Identificacion</strong></p>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(cliente.Telefono))
+                        {
+                            <div class="mb-2">
+                                <small class="text-muted">Teléfono:</small>
+                                <p class="mb-1">
+                                    <a href="tel:@cliente.Telefono">
+                                        <i class="bi bi-telephone me-1"></i>@cliente.Telefono
+                                    </a>
+                                </p>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(cliente.Email))
+                        {
+                            <div class="mb-2">
+                                <small class="text-muted">Email:</small>
+                                <p class="mb-1">
+                                    <a href="mailto:@cliente.Email">
+                                        <i class="bi bi-envelope me-1"></i>@cliente.Email
+                                    </a>
+                                </p>
+                            </div>
+                        }
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button class="btn btn-warning btn-sm" @onclick="() => EditarCliente(cliente.ClienteId)">
+                                <i class="bi bi-pencil me-1"></i>Editar
+                            </button>
+                            
+                            @if (cliente.Estado)
+                            {
+                                <button class="btn btn-danger btn-sm" 
+                                        @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, false, cliente.NombreCompleto)">
+                                    <i class="bi bi-x-circle me-1"></i>Desactivar
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-success btn-sm" 
+                                        @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, true, cliente.NombreCompleto)">
+                                    <i class="bi bi-check-circle me-1"></i>Activar
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Paginación -->
+        @if (_clientes.TotalPages > 1)
+        {
+            <nav aria-label="Paginación de clientes">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item @(_clientes.PageNumber == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(_clientes.PageNumber - 1)">
+                            Anterior
+                        </button>
+                    </li>
+
+                    @for (int i = 1; i <= _clientes.TotalPages; i++)
+                    {
+                        var pagina = i;
+                        <li class="page-item @(_clientes.PageNumber == pagina ? "active" : "")">
+                            <button class="page-link" @onclick="() => CambiarPagina(pagina)">
+                                @pagina
+                            </button>
+                        </li>
+                    }
+
+                    <li class="page-item @(_clientes.PageNumber == _clientes.TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(_clientes.PageNumber + 1)">
+                            Siguiente
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    }
+</div>
+
+@* Modal de confirmación para cambiar estado *@
+@if (_mostrarModalEstado)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header @(_nuevoEstadoModal ? "bg-success" : "bg-warning") text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Confirmar Cambio de Estado
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarCambioEstado"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro que desea <strong>@(_nuevoEstadoModal ? "ACTIVAR" : "DESACTIVAR")</strong> al siguiente cliente?</p>
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <p class="mb-0"><strong>Cliente:</strong> @_nombreClienteModal</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarCambioEstado">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn @(_nuevoEstadoModal ? "btn-success" : "btn-warning")" @onclick="ConfirmarCambioEstado">
+                        <i class="bi @(_nuevoEstadoModal ? "bi-check-circle" : "bi-x-circle")"></i>
+                        @(_nuevoEstadoModal ? "Activar" : "Desactivar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResultDto<ClienteListDto> _clientes = new();
+    private string _searchTerm = string.Empty;
+    private string _filtroTipoId = string.Empty;
+    private string _filtroEstado = string.Empty;
+    private bool _loading = true;
+    private Timer? _searchTimer;
+
+    // Variables para modal de estado
+    private bool _mostrarModalEstado = false;
+    private int _clienteIdModal = 0;
+    private bool _nuevoEstadoModal = false;
+    private string _nombreClienteModal = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarClientes();
+    }
+
+    private async Task CargarClientes()
+    {
+        try
+        {
+            _loading = true;
+
+            var filtro = new FiltroClienteDto
+            {
+                Busqueda = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm,
+                TipoIdentificacionId = string.IsNullOrWhiteSpace(_filtroTipoId) ? null : int.Parse(_filtroTipoId),
+                Estado = string.IsNullOrWhiteSpace(_filtroEstado) ? null : bool.Parse(_filtroEstado),
+                PageNumber = _clientes.PageNumber > 0 ? _clientes.PageNumber : 1,
+                PageSize = 10
+            };
+
+            _clientes = await ClienteService.ObtenerClientesAsync(filtro);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar clientes: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnSearchChanged()
+    {
+        _searchTimer?.Dispose();
+        _searchTimer = new Timer(_ =>
+        {
+            InvokeAsync(async () =>
+            {
+                _clientes.PageNumber = 1;
+                await CargarClientes();
+                StateHasChanged();
+            });
+        }, null, 300, Timeout.Infinite);
+    }
+
+    private void ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        _clientes.PageNumber = 1;
+        InvokeAsync(CargarClientes);
+    }
+
+    private async Task OnFiltroChanged()
+    {
+        _clientes.PageNumber = 1;
+        await CargarClientes();
+    }
+
+    private async Task CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= _clientes.TotalPages)
+        {
+            _clientes.PageNumber = nuevaPagina;
+            await CargarClientes();
+        }
+    }
+
+    private void MostrarConfirmacionEstado(int clienteId, bool activar, string nombreCliente)
+    {
+        _clienteIdModal = clienteId;
+        _nuevoEstadoModal = activar;
+        _nombreClienteModal = nombreCliente;
+        _mostrarModalEstado = true;
+    }
+
+    private async Task ConfirmarCambioEstado()
+    {
+        try
+        {
+            await ClienteService.CambiarEstadoAsync(_clienteIdModal, _nuevoEstadoModal);
+            ToastService.ShowSuccess(_nuevoEstadoModal ? "Cliente activado exitosamente" : "Cliente desactivado exitosamente");
+            _mostrarModalEstado = false;
+            await CargarClientes();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cambiar estado: {ex.Message}");
+            _mostrarModalEstado = false;
+        }
+    }
+
+    private void CancelarCambioEstado()
+    {
+        _mostrarModalEstado = false;
+    }
+
+    private void CrearNuevoCliente()
+    {
+        Navigation.NavigateTo("/clientes/crear");
+    }
+
+    private void EditarCliente(int id)
+    {
+        Navigation.NavigateTo($"/clientes/editar/{id}");
+    }
+
+    private string GetTipoIdBadgeClass(string tipoId) => tipoId switch
+    {
+        "Cédula" => "bg-primary",
+        "RUC" => "bg-success",
+        "Pasaporte" => "bg-info",
+        _ => "bg-secondary"
+    };
+
+    public void Dispose()
+    {
+        _searchTimer?.Dispose();
+    }
+}

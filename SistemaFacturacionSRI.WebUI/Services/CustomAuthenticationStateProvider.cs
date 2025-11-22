@@ -79,20 +79,27 @@ namespace SistemaFacturacionSRI.WebUI.Services
         /// Marca al usuario como autenticado y notifica a los componentes.
         /// </summary>
         public void MarkUserAsAuthenticated(string token)
-        {
-            _tokenStorage.Token = token;
+{
+    // ✅ Guardar token PRIMERO
+    _tokenStorage.Token = token;
 
-            var claims = _jwtTokenGenerator.GetClaimsFromToken(token);
-            var expiresAt = _jwtTokenGenerator.GetExpirationDate(token);
-            _tokenStorage.TokenExpiresAt = expiresAt;
+    var claims = _jwtTokenGenerator.GetClaimsFromToken(token);
+    var expiresAt = _jwtTokenGenerator.GetExpirationDate(token);
+    _tokenStorage.TokenExpiresAt = expiresAt;
 
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
+    var identity = new ClaimsIdentity(claims, "jwt");
+    var user = new ClaimsPrincipal(identity);
 
-            NotifyAuthenticationStateChanged(
-                Task.FromResult(new AuthenticationState(user))
-            );
-        }
+    // ✅ Notificar cambio de estado
+    NotifyAuthenticationStateChanged(
+        Task.FromResult(new AuthenticationState(user))
+    );
+    
+    // ✅ LOG para verificar
+    Console.WriteLine($"✅ Usuario marcado como autenticado: {user.Identity?.Name}");
+    Console.WriteLine($"✅ Token guardado en TokenStorage: {!string.IsNullOrEmpty(_tokenStorage.Token)}");
+}
+
 
         /// <summary>
         /// Marca al usuario como no autenticado y notifica a los componentes.

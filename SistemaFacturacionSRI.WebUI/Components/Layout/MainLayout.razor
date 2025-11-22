@@ -4,6 +4,8 @@
 @inject WebAuthService AuthService
 @inject NavigationManager Navigation
 
+<ToastContainer />
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -19,10 +21,9 @@
                             @context.User.Identity?.Name
                         </span>
                         <span class="badge bg-primary">@GetUserRole(context)</span>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="Logout">
-                            <i class="bi bi-box-arrow-right me-1"></i>
-                            Cerrar Sesión
-                        </button>
+                        
+                        <!-- ✅ COMPONENTE INTERACTIVO -->
+                        <LogoutButton />
                     </div>
                 </Authorized>
                 <NotAuthorized>
@@ -50,11 +51,5 @@
             .FirstOrDefault(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role);
         
         return roleClaim?.Value ?? "Sin rol";
-    }
-
-    private async Task Logout()
-    {
-        await AuthService.Logout();
-        Navigation.NavigateTo("/login", forceLoad: true);
     }
 }

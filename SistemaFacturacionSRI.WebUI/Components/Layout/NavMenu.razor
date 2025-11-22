@@ -1,8 +1,10 @@
 ﻿@namespace SistemaFacturacionSRI.WebUI.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href=""> El Rincón del Abasto</a>
+        <a class="navbar-brand" href="">El Rincón del Abasto</a>
     </div>
 </div>
 
@@ -10,29 +12,139 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="productos">
-                <span class="bi bi-box-seam-nav-menu" aria-hidden="true"></span> Productos
-            </NavLink>
-        </div>
+        <AuthorizeView Context="mainAuth">
+            <Authorized>
+                <!-- HOME/DASHBOARD según rol -->
+                <AuthorizeView Roles="Administrador" Context="adminAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/dashboard" Match="NavLinkMatch.All">
+                                <span class="bi bi-speedometer2-nav-menu" aria-hidden="true"></span> Dashboard
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="lotes">
-                <span class="bi bi-grid-3x3-gap-fill-nav-menu" aria-hidden="true"></span> Lotes
-            </NavLink>
-        </div>
+                <AuthorizeView Roles="Vendedor" Context="vendedorAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="vendedor/dashboard" Match="NavLinkMatch.All">
+                                <span class="bi bi-speedometer2-nav-menu" aria-hidden="true"></span> Dashboard
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
 
-        <!-- Reportes
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="reportes">
-                <span class="bi bi-bar-chart-fill-nav-menu" aria-hidden="true"></span> Reportes
-            </NavLink>
-        </div>
-         -->
+                <!-- PRODUCTOS (Admin y Vendedor) -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="productos">
+                        <span class="bi bi-box-seam-nav-menu" aria-hidden="true"></span> Productos
+                    </NavLink>
+                </div>
+
+                <!-- LOTES (Admin y Vendedor) -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="lotes">
+                        <span class="bi bi-grid-3x3-gap-fill-nav-menu" aria-hidden="true"></span> Lotes
+                    </NavLink>
+                </div>
+
+                <!-- USUARIOS (Solo Admin) -->
+                <AuthorizeView Roles="Administrador" Context="usuariosAuth">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="usuarios">
+                                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Usuarios
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- CLIENTES (Admin y Vendedor) -->
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="clientes">
+        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Clientes
+    </NavLink>
+</div>
+
+
+                <!-- FACTURAS (Próximamente - Admin y Vendedor) -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link disabled" href="facturas">
+                        <span class="bi bi-receipt-nav-menu" aria-hidden="true"></span> Facturas
+                        <small class="text-muted ms-2">(Pronto)</small>
+                    </NavLink>
+                </div>
+
+                <!-- Separador -->
+                <div class="nav-separator"></div>
+
+                <!-- Información del usuario -->
+                <div class="nav-item px-3 mt-3">
+                    <div class="user-info">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span class="user-name">@mainAuth.User.Identity?.Name</span>
+                        <br />
+                        <small class="user-role">
+                            @GetUserRole(mainAuth)
+                        </small>
+                    </div>
+                </div>
+            </Authorized>
+
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Iniciar Sesión
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    private string GetUserRole(AuthenticationState authState)
+    {
+        var roleClaim = authState.User.Claims
+            .FirstOrDefault(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role);
+        
+        return roleClaim?.Value switch
+        {
+            "Administrador" => "👑 Administrador",
+            "Vendedor" => "🛒 Vendedor",
+            _ => "Usuario"
+        };
+    }
+}
+
+<style>
+    .nav-separator {
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.2);
+        margin: 1rem 0;
+    }
+
+    .user-info {
+        padding: 0.75rem;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 0.5rem;
+        color: white;
+    }
+
+    .user-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .user-role {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.8rem;
+    }
+
+    .nav-link.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>

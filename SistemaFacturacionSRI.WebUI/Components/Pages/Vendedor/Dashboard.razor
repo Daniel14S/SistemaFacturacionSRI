@@ -1,0 +1,222 @@
+@page "/vendedor/dashboard"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Vendedor")]
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IProductoHttpService ProductoService
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - Vendedor</PageTitle>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="container py-4">
+    <!-- Header principal -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-speedometer2 me-2"></i>
+                Dashboard del Vendedor
+            </h2>
+            <p class="text-muted">Panel de ventas y consultas</p>
+        </div>
+        <img src="imagenes/store.png" alt="Tienda" style="width: 200px; height: auto; border-radius: 0.5rem;" />
+    </div>
+
+    <!-- Cards con métricas clave (Vista limitada) -->
+    <div class="row g-4 mb-4">
+        <!-- Total Productos -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Productos Disponibles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (cargandoProductos)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-primary mb-1">@productosActivos</h3>
+                        <small class="text-muted">Productos activos</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos con Stock -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Con Stock
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (cargandoProductos)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-success mb-1">@productosConStock</h3>
+                        <small class="text-muted">Listos para vender</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximamente: Facturas del día -->
+        <div class="col-md-4 col-sm-6">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>
+                        Facturas Hoy
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-info mb-1">0</h3>
+                    <small class="text-muted">Próximamente</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accesos rápidos VENDEDOR -->
+    <hr />
+    <h4 class="mb-3">
+        <i class="bi bi-lightning-fill me-2"></i>
+        Accesos Rápidos
+    </h4>
+    <div class="row g-3">
+        <div class="col-md-4 col-sm-6">
+            <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="MostrarProximamente">
+                <i class="bi bi-plus-square-fill fs-4 d-block mb-2"></i>
+                <strong>Nueva Factura</strong>
+                <small class="d-block text-muted">(Próximamente)</small>
+            </button>
+        </div>
+        <div class="col-md-4 col-sm-6">
+            <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrAProductos">
+                <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
+                <strong>Ver Productos</strong>
+                <small class="d-block text-muted">Solo lectura</small>
+            </button>
+        </div>
+        <div class="col-md-4 col-sm-6">
+            <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrALotes">
+                <i class="bi bi-grid-3x3-gap-fill fs-4 d-block mb-2"></i>
+                <strong>Ver Lotes</strong>
+                <small class="d-block text-muted">Solo lectura</small>
+            </button>
+        </div>
+    </div>
+
+    <!-- Información importante -->
+    <div class="alert alert-info mt-4">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <strong>Nota:</strong> Como vendedor, no puedes gestionar usuarios o modificar inventario, contacta a un administrador.
+    </div>
+
+    @if (mostrarMensaje)
+    {
+        <div class="home-overlay" @onclick="CerrarMensaje">
+            <div class="home-overlay-content" @onclick:stopPropagation="true">
+                <i class="bi bi-info-circle-fill display-6 text-primary mb-3"></i>
+                <p class="lead text-center mb-4">@mensajeProximamente</p>
+                <button type="button" class="btn btn-light" @onclick="CerrarMensaje">Entendido</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int productosActivos = 0;
+    private int productosConStock = 0;
+    
+    private bool cargandoProductos = true;
+    private bool mostrarMensaje = false;
+    private string mensajeProximamente = string.Empty;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CargarEstadisticas();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarEstadisticas()
+    {
+        try
+        {
+            cargandoProductos = true;
+            var productos = await ProductoService.ObtenerTodosAsync();
+            productosActivos = productos?.Count(p => p.Activo) ?? 0;
+            productosConStock = productos?.Count(p => p.TieneStock) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar productos: {ex.Message}";
+        }
+        finally
+        {
+            cargandoProductos = false;
+        }
+    }
+
+    private void IrAProductos() => Navigation.NavigateTo("/productos");
+    private void IrALotes() => Navigation.NavigateTo("/lotes");
+
+    private async Task MostrarProximamente()
+    {
+        mensajeProximamente = "Esta función se agregará próximamente";
+        mostrarMensaje = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CerrarMensaje()
+    {
+        mostrarMensaje = false;
+        mensajeProximamente = string.Empty;
+        _ = InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .home-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .home-overlay-content {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        width: min(90vw, 420px);
+        text-align: center;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
+    }
+</style>
