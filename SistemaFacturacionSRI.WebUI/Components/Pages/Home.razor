@@ -1,7 +1,9 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @using SistemaFacturacionSRI.Domain.Entities
 @using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
 @inject IProductoHttpService ProductoService
 @inject NavigationManager Navigation
 
@@ -20,7 +22,6 @@
             <p class="text-muted">Control total de tu tienda de víveres</p>
         </div>
         <img src="imagenes/store.png" alt="Tienda" style="width: 200px; height: auto; border-radius: 0.5rem;" />
-
     </div>
 
     <!-- Cards con métricas clave -->
@@ -91,7 +92,6 @@
     private bool cargandoProductos = true;
     private bool mostrarMensaje = false;
     private string mensajeProximamente = string.Empty;
-
     private string? errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -120,7 +120,6 @@
         }
         catch (Exception)
         {
-            // Si hay error, dejamos el conteo en 0 y no interrumpimos la UI
             totalProductos = 0;
         }
         finally

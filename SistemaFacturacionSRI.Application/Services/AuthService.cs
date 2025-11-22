@@ -73,6 +73,7 @@ namespace SistemaFacturacionSRI.Application.Services
             usuario.UltimoAcceso = DateTime.UtcNow;
             await _usuarioRepository.ActualizarAsync(usuario);
 
+            // Generar token con rol
             var token = _jwtTokenGenerator.GenerateToken(
                 usuario.UsuarioId,
                 usuario.Username,
@@ -87,7 +88,10 @@ namespace SistemaFacturacionSRI.Application.Services
                 Message = "Inicio de sesión exitoso",
                 Token = token,
                 Usuario = MapearUsuario(usuario),
-                ExpiresAt = expiresAt
+                ExpiresAt = expiresAt,
+
+                // 🔥 AQUÍ AGREGAMOS EL ROL PARA REDIRECCIÓN EN BLAZOR
+                Role = usuario.Rol?.NombreRol
             };
         }
 

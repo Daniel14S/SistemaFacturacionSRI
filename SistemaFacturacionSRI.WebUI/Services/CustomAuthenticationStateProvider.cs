@@ -24,43 +24,55 @@ namespace SistemaFacturacionSRI.WebUI.Services
         /// <summary>
         /// Obtiene el estado de autenticación actual del usuario.
         /// </summary>
-        public override Task<AuthenticationState> GetAuthenticationStateAsync()
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = _tokenStorage.Token;
-
-            if (string.IsNullOrEmpty(token))
+            try
             {
-                // Usuario no autenticado
-                return Task.FromResult(new AuthenticationState(
-                    new ClaimsPrincipal(new ClaimsIdentity())
-                ));
-            }
+                // ✅ Usar GetTokenAsync() si es asíncrono, o Token si es síncrono
+                var token = await Task.FromResult(_tokenStorage.Token);
 
-            // Validar el token
-            var isValid = _jwtTokenGenerator.ValidateToken(token);
-            if (!isValid)
+                if (string.IsNullOrEmpty(token))
+                {
+                    // Usuario no autenticado - Retornar usuario anónimo
+                    return new AuthenticationState(
+                        new ClaimsPrincipal(new ClaimsIdentity())
+                    );
+                }
+
+                // Validar el token
+                var isValid = _jwtTokenGenerator.ValidateToken(token);
+                if (!isValid)
+                {
+                    // Token inválido, limpiar y retornar no autenticado
+                    _tokenStorage.Clear();
+                    return new AuthenticationState(
+                        new ClaimsPrincipal(new ClaimsIdentity())
+                    );
+                }
+
+                // Token válido, extraer claims
+                var claims = _jwtTokenGenerator.GetClaimsFromToken(token);
+                if (claims == null || !claims.Any())
+                {
+                    return new AuthenticationState(
+                        new ClaimsPrincipal(new ClaimsIdentity())
+                    );
+                }
+
+                // Crear identidad autenticada
+                var identity = new ClaimsIdentity(claims, "jwt");
+                var user = new ClaimsPrincipal(identity);
+
+                return new AuthenticationState(user);
+            }
+            catch (Exception)
             {
-                // Token inválido, limpiar y retornar no autenticado
-                _tokenStorage.Clear();
-                return Task.FromResult(new AuthenticationState(
+                // ✅ En caso de cualquier error, retornar usuario anónimo
+                // No lanzar excepciones que rompan la aplicación
+                return new AuthenticationState(
                     new ClaimsPrincipal(new ClaimsIdentity())
-                ));
+                );
             }
-
-            // Token válido, extraer claims
-            var claims = _jwtTokenGenerator.GetClaimsFromToken(token);
-            if (claims == null || !claims.Any())
-            {
-                return Task.FromResult(new AuthenticationState(
-                    new ClaimsPrincipal(new ClaimsIdentity())
-                ));
-            }
-
-            // Crear identidad autenticada
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var user = new ClaimsPrincipal(identity);
-
-            return Task.FromResult(new AuthenticationState(user));
         }
 
         /// <summary>

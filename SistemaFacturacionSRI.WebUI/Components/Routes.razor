@@ -1,14 +1,60 @@
 ﻿@namespace SistemaFacturacionSRI.WebUI.Components
 @using SistemaFacturacionSRI.WebUI.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@using SistemaFacturacionSRI.WebUI.Components.Auth
 
-<Router AppAssembly="@typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Lo sentimos, la página no fue encontrada.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <LayoutView Layout="@typeof(MainLayout)">
+                            <div class="alert alert-danger m-4">
+                                <h4>Acceso Denegado</h4>
+                                <p>No tienes permisos para acceder a esta página.</p>
+                                <a href="/" class="btn btn-primary">Volver al inicio</a>
+                            </div>
+                        </LayoutView>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <div class="alert alert-warning m-4">
+                    <h4>Página no encontrada</h4>
+                    <p>Lo sentimos, la página que buscas no existe.</p>
+                    <a href="/" class="btn btn-primary">Volver al inicio</a>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    // Componente auxiliar para redirección
+    private class RedirectToLogin : ComponentBase
+    {
+        [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+        protected override void OnInitialized()
+        {
+            var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+            if (!returnUrl.StartsWith("login", StringComparison.OrdinalIgnoreCase))
+            {
+                Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}", forceLoad: true);
+            }
+            else
+            {
+                Navigation.NavigateTo("/login", forceLoad: true);
+            }
+        }
+    }
+}
