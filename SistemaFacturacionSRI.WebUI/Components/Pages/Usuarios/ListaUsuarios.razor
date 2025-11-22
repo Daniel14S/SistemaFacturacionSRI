@@ -1,0 +1,369 @@
+@page "/usuarios"
+@rendermode InteractiveServer
+@using SistemaFacturacionSRI.Application.DTOs.Auth
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Administrador")]
+@inject IUsuarioHttpService UsuarioService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>Gestión de Usuarios</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-people-fill me-2"></i>
+                Gestión de Usuarios
+            </h2>
+            <p class="text-muted">Administra los usuarios del sistema</p>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda y botón crear -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" 
+                       class="form-control" 
+                       placeholder="Buscar por nombre de usuario o email..." 
+                       @bind="_searchTerm"
+                       @bind:event="oninput"
+                       @onkeyup="OnSearchChanged" />
+                @if (!string.IsNullOrEmpty(_searchTerm))
+                {
+                    <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" @onclick="CrearNuevoUsuario">
+                <i class="bi bi-plus-circle me-1"></i>
+                Nuevo Usuario
+            </button>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <select class="form-select" @bind="_filtroRol" @bind:after="OnFiltroChanged">
+                <option value="">Todos los roles</option>
+                <option value="Administrador">Administrador</option>
+                <option value="Vendedor">Vendedor</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select" @bind="_filtroEstado" @bind:after="OnFiltroChanged">
+                <option value="">Todos los estados</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
+            </select>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-info fs-6">
+                Total: @_usuariosFiltrados.Count usuarios
+            </span>
+        </div>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando usuarios...</p>
+        </div>
+    }
+    else if (!_usuariosFiltrados.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            No se encontraron usuarios con los criterios seleccionados.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>Nombre Completo</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Último Acceso</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usuario in _usuariosPaginados)
+                    {
+                        <tr>
+                            <td>@usuario.Id</td>
+                            <td>
+                                <strong>@usuario.Username</strong>
+                            </td>
+                            <td>@usuario.Email</td>
+                            <td>@(usuario.NombreCompleto ?? "N/A")</td>
+                            <td>
+                                <span class="badge @GetRolBadgeClass(usuario.Rol)">
+                                    @usuario.Rol
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @(usuario.Estado ? "bg-success" : "bg-danger")">
+                                    @(usuario.Estado ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td>
+                                @if (usuario.UltimoAcceso.HasValue)
+                                {
+                                    <small>@usuario.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                }
+                                else
+                                {
+                                    <small class="text-muted">Nunca</small>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" 
+                                            @onclick="() => EditarUsuario(usuario.Id)"
+                                            title="Editar">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                    
+                                    @if (usuario.Estado)
+                                    {
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                @onclick="() => CambiarEstadoUsuario(usuario.Id, false)"
+                                                title="Desactivar">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success" 
+                                                @onclick="() => CambiarEstadoUsuario(usuario.Id, true)"
+                                                title="Activar">
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        <nav aria-label="Paginación de usuarios">
+            <ul class="pagination justify-content-center">
+                <li class="page-item @(_paginaActual == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(_paginaActual - 1)">
+                        Anterior
+                    </button>
+                </li>
+
+                @for (int i = 1; i <= _totalPaginas; i++)
+                {
+                    var pagina = i;
+                    <li class="page-item @(_paginaActual == pagina ? "active" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(pagina)">
+                            @pagina
+                        </button>
+                    </li>
+                }
+
+                <li class="page-item @(_paginaActual == _totalPaginas ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(_paginaActual + 1)">
+                        Siguiente
+                    </button>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>
+
+@code {
+    private List<UsuarioDto> _usuarios = new();
+    private List<UsuarioDto> _usuariosFiltrados = new();
+    private List<UsuarioDto> _usuariosPaginados = new();
+    
+    private string _searchTerm = string.Empty;
+    private string _filtroRol = string.Empty;
+    private string _filtroEstado = string.Empty;
+    
+    private bool _loading = true;
+    private Timer? _searchTimer;
+
+    // Paginación
+    private int _paginaActual = 1;
+    private int _itemsPorPagina = 10;
+    private int _totalPaginas = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarUsuarios();
+    }
+
+    private async Task CargarUsuarios()
+    {
+        try
+        {
+            _loading = true;
+            _usuarios = await UsuarioService.ObtenerTodosAsync();
+            AplicarFiltros();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar usuarios: {ex.Message}");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnSearchChanged()
+    {
+        _searchTimer?.Dispose();
+        _searchTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                AplicarFiltros();
+                StateHasChanged();
+            });
+        }, null, 300, Timeout.Infinite);
+    }
+
+    private void ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        AplicarFiltros();
+    }
+
+    private void OnFiltroChanged()
+    {
+        _paginaActual = 1;
+        AplicarFiltros();
+    }
+
+    private void AplicarFiltros()
+    {
+        _usuariosFiltrados = _usuarios;
+
+        // Filtro de búsqueda
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            _usuariosFiltrados = _usuariosFiltrados
+                .Where(u => 
+                    u.Username.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    u.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                    (u.NombreCompleto != null && u.NombreCompleto.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+                )
+                .ToList();
+        }
+
+        // Filtro de rol
+        if (!string.IsNullOrWhiteSpace(_filtroRol))
+        {
+            _usuariosFiltrados = _usuariosFiltrados
+                .Where(u => u.Rol.Equals(_filtroRol, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        // Filtro de estado
+        if (!string.IsNullOrWhiteSpace(_filtroEstado))
+        {
+            bool estado = bool.Parse(_filtroEstado);
+            _usuariosFiltrados = _usuariosFiltrados.Where(u => u.Estado == estado).ToList();
+        }
+
+        // Calcular paginación
+        _totalPaginas = (int)Math.Ceiling(_usuariosFiltrados.Count / (double)_itemsPorPagina);
+        _totalPaginas = Math.Max(_totalPaginas, 1);
+        
+        if (_paginaActual > _totalPaginas)
+        {
+            _paginaActual = _totalPaginas;
+        }
+
+        AplicarPaginacion();
+    }
+
+    private void AplicarPaginacion()
+    {
+        _usuariosPaginados = _usuariosFiltrados
+            .Skip((_paginaActual - 1) * _itemsPorPagina)
+            .Take(_itemsPorPagina)
+            .ToList();
+    }
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= _totalPaginas)
+        {
+            _paginaActual = nuevaPagina;
+            AplicarPaginacion();
+        }
+    }
+
+    private async Task CambiarEstadoUsuario(int id, bool activar)
+    {
+        try
+        {
+            if (activar)
+            {
+                await UsuarioService.ActivarAsync(id);
+                ToastService.ShowSuccess("Usuario activado exitosamente");
+            }
+            else
+            {
+                await UsuarioService.DesactivarAsync(id);
+                ToastService.ShowWarning("Usuario desactivado exitosamente");
+            }
+
+            await CargarUsuarios();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cambiar estado: {ex.Message}");
+        }
+    }
+
+    private void CrearNuevoUsuario()
+    {
+        Navigation.NavigateTo("/usuarios/crear");
+    }
+
+    private void EditarUsuario(int id)
+    {
+        Navigation.NavigateTo($"/usuarios/editar/{id}");
+    }
+
+    private string GetRolBadgeClass(string rol) => rol switch
+    {
+        "Administrador" => "bg-danger",
+        "Vendedor" => "bg-primary",
+        _ => "bg-secondary"
+    };
+
+    public void Dispose()
+    {
+        _searchTimer?.Dispose();
+    }
+}

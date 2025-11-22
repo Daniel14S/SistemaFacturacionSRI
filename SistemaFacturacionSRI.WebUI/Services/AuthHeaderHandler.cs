@@ -10,33 +10,24 @@ namespace SistemaFacturacionSRI.WebUI.Services
     public class AuthHeaderHandler : DelegatingHandler
     {
         private readonly ITokenStorage _tokenStorage;
-        private readonly IAutoLoginService _autoLoginService;
         private readonly ILogger<AuthHeaderHandler> _logger;
 
         public AuthHeaderHandler(
             ITokenStorage tokenStorage,
-            IAutoLoginService autoLoginService,
             ILogger<AuthHeaderHandler> logger)
         {
             _tokenStorage = tokenStorage;
-            _autoLoginService = autoLoginService;
             _logger = logger;
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, 
+            CancellationToken cancellationToken)
         {
-            try
-            {
-                await _autoLoginService.EnsureAdminTokenAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "No se pudo asegurar el token antes de la petición a {RequestUri}", 
-                    request.RequestUri);
-            }
+            // 1. Adjuntar token si existe
+            AttachTokenIfAvailable(request);
 
-            AttachToken(request);
-
+            // 2. Enviar petición
             HttpResponseMessage response;
             try
             {
@@ -48,30 +39,39 @@ namespace SistemaFacturacionSRI.WebUI.Services
                 throw;
             }
 
-            // 4. Manejar respuestas de autenticación
-            await HandleAuthenticationResponse(response, request);
+            // 3. Manejar respuestas de autenticación
+            HandleAuthenticationResponse(response, request);
 
             return response;
         }
 
-        private void AttachToken(HttpRequestMessage request)
+        private void AttachTokenIfAvailable(HttpRequestMessage request)
         {
+            // ✅ Leer token directamente de la propiedad
             var token = _tokenStorage.Token;
+            
             if (string.IsNullOrEmpty(token))
             {
-                _logger.LogDebug("No hay token disponible para adjuntar a {RequestUri}", request.RequestUri);
+                _logger.LogWarning("⚠️ No hay token disponible para adjuntar a {RequestUri}", request.RequestUri);
+                return;
+            }
+
+            // Verificar si el token ha expirado
+            if (_tokenStorage.TokenExpiresAt.HasValue && _tokenStorage.TokenExpiresAt.Value <= DateTime.UtcNow)
+            {
+                _logger.LogWarning("Token expirado detectado. No se adjuntará a la petición.");
+                _tokenStorage.Clear();
                 return;
             }
 
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            _logger.LogDebug("Token JWT adjuntado a la petición {Method} {RequestUri}", 
+            _logger.LogInformation("✅ Token JWT adjuntado a la petición {Method} {RequestUri}", 
                 request.Method, 
                 request.RequestUri);
-
         }
 
-        private async Task HandleAuthenticationResponse(HttpResponseMessage response, HttpRequestMessage request)
+        private void HandleAuthenticationResponse(HttpResponseMessage response, HttpRequestMessage request)
         {
             switch (response.StatusCode)
             {
@@ -79,27 +79,11 @@ namespace SistemaFacturacionSRI.WebUI.Services
                     _logger.LogWarning("Respuesta 401 Unauthorized de {RequestUri}. Token inválido o expirado.", 
                         request.RequestUri);
                     
-                    // Verificar si el token expiró
+                    _tokenStorage.Clear();
+                    
                     if (response.Headers.Contains("Token-Expired"))
                     {
-                        _logger.LogInformation("Token expirado detectado. Limpiando token storage.");
-                        _tokenStorage.Clear();
-                        
-                        // Opcional: Intentar refrescar automáticamente
-                        try
-                        {
-                            await _autoLoginService.ForceRefreshTokenAsync();
-                            _logger.LogInformation("Token refrescado automáticamente después de expiración.");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "No se pudo refrescar el token automáticamente.");
-                        }
-                    }
-                    else
-                    {
-                        // Token inválido (no solo expirado)
-                        _tokenStorage.Clear();
+                        _logger.LogInformation("Token expirado detectado en respuesta.");
                     }
                     break;
 
@@ -109,6 +93,5 @@ namespace SistemaFacturacionSRI.WebUI.Services
                     break;
             }
         }
-
     }
 }

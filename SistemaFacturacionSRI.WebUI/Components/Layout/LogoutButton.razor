@@ -1,0 +1,30 @@
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@inject WebAuthService AuthService
+@inject NavigationManager Navigation
+
+<button class="btn btn-sm btn-outline-danger" 
+        type="button"
+        @onclick="HandleLogout">
+    <i class="bi bi-box-arrow-right me-1"></i>
+    Cerrar Sesión
+</button>
+
+@code {
+    private async Task HandleLogout()
+    {
+        try
+        {
+            Console.WriteLine("🔴 Iniciando logout...");
+            await AuthService.Logout();
+            Console.WriteLine("✅ Logout completado, redirigiendo...");
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error en logout: {ex.Message}");
+            // Forzar logout de todas formas
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}

@@ -15,5 +15,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Auth
         /// Fecha de expiración del token
         /// </summary>
         public DateTime? ExpiresAt { get; set; }
+        public string? Role { get; set; }
     }
 }

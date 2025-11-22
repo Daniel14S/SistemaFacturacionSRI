@@ -1,0 +1,398 @@
+@page "/clientes/crear"
+@page "/clientes/editar/{ClienteId:int}"
+@rendermode InteractiveServer
+@using SistemaFacturacionSRI.Application.DTOs.Cliente
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize]
+@inject IClienteHttpService ClienteService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>@(ClienteId.HasValue ? "Editar Cliente" : "Nuevo Cliente")</PageTitle>
+
+<div class="container mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>
+                <i class="bi bi-person-badge me-2"></i>
+                @(ClienteId.HasValue ? "Editar Cliente" : "Nuevo Cliente")
+            </h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-secondary" @onclick="Volver">
+                <i class="bi bi-arrow-left me-1"></i> Volver
+            </button>
+        </div>
+    </div>
+
+    <EditForm Model="@_modelo" OnValidSubmit="GuardarCliente">
+        <DataAnnotationsValidator />
+
+        <div class="card">
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(_mensajeError))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @_mensajeError
+                        <button type="button" class="btn-close" @onclick="() => _mensajeError = string.Empty"></button>
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <!-- Tipo de Identificación -->
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo de Identificación <span class="text-danger">*</span></label>
+                        <InputSelect class="form-select" @bind-Value="_modelo.TipoIdentificacionId" @onchange="OnTipoIdentificacionChanged">
+                            <option value="0">-- Seleccione --</option>
+                            <option value="1">Cédula (10 dígitos)</option>
+                            <option value="2">RUC (13 dígitos)</option>
+                            <option value="3">Pasaporte (6-20 caracteres)</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => _modelo.TipoIdentificacionId)" class="text-danger" />
+                    </div>
+
+                    <!-- Identificación -->
+                    <div class="col-md-6">
+                        <label class="form-label">Identificación <span class="text-danger">*</span></label>
+                        <InputText class="form-control" 
+                                   @bind-Value="_modelo.Identificacion" 
+                                   placeholder="@_placeholderIdentificacion"
+                                   disabled="@(ClienteId.HasValue)" />
+                        <ValidationMessage For="@(() => _modelo.Identificacion)" class="text-danger" />
+                        @if (!string.IsNullOrEmpty(_errorIdentificacion))
+                        {
+                            <div class="text-danger small mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                @_errorIdentificacion
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Primer Nombre -->
+                    <div class="col-md-6">
+                        <label class="form-label">Primer Nombre <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_modelo.Nombre1" placeholder="Ej: Juan" />
+                        <ValidationMessage For="@(() => _modelo.Nombre1)" class="text-danger" />
+                    </div>
+
+                    <!-- Segundo Nombre -->
+                    <div class="col-md-6">
+                        <label class="form-label">Segundo Nombre</label>
+                        <InputText class="form-control" @bind-Value="_modelo.Nombre2" placeholder="Ej: Carlos (opcional)" />
+                        <ValidationMessage For="@(() => _modelo.Nombre2)" class="text-danger" />
+                    </div>
+
+                    <!-- Primer Apellido -->
+                    <div class="col-md-6">
+                        <label class="form-label">Primer Apellido <span class="text-danger">*</span></label>
+                        <InputText class="form-control" @bind-Value="_modelo.Apellido1" placeholder="Ej: Pérez" />
+                        <ValidationMessage For="@(() => _modelo.Apellido1)" class="text-danger" />
+                    </div>
+
+                    <!-- Segundo Apellido -->
+                    <div class="col-md-6">
+                        <label class="form-label">Segundo Apellido</label>
+                        <InputText class="form-control" @bind-Value="_modelo.Apellido2" placeholder="Ej: García (opcional)" />
+                        <ValidationMessage For="@(() => _modelo.Apellido2)" class="text-danger" />
+                    </div>
+
+                    <!-- Dirección -->
+                    <div class="col-12">
+                        <label class="form-label">Dirección</label>
+                        <InputTextArea class="form-control" @bind-Value="_modelo.Direccion" rows="2" 
+                                       placeholder="Ej: Av. Amazonas N24-03 y Colón" />
+                        <ValidationMessage For="@(() => _modelo.Direccion)" class="text-danger" />
+                    </div>
+
+                    <!-- Teléfono -->
+                    <div class="col-md-6">
+                        <label class="form-label">Teléfono</label>
+                        <InputText class="form-control" @bind-Value="_modelo.Telefono" placeholder="Ej: 0987654321" />
+                        <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
+                        @if (!string.IsNullOrEmpty(_errorTelefono))
+                        {
+                            <div class="text-danger small mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                @_errorTelefono
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Email -->
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <InputText class="form-control" @bind-Value="_modelo.Email" placeholder="Ej: cliente@example.com" type="email" />
+                        <ValidationMessage For="@(() => _modelo.Email)" class="text-danger" />
+                        @if (!string.IsNullOrEmpty(_errorEmail))
+                        {
+                            <div class="text-danger small mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                @_errorEmail
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" @onclick="Volver">
+                    <i class="bi bi-x-circle me-1"></i> Cancelar
+                </button>
+
+                <button type="submit" class="btn btn-primary" disabled="@_guardando">
+                    @if (_guardando)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Guardando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-save me-1"></i>
+                        <span>Guardar</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? ClienteId { get; set; }
+
+    private CrearClienteDto _modelo = new();
+    private ActualizarClienteDto _modeloActualizar = new();
+    private bool _guardando = false;
+    private string _mensajeError = string.Empty;
+    private string _placeholderIdentificacion = "Seleccione tipo de identificación";
+    private string _errorIdentificacion = string.Empty;
+    private string _errorTelefono = string.Empty;
+    private string _errorEmail = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ClienteId.HasValue)
+        {
+            await CargarCliente();
+        }
+    }
+
+    private async Task CargarCliente()
+    {
+        try
+        {
+            var cliente = await ClienteService.ObtenerPorIdAsync(ClienteId!.Value);
+            if (cliente != null)
+            {
+                _modeloActualizar = new ActualizarClienteDto
+                {
+                    ClienteId = cliente.ClienteId,
+                    TipoIdentificacionId = cliente.TipoIdentificacionId,
+                    Identificacion = cliente.Identificacion,
+                    Nombre1 = cliente.Nombre1,
+                    Nombre2 = cliente.Nombre2,
+                    Apellido1 = cliente.Apellido1,
+                    Apellido2 = cliente.Apellido2,
+                    Direccion = cliente.Direccion,
+                    Telefono = cliente.Telefono,
+                    Email = cliente.Email
+                };
+
+                // Copiar al modelo de creación para usar el mismo formulario
+                _modelo.TipoIdentificacionId = cliente.TipoIdentificacionId;
+                _modelo.Identificacion = cliente.Identificacion;
+                _modelo.Nombre1 = cliente.Nombre1;
+                _modelo.Nombre2 = cliente.Nombre2;
+                _modelo.Apellido1 = cliente.Apellido1;
+                _modelo.Apellido2 = cliente.Apellido2;
+                _modelo.Direccion = cliente.Direccion;
+                _modelo.Telefono = cliente.Telefono;
+                _modelo.Email = cliente.Email;
+
+                ActualizarPlaceholder();
+            }
+            else
+            {
+                _mensajeError = "Cliente no encontrado";
+            }
+        }
+        catch (Exception ex)
+        {
+            _mensajeError = $"Error al cargar cliente: {ex.Message}";
+        }
+    }
+
+    private void OnTipoIdentificacionChanged(ChangeEventArgs e)
+    {
+        ActualizarPlaceholder();
+        _errorIdentificacion = string.Empty;
+    }
+
+    private void ActualizarPlaceholder()
+    {
+        _placeholderIdentificacion = _modelo.TipoIdentificacionId switch
+        {
+            1 => "Ej: 1234567890 (10 dígitos)",
+            2 => "Ej: 1234567890001 (13 dígitos)",
+            3 => "Ej: AB123456 (6-20 caracteres)",
+            _ => "Seleccione tipo de identificación"
+        };
+    }
+
+    private async Task GuardarCliente()
+    {
+        try
+        {
+            _guardando = true;
+            _mensajeError = string.Empty;
+            _errorIdentificacion = string.Empty;
+            _errorTelefono = string.Empty;
+            _errorEmail = string.Empty;
+
+            // Validaciones adicionales
+            if (!ValidarIdentificacion())
+            {
+                _guardando = false;
+                return;
+            }
+
+            if (!ValidarTelefono())
+            {
+                _guardando = false;
+                return;
+            }
+
+            if (!ValidarEmail())
+            {
+                _guardando = false;
+                return;
+            }
+
+            if (ClienteId.HasValue)
+            {
+                // Actualizar
+                _modeloActualizar.TipoIdentificacionId = _modelo.TipoIdentificacionId;
+                _modeloActualizar.Identificacion = _modelo.Identificacion;
+                _modeloActualizar.Nombre1 = _modelo.Nombre1;
+                _modeloActualizar.Nombre2 = _modelo.Nombre2;
+                _modeloActualizar.Apellido1 = _modelo.Apellido1;
+                _modeloActualizar.Apellido2 = _modelo.Apellido2;
+                _modeloActualizar.Direccion = _modelo.Direccion;
+                _modeloActualizar.Telefono = _modelo.Telefono;
+                _modeloActualizar.Email = _modelo.Email;
+
+                await ClienteService.ActualizarAsync(_modeloActualizar);
+                ToastService.ShowSuccess("Cliente actualizado exitosamente");
+            }
+            else
+            {
+                // Crear
+                await ClienteService.CrearAsync(_modelo);
+                ToastService.ShowSuccess("Cliente creado exitosamente");
+            }
+
+            Navigation.NavigateTo("/clientes");
+        }
+        catch (Exception ex)
+        {
+            _mensajeError = ex.Message;
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private bool ValidarIdentificacion()
+    {
+        if (string.IsNullOrWhiteSpace(_modelo.Identificacion))
+        {
+            _errorIdentificacion = "La identificación es obligatoria";
+            return false;
+        }
+
+        var id = _modelo.Identificacion.Trim();
+
+        switch (_modelo.TipoIdentificacionId)
+        {
+            case 1: // Cédula
+                if (id.Length != 10 || !id.All(char.IsDigit))
+                {
+                    _errorIdentificacion = "La cédula debe tener exactamente 10 dígitos numéricos";
+                    return false;
+                }
+                break;
+
+            case 2: // RUC
+                if (id.Length != 13 || !id.All(char.IsDigit))
+                {
+                    _errorIdentificacion = "El RUC debe tener exactamente 13 dígitos numéricos";
+                    return false;
+                }
+                break;
+
+            case 3: // Pasaporte
+                if (id.Length < 6 || id.Length > 20)
+                {
+                    _errorIdentificacion = "El pasaporte debe tener entre 6 y 20 caracteres";
+                    return false;
+                }
+                if (!id.All(c => char.IsLetterOrDigit(c)))
+                {
+                    _errorIdentificacion = "El pasaporte solo puede contener letras y números";
+                    return false;
+                }
+                break;
+
+            default:
+                _errorIdentificacion = "Debe seleccionar un tipo de identificación";
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool ValidarTelefono()
+    {
+        if (string.IsNullOrWhiteSpace(_modelo.Telefono))
+        {
+            return true; // Es opcional
+        }
+
+        var telefono = _modelo.Telefono.Trim();
+        
+        if (telefono.Length < 7 || telefono.Length > 20)
+        {
+            _errorTelefono = "El teléfono debe tener entre 7 y 20 caracteres";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ValidarEmail()
+    {
+        if (string.IsNullOrWhiteSpace(_modelo.Email))
+        {
+            return true; // Es opcional
+        }
+
+        var email = _modelo.Email.Trim();
+        var emailRegex = new System.Text.RegularExpressions.Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+        
+        if (!emailRegex.IsMatch(email))
+        {
+            _errorEmail = "El formato del email no es válido";
+            return false;
+        }
+
+        return true;
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/clientes");
+    }
+}

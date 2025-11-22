@@ -29,6 +29,21 @@ namespace SistemaFacturacionSRI.WebUI.Middleware
         /// </summary>
         public async Task InvokeAsync(HttpContext context, JwtTokenGenerator jwtTokenGenerator)
         {
+            var path = context.Request.Path.Value?.ToLower() ?? "";
+
+            // ✅ EXCLUIR rutas de Blazor del middleware JWT
+            if (path.StartsWith("/_blazor") || 
+                path.StartsWith("/_framework") || 
+                path.StartsWith("/_content") ||
+                path == "/" ||
+                path.StartsWith("/login") ||
+                path.StartsWith("/error") ||
+                !path.StartsWith("/api")) // Solo aplicar JWT a rutas /api
+            {
+                await _next(context);
+                return;
+            }
+
             // 1. Intentar extraer el token del header Authorization
             var token = ExtraerTokenDelHeader(context);
 

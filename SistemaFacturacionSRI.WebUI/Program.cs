@@ -1,256 +1,262 @@
-    using Microsoft.JSInterop;
-    using Microsoft.EntityFrameworkCore;
-    using Microsoft.AspNetCore.Authentication.JwtBearer;
-    using Microsoft.IdentityModel.Tokens;
-    using System.Text;
-    using SistemaFacturacionSRI.Infrastructure.Data;
-    using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-    using SistemaFacturacionSRI.Application.Interfaces;
-    using SistemaFacturacionSRI.Infrastructure.Repositories;
-    using SistemaFacturacionSRI.Application.Interfaces.Services;
-    using SistemaFacturacionSRI.Application.Services;
-    using SistemaFacturacionSRI.Application.Mappings;
-    using SistemaFacturacionSRI.Application.Interfaces.Security;
-    using SistemaFacturacionSRI.Application.Security;
-    using SistemaFacturacionSRI.WebUI.Services;
-    using SistemaFacturacionSRI.WebUI.Components;
-    using SistemaFacturacionSRI.WebUI.Middleware;
-    using SistemaFacturacionSRI.WebUI.Authorization;
-    using Blazored.LocalStorage;  
-    using Microsoft.AspNetCore.Components.Authorization;
-   
-    
+using Microsoft.JSInterop;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using SistemaFacturacionSRI.Infrastructure.Data;
+using SistemaFacturacionSRI.Application.Interfaces.Repositories;
+using SistemaFacturacionSRI.Application.Interfaces;
+using SistemaFacturacionSRI.Infrastructure.Repositories;
+using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.Application.Services;
+using SistemaFacturacionSRI.Application.Mappings;
+using SistemaFacturacionSRI.Application.Interfaces.Security;
+using SistemaFacturacionSRI.Application.Security;
+using SistemaFacturacionSRI.WebUI.Services;
+using SistemaFacturacionSRI.WebUI.Components;
+using SistemaFacturacionSRI.WebUI.Middleware;
+using SistemaFacturacionSRI.WebUI.Authorization;
+using Blazored.LocalStorage;  
+using Microsoft.AspNetCore.Components.Authorization;
 
-    var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-    // ===========================
-    // CONFIGURACIÓN DE SERVICIOS
-    // ===========================
+// ===========================
+// CONFIGURACIÓN DE SERVICIOS
+// ===========================
 
-    // Blazor Server y Razor
-    builder.Services.AddRazorComponents()
-        .AddInteractiveServerComponents();
+// Blazor Server y Razor
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
-    builder.Services.AddRazorPages();
-    builder.Services.AddServerSideBlazor();
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
 
-    // Base de datos (SQL Server)
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-    );
+// Base de datos (SQL Server)
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
 
-    // Repositorios y Servicios (Inyección de dependencias)
-    builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
-    builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
-    builder.Services.AddScoped<IProductoService, ProductoService>();
-    builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
-    builder.Services.AddScoped<ICategoriaService, CategoriaService>();
-    builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
-    builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
-    builder.Services.AddScoped<ILoteRepository, LoteRepository>();
-    builder.Services.AddScoped<ILoteService, LoteService>();
-    builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-    builder.Services.AddScoped<WebAuthService>();
-    builder.Services.AddScoped<IUsuarioService, UsuarioService>();
-    builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
-    builder.Services.AddSingleton<JwtTokenGenerator>();
-    builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
-    builder.Services.AddScoped<IAutoLoginService, AutoLoginService>();
-    builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-    builder.Services.AddScoped<IClienteService, ClienteService>();
-    builder.Services.AddBlazoredLocalStorage();
-    builder.Services.AddScoped<IAuthService, AuthService>();
-    builder.Services.AddAuthorizationCore();
-    builder.Services.AddScoped<CustomAuthenticationStateProvider>();
-    builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+// Repositorios y Servicios (Inyección de dependencias)
+builder.Services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
+builder.Services.AddScoped<IProductoRepository, ProductoRepository>();
+builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<ITipoIVARepository, TipoIVARepository>();
+builder.Services.AddScoped<ITipoIVAService, TipoIVAService>();
+builder.Services.AddScoped<ILoteRepository, LoteRepository>();
+builder.Services.AddScoped<ILoteService, LoteService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<WebAuthService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddSingleton<JwtTokenGenerator>();
+builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddAuthorizationCore();
+
+
+// ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
 
-    // ✅ CORS - Configuración para desarrollo local
-    builder.Services.AddCors(options =>
+// Después de las líneas existentes, agregar:
+builder.Services.AddScoped<ToastService>();
+
+builder.Services.AddHttpClient<IUsuarioHttpService, UsuarioHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
+
+
+// ✅ CORS - Configuración para desarrollo local
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowBlazorDevelopment", policy =>
     {
-        options.AddPolicy("AllowBlazorDevelopment", policy =>
-        {
-            policy.WithOrigins(
-                "https://localhost:5293",
-                "http://localhost:5292",
-                "https://localhost:7001"
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials(); // ⚠️ CRÍTICO para Blazor Server WebSocket
-        });
+        policy.WithOrigins(
+            "https://localhost:5293",
+            "http://localhost:5292",
+            "https://localhost:7001"
+        )
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials();
     });
+});
 
-    // 🔐 Configuración de autenticación JWT
-    builder.Services.AddAuthentication(options =>
+// 🔐 Configuración de autenticación JWT
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+    var secretKey = jwtSettings["SecretKey"];
+
+    if (string.IsNullOrEmpty(secretKey))
     {
-        options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
+        throw new InvalidOperationException("JWT SecretKey no está configurada en appsettings.json");
+    }
+
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-        var secretKey = jwtSettings["SecretKey"];
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtSettings["Issuer"],
+        ValidateAudience = true,
+        ValidAudience = jwtSettings["Audience"],
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
 
-        if (string.IsNullOrEmpty(secretKey))
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
         {
-            throw new InvalidOperationException("JWT SecretKey no está configurada en appsettings.json");
-        }
-
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
-                System.Text.Encoding.UTF8.GetBytes(secretKey)),
-            ValidateIssuer = true,
-            ValidIssuer = jwtSettings["Issuer"],
-            ValidateAudience = true,
-            ValidAudience = jwtSettings["Audience"],
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero // Sin tolerancia de tiempo
-        };
-
-        // Configuración para APIs
-        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
-        {
-            OnMessageReceived = context =>
+            var authorization = context.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                // Intentar obtener el token del header Authorization
-                var authorization = context.Request.Headers["Authorization"].ToString();
-                if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                {
-                    context.Token = authorization.Substring("Bearer ".Length).Trim();
-                }
-
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                if (context.Exception.GetType() == typeof(Microsoft.IdentityModel.Tokens.SecurityTokenExpiredException))
-                {
-                    context.Response.Headers["Token-Expired"] = "true";
-                }
-                return Task.CompletedTask;
+                context.Token = authorization.Substring("Bearer ".Length).Trim();
             }
-        };
-    });
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            {
+                context.Response.Headers["Token-Expired"] = "true";
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
 
-    // 🔐 Configuración de autorización con políticas
-    builder.Services.AddAuthorization(options =>
-    {
-        // Política para administradores
-        options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
-            policy.RequireRole("Administrador"));
+// 🔐 Configuración de autorización con políticas
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthorizationPolicies.AdminOnly, policy =>
+        policy.RequireRole("Administrador"));
 
-        // Política para vendedores
-        options.AddPolicy(AuthorizationPolicies.VendedorOnly, policy =>
-            policy.RequireRole("Vendedor"));
+    options.AddPolicy(AuthorizationPolicies.VendedorOnly, policy =>
+        policy.RequireRole("Vendedor"));
 
-        // Política para admin o vendedor
-        options.AddPolicy(AuthorizationPolicies.AdminOrVendedor, policy =>
-            policy.RequireRole("Administrador", "Vendedor"));
-    });
+    options.AddPolicy(AuthorizationPolicies.AdminOrVendedor, policy =>
+        policy.RequireRole("Administrador", "Vendedor"));
+});
 
-    builder.Services.AddHttpClient<IProductoHttpService, ProductoHttpService>(client =>
-    {
-        client.BaseAddress = new Uri("http://localhost:5293");
-    })
-    .AddHttpMessageHandler<AuthHeaderHandler>(); 
+// ✅ AuthHeaderHandler debe estar ANTES de los HttpClients
+builder.Services.AddTransient<AuthHeaderHandler>();
 
-    builder.Services.AddHttpClient<ILoteHttpService, LoteHttpService>(client =>
-    {
-        client.BaseAddress = new Uri("http://localhost:5293");
-    })
-    .AddHttpMessageHandler<AuthHeaderHandler>(); 
+// ✅ HttpClients CON AuthHeaderHandler para adjuntar token
+builder.Services.AddHttpClient<IProductoHttpService, ProductoHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-    builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
-    {
-        client.BaseAddress = new Uri("http://localhost:5293");
-    })
-    .AddHttpMessageHandler<AuthHeaderHandler>(); 
+builder.Services.AddHttpClient<ILoteHttpService, LoteHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-    builder.Services.AddHttpClient<IAuthHttpService, AuthHttpService>(client =>
-    {
-        client.BaseAddress = new Uri("http://localhost:5293");
-    })
-    .AddHttpMessageHandler<AuthHeaderHandler>();
+builder.Services.AddHttpClient<ICategoriaHttpService, CategoriaHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
+// ⚠️ AuthHttpService NO debe tener AuthHeaderHandler (es para login)
+builder.Services.AddHttpClient<IAuthHttpService, AuthHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+});
 
-    builder.Services.AddTransient<AuthHeaderHandler>();
+// ✅ Cliente HttpClient con AuthHeaderHandler
+builder.Services.AddHttpClient<IClienteHttpService, ClienteHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
-    // Controladores (para los endpoints API)
-    builder.Services.AddControllers();
+// Controladores (para los endpoints API)
+builder.Services.AddControllers();
 
-    // AutoMapper (para mapear DTOs ↔ entidades)
-    builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
+// AutoMapper (para mapear DTOs ↔ entidades)
+builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 
-    var app = builder.Build();
+var app = builder.Build();
 
-    // ===========================
-    // CONFIGURACIÓN DE MIDDLEWARE
-    // ===========================
+// ===========================
+// CONFIGURACIÓN DE MIDDLEWARE
+// ===========================
 
-    // ✅ Headers de seguridad CSP - Permite WebSocket y recursos locales
-    app.Use(async (context, next) =>
-    {
-        // Content Security Policy para desarrollo
-        // Permite WebSocket (ws:// y wss://) y recursos locales
-        context.Response.Headers["Content-Security-Policy"] =
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' " +
-            "https://localhost:* http://localhost:* " +
-            "ws://localhost:* wss://localhost:*; " +
-            "font-src 'self' data:; " +
-            "img-src 'self' data: https:; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            "connect-src 'self' " +
-            "ws://localhost:* wss://localhost:* " +
-            "https://localhost:* http://localhost:*;";
+// ✅ Headers de seguridad CSP
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' " +
+        "https://localhost:* http://localhost:* " +
+        "ws://localhost:* wss://localhost:*; " +
+        "font-src 'self' data:; " +
+        "img-src 'self' data: https:; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "connect-src 'self' " +
+        "ws://localhost:* wss://localhost:* " +
+        "https://localhost:* http://localhost:*;";
 
-        await next();
-    });
+    await next();
+});
 
-    if (!app.Environment.IsDevelopment())
-    {
-        app.UseExceptionHandler("/Error", createScopeForErrors: true);
-        app.UseHsts();
-    }
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseHsts();
+}
 
-    app.UseHttpsRedirection();
-    app.UseStaticFiles();
+app.UseHttpsRedirection();
+app.UseStaticFiles();
 
-    // ✅ CORS debe ir ANTES de UseRouting
-    app.UseCors("AllowBlazorDevelopment");
+app.UseCors("AllowBlazorDevelopment");
 
-    // ✅ Orden correcto del pipeline
-    app.UseRouting();
+app.UseRouting();
 
-    // 🔒 JWT Middleware (procesa tokens en cada petición)
-    app.UseJwtMiddleware();  
+// 🔒 JWT Middleware
+app.UseJwtMiddleware();  
 
-    // 🔒 Autenticación y Autorización (DESPUÉS de UseRouting)
-    app.UseAuthentication();
-    app.UseAuthorization();
+// 🔒 Autenticación y Autorización
+app.UseAuthentication();
+app.UseAuthorization();
 
-    app.UseAuthErrorHandling();
+app.UseAuthErrorHandling();
 
-    // 🔒 Antiforgery debe ir después de UseRouting()
-    app.UseAntiforgery();
+app.UseAntiforgery();
 
-    // ✅ Mapea controladores (endpoints API)
-    app.MapControllers();
+// ✅ Mapea controladores (endpoints API)
+app.MapControllers();
 
-    // ✅ Mapea los componentes Blazor
-    app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
-        .AddInteractiveServerRenderMode();
+// ✅ Mapea los componentes Blazor
+app.MapRazorComponents<SistemaFacturacionSRI.WebUI.Components.App>()
+    .AddInteractiveServerRenderMode().AllowAnonymous();
 
-    // ===========================
-    // INICIALIZACIÓN DE BASE DE DATOS (MIGRATIONS)
-    // ===========================
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.Migrate();
-    }
+// ===========================
+// INICIALIZACIÓN DE BASE DE DATOS
+// ===========================
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.Migrate();
+}
 
-    app.Run();
+app.Run();

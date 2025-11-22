@@ -1,0 +1,258 @@
+@page "/admin/dashboard"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@inject IProductoHttpService ProductoService
+@inject IUsuarioHttpService UsuarioService
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - Administrador</PageTitle>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="container py-4">
+    <!-- Header principal -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi bi-speedometer2 me-2"></i>
+                Dashboard del Administrador
+            </h2>
+            <p class="text-muted">Control completo del sistema</p>
+        </div>
+        <img src="imagenes/store.png" alt="Tienda" style="width: 200px; height: auto; border-radius: 0.5rem;" />
+    </div>
+
+    <!-- Cards con métricas clave -->
+    <div class="row g-4 mb-4">
+        <!-- Total Productos -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Productos
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (cargandoProductos)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-primary mb-1">@totalProductos</h3>
+                        <small class="text-muted">Activos: @productosActivos</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Usuarios -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        Usuarios
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (cargandoUsuarios)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-success mb-1">@totalUsuarios</h3>
+                        <small class="text-muted">Activos: @usuariosActivos</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximamente: Clientes -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Clientes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-info mb-1">0</h3>
+                    <small class="text-muted">Próximamente</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximamente: Facturas -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>
+                        Facturas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h3 class="text-warning mb-1">0</h3>
+                    <small class="text-muted">Próximamente</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accesos rápidos ADMIN -->
+    <hr />
+    <h4 class="mb-3">
+        <i class="bi bi-lightning-fill me-2"></i>
+        Accesos Rápidos
+    </h4>
+    <div class="row g-3">
+        <div class="col-md-3 col-sm-6">
+            <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrAProductos">
+                <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
+                <strong>Gestionar Productos</strong>
+            </button>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrALotes">
+                <i class="bi bi-grid-3x3-gap-fill fs-4 d-block mb-2"></i>
+                <strong>Gestionar Lotes</strong>
+            </button>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <button type="button" class="btn btn-outline-success w-100 py-3" @onclick="IrAUsuarios">
+                <i class="bi bi-people-fill fs-4 d-block mb-2"></i>
+                <strong>Gestionar Usuarios</strong>
+            </button>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <button type="button" class="btn btn-outline-info w-100 py-3" @onclick="MostrarProximamente">
+                <i class="bi bi-person-badge fs-4 d-block mb-2"></i>
+                <strong>Clientes (Próximamente)</strong>
+            </button>
+        </div>
+    </div>
+
+    @if (mostrarMensaje)
+    {
+        <div class="home-overlay" @onclick="CerrarMensaje">
+            <div class="home-overlay-content" @onclick:stopPropagation="true">
+                <i class="bi bi-info-circle-fill display-6 text-primary mb-3"></i>
+                <p class="lead text-center mb-4">@mensajeProximamente</p>
+                <button type="button" class="btn btn-light" @onclick="CerrarMensaje">Entendido</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int totalProductos = 0;
+    private int productosActivos = 0;
+    private int totalUsuarios = 0;
+    private int usuariosActivos = 0;
+    
+    private bool cargandoProductos = true;
+    private bool cargandoUsuarios = true;
+    private bool mostrarMensaje = false;
+    private string mensajeProximamente = string.Empty;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CargarEstadisticas();
+            StateHasChanged();
+        }
+    }
+
+    private async Task CargarEstadisticas()
+    {
+        // Cargar productos
+        try
+        {
+            cargandoProductos = true;
+            var productos = await ProductoService.ObtenerTodosAsync();
+            totalProductos = productos?.Count ?? 0;
+            productosActivos = productos?.Count(p => p.Activo) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar productos: {ex.Message}";
+        }
+        finally
+        {
+            cargandoProductos = false;
+        }
+
+        // Cargar usuarios
+        try
+        {
+            cargandoUsuarios = true;
+            var usuarios = await UsuarioService.ObtenerTodosAsync();
+            totalUsuarios = usuarios?.Count ?? 0;
+            usuariosActivos = usuarios?.Count(u => u.Estado) ?? 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar usuarios: {ex.Message}";
+        }
+        finally
+        {
+            cargandoUsuarios = false;
+        }
+    }
+
+    private void IrAProductos() => Navigation.NavigateTo("/productos");
+    private void IrALotes() => Navigation.NavigateTo("/lotes");
+    private void IrAUsuarios() => Navigation.NavigateTo("/usuarios");
+
+    private async Task MostrarProximamente()
+    {
+        mensajeProximamente = "Esta función se agregará próximamente";
+        mostrarMensaje = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CerrarMensaje()
+    {
+        mostrarMensaje = false;
+        mensajeProximamente = string.Empty;
+        _ = InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .home-overlay {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+    }
+
+    .home-overlay-content {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        width: min(90vw, 420px);
+        text-align: center;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.25);
+    }
+</style>

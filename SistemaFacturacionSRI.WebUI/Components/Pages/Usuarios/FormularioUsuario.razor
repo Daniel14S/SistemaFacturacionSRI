@@ -1,0 +1,305 @@
+@page "/usuarios/crear"
+@page "/usuarios/editar/{Id:int}"
+@rendermode InteractiveServer
+@using SistemaFacturacionSRI.Application.DTOs.Auth
+@using SistemaFacturacionSRI.Application.DTOs.Usuario
+@using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@attribute [Authorize(Roles = "Administrador")]
+@inject IUsuarioHttpService UsuarioService
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_esEdicion ? "Editar Usuario" : "Crear Usuario")</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi @(_esEdicion ? "bi-pencil-square" : "bi-person-plus-fill") me-2"></i>
+                        @(_esEdicion ? "Editar Usuario" : "Nuevo Usuario")
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (_cargando)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2">Cargando...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="_modelo" OnValidSubmit="HandleSubmit">
+                            <DataAnnotationsValidator />
+                            
+                            <!-- Datos de Autenticación -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">
+                                        <i class="bi bi-shield-lock me-2"></i>
+                                        Datos de Autenticación
+                                    </h5>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Nombre de Usuario *</label>
+                                    <InputText @bind-Value="_modelo.Username" class="form-control" placeholder="usuario123" />
+                                    <ValidationMessage For="@(() => _modelo.Username)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email *</label>
+                                    <InputText @bind-Value="_modelo.Email" type="email" class="form-control" placeholder="usuario@ejemplo.com" />
+                                    <ValidationMessage For="@(() => _modelo.Email)" class="text-danger" />
+                                </div>
+
+                                @if (!_esEdicion)
+                                {
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Contraseña *</label>
+                                        <div class="input-group">
+                                            <InputText @bind-Value="_modelo.Password" 
+                                                       type="@(_mostrarPassword ? "text" : "password")" 
+                                                       class="form-control" 
+                                                       placeholder="Mínimo 8 caracteres" />
+                                            <button class="btn btn-outline-secondary" 
+                                                    type="button" 
+                                                    @onclick="() => _mostrarPassword = !_mostrarPassword">
+                                                <i class="bi @(_mostrarPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                                            </button>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            Debe contener mayúscula, minúscula, número y carácter especial
+                                        </small>
+                                        <ValidationMessage For="@(() => _modelo.Password)" class="text-danger" />
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Confirmar Contraseña *</label>
+                                        <InputText @bind-Value="_modelo.ConfirmarPassword" 
+                                                   type="@(_mostrarPassword ? "text" : "password")" 
+                                                   class="form-control" 
+                                                   placeholder="Repetir contraseña" />
+                                        <ValidationMessage For="@(() => _modelo.ConfirmarPassword)" class="text-danger" />
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Datos Personales -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">
+                                        <i class="bi bi-person me-2"></i>
+                                        Datos Personales
+                                    </h5>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Primer Nombre *</label>
+                                    <InputText @bind-Value="_modelo.Nombre1" class="form-control" placeholder="Juan" />
+                                    <ValidationMessage For="@(() => _modelo.Nombre1)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Segundo Nombre</label>
+                                    <InputText @bind-Value="_modelo.Nombre2" class="form-control" placeholder="Carlos" />
+                                    <ValidationMessage For="@(() => _modelo.Nombre2)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Primer Apellido *</label>
+                                    <InputText @bind-Value="_modelo.Apellido1" class="form-control" placeholder="Pérez" />
+                                    <ValidationMessage For="@(() => _modelo.Apellido1)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Segundo Apellido</label>
+                                    <InputText @bind-Value="_modelo.Apellido2" class="form-control" placeholder="García" />
+                                    <ValidationMessage For="@(() => _modelo.Apellido2)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Cédula (10 dígitos)</label>
+                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" />
+                                    <ValidationMessage For="@(() => _modelo.Cedula)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Teléfono</label>
+                                    <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" />
+                                    <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
+                                </div>
+
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Dirección</label>
+                                    <InputTextArea @bind-Value="_modelo.Direccion" class="form-control" rows="2" placeholder="Av. Principal, Quito" />
+                                    <ValidationMessage For="@(() => _modelo.Direccion)" class="text-danger" />
+                                </div>
+                            </div>
+
+                            <!-- Rol y Estado -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-2">
+                                        <i class="bi bi-gear me-2"></i>
+                                        Configuración
+                                    </h5>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Rol *</label>
+                                    <InputSelect @bind-Value="_modelo.RolId" class="form-select">
+                                        <option value="0">-- Seleccionar Rol --</option>
+                                        <option value="1">Administrador</option>
+                                        <option value="2">Vendedor</option>
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => _modelo.RolId)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Estado</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <InputCheckbox @bind-Value="_modelo.Estado" class="form-check-input" id="estadoSwitch" />
+                                        <label class="form-check-label" for="estadoSwitch">
+                                            @(_modelo.Estado ? "Activo" : "Inactivo")
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                                            <i class="bi bi-x-circle me-1"></i>
+                                            Cancelar
+                                        </button>
+                                        <button type="submit" class="btn btn-primary" disabled="@_guardando">
+                                            @if (_guardando)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-save me-1"></i>
+                                            }
+                                            @(_esEdicion ? "Actualizar" : "Crear")
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private CrearUsuarioDto _modelo = new() { Estado = true };
+    private bool _esEdicion => Id.HasValue && Id.Value > 0;
+    private bool _cargando = false;
+    private bool _guardando = false;
+    private bool _mostrarPassword = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_esEdicion)
+        {
+            await CargarUsuario();
+        }
+    }
+
+    private async Task CargarUsuario()
+    {
+        try
+        {
+            _cargando = true;
+            var usuario = await UsuarioService.ObtenerPorIdAsync(Id!.Value);
+            
+            if (usuario == null)
+            {
+                ToastService.ShowError("Usuario no encontrado");
+                Navigation.NavigateTo("/usuarios");
+                return;
+            }
+
+            // Mapear a modelo de edición
+            _modelo = new CrearUsuarioDto
+            {
+                Username = usuario.Username,
+                Email = usuario.Email,
+                // Nota: No cargamos contraseña por seguridad
+                Nombre1 = usuario.NombreCompleto?.Split(' ').FirstOrDefault() ?? "",
+                Apellido1 = usuario.NombreCompleto?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                RolId = usuario.Rol == "Administrador" ? 1 : 2,
+                Estado = usuario.Estado
+            };
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al cargar usuario: {ex.Message}");
+            Navigation.NavigateTo("/usuarios");
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        try
+        {
+            _guardando = true;
+
+            if (_esEdicion)
+            {
+                var dto = new ActualizarUsuarioDto
+                {
+                    UsuarioId = Id!.Value,
+                    Username = _modelo.Username,
+                    Email = _modelo.Email,
+                    Nombre1 = _modelo.Nombre1,
+                    Nombre2 = _modelo.Nombre2,
+                    Apellido1 = _modelo.Apellido1,
+                    Apellido2 = _modelo.Apellido2,
+                    Cedula = _modelo.Cedula,
+                    Telefono = _modelo.Telefono,
+                    Direccion = _modelo.Direccion
+                };
+
+                await UsuarioService.ActualizarAsync(dto);
+                ToastService.ShowSuccess("Usuario actualizado exitosamente");
+            }
+            else
+            {
+                await UsuarioService.CrearAsync(_modelo);
+                ToastService.ShowSuccess("Usuario creado exitosamente");
+            }
+
+            Navigation.NavigateTo("/usuarios");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al guardar: {ex.Message}");
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/usuarios");
+    }
+}

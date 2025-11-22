@@ -990,7 +990,7 @@ app.MapGet("/api/productos/{id}", async (int id, IProductoService service) =>
 
 // 4. BLAZOR COMPONENTS
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode().AllowAnonymous();
 
 app.Run();
 ```

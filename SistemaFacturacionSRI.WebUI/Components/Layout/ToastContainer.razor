@@ -1,0 +1,104 @@
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast show @GetToastClass(toast.Type)" role="alert">
+            <div class="toast-header">
+                <i class="bi @GetIconClass(toast.Type) me-2"></i>
+                <strong class="me-auto">@GetTitle(toast.Type)</strong>
+                <button type="button" class="btn-close" @onclick="() => RemoveToast(toast.Id)"></button>
+            </div>
+            <div class="toast-body">
+                @toast.Message
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<ToastMessage> _toasts = new();
+    private int _nextId = 1;
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += ShowToast;
+    }
+
+    private void ShowToast(string message, ToastType type)
+    {
+        var toast = new ToastMessage
+        {
+            Id = _nextId++,
+            Message = message,
+            Type = type
+        };
+
+        _toasts.Add(toast);
+        StateHasChanged();
+
+        // Auto-remover después de 5 segundos
+        Task.Delay(5000).ContinueWith(_ =>
+        {
+            RemoveToast(toast.Id);
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void RemoveToast(int id)
+    {
+        var toast = _toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            _toasts.Remove(toast);
+            StateHasChanged();
+        }
+    }
+
+    private string GetToastClass(ToastType type) => type switch
+    {
+        ToastType.Success => "bg-success text-white",
+        ToastType.Error => "bg-danger text-white",
+        ToastType.Warning => "bg-warning text-dark",
+        ToastType.Info => "bg-info text-white",
+        _ => "bg-secondary text-white"
+    };
+
+    private string GetIconClass(ToastType type) => type switch
+    {
+        ToastType.Success => "bi-check-circle-fill",
+        ToastType.Error => "bi-x-circle-fill",
+        ToastType.Warning => "bi-exclamation-triangle-fill",
+        ToastType.Info => "bi-info-circle-fill",
+        _ => "bi-bell-fill"
+    };
+
+    private string GetTitle(ToastType type) => type switch
+    {
+        ToastType.Success => "Éxito",
+        ToastType.Error => "Error",
+        ToastType.Warning => "Advertencia",
+        ToastType.Info => "Información",
+        _ => "Notificación"
+    };
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= ShowToast;
+    }
+
+    private class ToastMessage
+    {
+        public int Id { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public ToastType Type { get; set; }
+    }
+}
+
+<style>
+    .toast {
+        min-width: 300px;
+        margin-bottom: 10px;
+    }
+</style>
