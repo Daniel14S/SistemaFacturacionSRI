@@ -17,6 +17,7 @@
     using SistemaFacturacionSRI.WebUI.Middleware;
     using SistemaFacturacionSRI.WebUI.Authorization;
     using Blazored.LocalStorage;  
+    using Microsoft.AspNetCore.Components.Authorization;
    
     
 
@@ -49,6 +50,7 @@
     builder.Services.AddScoped<ILoteRepository, LoteRepository>();
     builder.Services.AddScoped<ILoteService, LoteService>();
     builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+    builder.Services.AddScoped<WebAuthService>();
     builder.Services.AddScoped<IUsuarioService, UsuarioService>();
     builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
     builder.Services.AddSingleton<JwtTokenGenerator>();
@@ -58,20 +60,27 @@
     builder.Services.AddScoped<IClienteService, ClienteService>();
     builder.Services.AddBlazoredLocalStorage();
     builder.Services.AddScoped<IAuthService, AuthService>();
-    // HttpClient factory
-builder.Services.AddHttpClient();
+    builder.Services.AddAuthorizationCore();
+    builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+    builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
+    provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
-// WebAuthService con HttpClient configurado
-builder.Services.AddScoped<WebAuthService>(sp =>
-{
-    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient();
-    httpClient.BaseAddress = new Uri("http://localhost:5293");
-    var jsRuntime = sp.GetRequiredService<IJSRuntime>();
-    
-    return new WebAuthService(httpClient, jsRuntime);
-});
 
+    // ✅ CORS - Configuración para desarrollo local
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowBlazorDevelopment", policy =>
+        {
+            policy.WithOrigins(
+                "https://localhost:5293",
+                "http://localhost:5292",
+                "https://localhost:7001"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); // ⚠️ CRÍTICO para Blazor Server WebSocket
+        });
+    });
 
     // 🔐 Configuración de autenticación JWT
     builder.Services.AddAuthentication(options =>
@@ -182,6 +191,25 @@ builder.Services.AddScoped<WebAuthService>(sp =>
     // CONFIGURACIÓN DE MIDDLEWARE
     // ===========================
 
+    // ✅ Headers de seguridad CSP - Permite WebSocket y recursos locales
+    app.Use(async (context, next) =>
+    {
+        // Content Security Policy para desarrollo
+        // Permite WebSocket (ws:// y wss://) y recursos locales
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' " +
+            "https://localhost:* http://localhost:* " +
+            "ws://localhost:* wss://localhost:*; " +
+            "font-src 'self' data:; " +
+            "img-src 'self' data: https:; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "connect-src 'self' " +
+            "ws://localhost:* wss://localhost:* " +
+            "https://localhost:* http://localhost:*;";
+
+        await next();
+    });
+
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler("/Error", createScopeForErrors: true);
@@ -190,6 +218,9 @@ builder.Services.AddScoped<WebAuthService>(sp =>
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
+
+    // ✅ CORS debe ir ANTES de UseRouting
+    app.UseCors("AllowBlazorDevelopment");
 
     // ✅ Orden correcto del pipeline
     app.UseRouting();

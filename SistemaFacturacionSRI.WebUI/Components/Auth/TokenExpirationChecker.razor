@@ -8,7 +8,7 @@
     private System.Threading.Timer? _timer;
     private bool _isInitialized = false;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !_isInitialized)
         {
@@ -23,6 +23,8 @@
                 });
             }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         }
+
+        return Task.CompletedTask; 
     }
 
     private async Task CheckTokenExpiration()
