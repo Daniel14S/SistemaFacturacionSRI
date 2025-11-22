@@ -1,183 +1,113 @@
-using Microsoft.JSInterop;
-using System.Net.Http.Headers;
-using System.Text.Json;
+using SistemaFacturacionSRI.Application.DTOs.Auth;
+using SistemaFacturacionSRI.Application.Interfaces;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace SistemaFacturacionSRI.WebUI.Services
-
 {
+    /// <summary>
+    /// Servicio de autenticación para la interfaz web (Blazor).
+    /// </summary>
     public class WebAuthService
-
     {
-        private readonly HttpClient _httpClient;
-        private readonly IJSRuntime _jsRuntime;
+        private readonly IAuthService _authService;
+        private readonly CustomAuthenticationStateProvider _authStateProvider;
+        private readonly ILogger<WebAuthService> _logger;
 
-        private const string TOKEN_KEY = "authToken";
-        private const string USER_KEY = "currentUser";
-
-        private readonly JsonSerializerOptions _jsonOptions =
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-        public WebAuthService(HttpClient httpClient, IJSRuntime jsRuntime)
+        public WebAuthService(
+            IAuthService authService,
+            AuthenticationStateProvider authStateProvider,
+            ILogger<WebAuthService> logger)
         {
-            _httpClient = httpClient;
-            _jsRuntime = jsRuntime;
+            _authService = authService;
+            _authStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
+            _logger = logger;
         }
 
-        // ==========================================================
-        // LOGIN
-        // ==========================================================
-        public async Task<LoginResult> Login(string username, string password)
+        /// <summary>
+        /// Inicia sesión con username y password.
+        /// </summary>
+        public async Task<LoginResponseDto> Login(string username, string password)
+        {
+            var request = new LoginRequestDto
+            {
+                Username = username,
+                Password = password
+            };
+
+            var response = await _authService.LoginAsync(request);
+
+            if (response.Success && !string.IsNullOrEmpty(response.Token))
+            {
+                // Marcar usuario como autenticado
+                _authStateProvider.MarkUserAsAuthenticated(response.Token);
+                _logger.LogInformation("Usuario {Username} autenticado exitosamente", username);
+            }
+
+            return response;
+        }
+
+        /// <summary>
+        /// Cierra sesión del usuario actual.
+        /// </summary>
+        public async Task Logout()
         {
             try
             {
-                var loginData = new { Username = username, Password = password };
+                // Intentar logout en el servidor (actualizar último acceso)
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-                var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginData);
-
-                if (!response.IsSuccessStatusCode)
+                if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int userIdInt))
                 {
-                    return new LoginResult
-                    {
-                        Success = false,
-                        Message = "Credenciales inválidas."
-                    };
+                    await _authService.LogoutAsync(userIdInt);
                 }
-
-                // Deserializar respuesta
-                var result = await response.Content.ReadFromJsonAsync<LoginResponse>(_jsonOptions);
-
-                if (result == null || string.IsNullOrEmpty(result.Token))
-                {
-                    return new LoginResult
-                    {
-                        Success = false,
-                        Message = "Respuesta inválida del servidor."
-                    };
-                }
-
-                // Guardar token
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, result.Token);
-
-                // Guardar usuario
-                var userJson = JsonSerializer.Serialize(result.User, _jsonOptions);
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", USER_KEY, userJson);
-
-                // Configurar Header
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", result.Token);
-
-                return new LoginResult { Success = true, Message = "Login exitoso." };
             }
             catch (Exception ex)
             {
-                return new LoginResult
-                {
-                    Success = false,
-                    Message = $"Error inesperado: {ex.Message}"
-                };
+                _logger.LogWarning(ex, "Error al hacer logout en el servidor");
             }
-        }
-
-        // ==========================================================
-        // LOGOUT
-        // ==========================================================
-        public async Task Logout()
-        {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", USER_KEY);
-
-            _httpClient.DefaultRequestHeaders.Authorization = null;
-        }
-
-        // ==========================================================
-        // GET TOKEN
-        // ==========================================================
-        public async Task<string?> GetToken()
-        {
-            try
+            finally
             {
-                return await _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
-            }
-            catch
-            {
-                return null;
+                // Siempre limpiar el estado local
+                _authStateProvider.MarkUserAsLoggedOut();
+                _logger.LogInformation("Usuario cerró sesión");
             }
         }
 
-        // ==========================================================
-        // IS AUTHENTICATED
-        // ==========================================================
+        /// <summary>
+        /// Verifica si el usuario está autenticado.
+        /// </summary>
         public async Task<bool> IsAuthenticated()
         {
-            var token = await GetToken();
-            return !string.IsNullOrEmpty(token);
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            return authState.User.Identity?.IsAuthenticated ?? false;
         }
 
-        // ==========================================================
-        // GET CURRENT USER
-        // ==========================================================
-        public async Task<User?> GetCurrentUser()
+        /// <summary>
+        /// Obtiene el usuario autenticado actual.
+        /// </summary>
+        public async Task<System.Security.Claims.ClaimsPrincipal> GetCurrentUser()
         {
-            try
-            {
-                var json = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", USER_KEY);
-
-                if (string.IsNullOrWhiteSpace(json))
-                    return null;
-
-                return JsonSerializer.Deserialize<User>(json, _jsonOptions);
-            }
-            catch
-            {
-                return null;
-            }
+            var authState = await _authStateProvider.GetAuthenticationStateAsync();
+            return authState.User;
         }
 
-        // ==========================================================
-        // GET USER ROLE
-        // ==========================================================
+        /// <summary>
+        /// Obtiene el rol del usuario autenticado.
+        /// </summary>
         public async Task<string?> GetUserRole()
         {
             var user = await GetCurrentUser();
-            return user?.Role;
+            return user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
         }
 
-        // ==========================================================
-        // INITIALIZE AUTH (CARGA INICIAL)
-        // ==========================================================
-        public async Task InitializeAuth()
+        /// <summary>
+        /// Verifica si el usuario tiene un rol específico.
+        /// </summary>
+        public async Task<bool> IsInRole(string role)
         {
-            var token = await GetToken();
-
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
-            }
+            var user = await GetCurrentUser();
+            return user.IsInRole(role);
         }
-    }
-
-    // ==========================================================
-    // MODELOS
-    // ==========================================================
-    public class LoginResponse
-    {
-        public string Token { get; set; } = string.Empty;
-        public User User { get; set; } = new User();
-    }
-
-    public class User
-    {
-        public int Id { get; set; }
-        public string Username { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-    }
-
-    public class LoginResult
-    {
-        public bool Success { get; set; }
-        public string Message { get; set; } = string.Empty;
     }
 }
