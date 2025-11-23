@@ -6,6 +6,7 @@
 @using SistemaFacturacionSRI.WebUI.Services
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Json
 @attribute [Authorize(Roles = "Administrador")]
 @inject IUsuarioHttpService UsuarioService
 @inject ToastService ToastService
@@ -405,25 +406,30 @@
         }
         catch (Exception ex)
         {
-            _errorGeneral = ex.Message;
-            
-            if (ex.Message.Contains("Email") || ex.Message.Contains("email") || ex.Message.Contains("correo"))
+            var mensajeBackend = ExtraerMensajeDesdeBackend(ex.Message);
+            _errorGeneral = mensajeBackend;
+
+            if (ContieneTexto(mensajeBackend, "email") || ContieneTexto(mensajeBackend, "correo"))
             {
                 _erroresValidacion.Add("El email ya está registrado en el sistema");
             }
-            else if (ex.Message.Contains("Username") || ex.Message.Contains("usuario"))
+            else if (ContieneTexto(mensajeBackend, "username"))
             {
                 _erroresValidacion.Add("El nombre de usuario ya existe");
             }
-            else if (ex.Message.Contains("Cedula") || ex.Message.Contains("cédula"))
+            else if (ContieneTexto(mensajeBackend, "cédula") || ContieneTexto(mensajeBackend, "cedula"))
             {
                 _erroresValidacion.Add("La cédula ya está registrada");
             }
-            else if (ex.Message.Contains("400"))
+            else if (ContieneTexto(mensajeBackend, "datos inválidos") || ContieneTexto(mensajeBackend, "400"))
             {
                 _erroresValidacion.Add("Datos inválidos. Verifique todos los campos");
             }
-            
+            else if (!string.IsNullOrWhiteSpace(mensajeBackend))
+            {
+                _erroresValidacion.Add(mensajeBackend);
+            }
+
             ToastService.ShowError("No se pudo guardar el usuario");
         }
         finally
@@ -435,5 +441,39 @@
     private void Cancelar()
     {
         Navigation.NavigateTo("/usuarios");
+    }
+
+    private static string ExtraerMensajeDesdeBackend(string? rawMessage)
+    {
+        if (string.IsNullOrWhiteSpace(rawMessage))
+        {
+            return string.Empty;
+        }
+
+        var jsonStart = rawMessage.IndexOf('{');
+        if (jsonStart >= 0)
+        {
+            var posibleJson = rawMessage.Substring(jsonStart);
+            try
+            {
+                using var doc = JsonDocument.Parse(posibleJson);
+                if (doc.RootElement.TryGetProperty("message", out var mensaje) && mensaje.ValueKind == JsonValueKind.String)
+                {
+                    return mensaje.GetString() ?? rawMessage;
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignorar, caeremos en el retorno original
+            }
+        }
+
+        return rawMessage;
+    }
+
+    private static bool ContieneTexto(string origen, string texto)
+    {
+        return !string.IsNullOrWhiteSpace(origen) &&
+               origen.Contains(texto, StringComparison.OrdinalIgnoreCase);
     }
 }
