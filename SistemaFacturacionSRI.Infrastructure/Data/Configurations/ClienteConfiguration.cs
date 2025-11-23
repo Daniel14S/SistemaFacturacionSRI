@@ -17,7 +17,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(c => c.Apellido1).IsRequired().HasMaxLength(100);
             builder.Property(c => c.Apellido2).HasMaxLength(100);
             builder.Property(c => c.Direccion).HasMaxLength(500);
-            builder.Property(c => c.Telefono).HasMaxLength(20);
+            builder.Property(c => c.Telefono).HasMaxLength(10);
             builder.Property(c => c.Email).HasMaxLength(100);
             builder.Property(c => c.Estado).HasDefaultValue(true);
 
@@ -38,7 +38,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Juan",
                     Apellido1 = "Perez",
                     Direccion = "Av. Amazonas 123, Quito",
-                    Telefono = "+593999999999",
+                    Telefono = "0991110001",
                     Email = "juan.perez@example.com",
                     Estado = true
                 },
@@ -50,7 +50,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Maria",
                     Apellido1 = "Garcia",
                     Direccion = "Calle 10 de Agosto 456, Cuenca",
-                    Telefono = "+593988888888",
+                    Telefono = "0991110002",
                     Email = "maria.garcia@example.com",
                     Estado = true
                 },
@@ -62,7 +62,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Carlos",
                     Apellido1 = "Lopez",
                     Direccion = "Av. 9 de Octubre 789, Guayaquil",
-                    Telefono = "+593977777777",
+                    Telefono = "0991110003",
                     Email = "carlos.lopez@example.com",
                     Estado = true
                 },
@@ -74,7 +74,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Andrea",
                     Apellido1 = "Salazar",
                     Direccion = "Av. de los Shyris 321, Quito",
-                    Telefono = "+593966666666",
+                    Telefono = "0991110004",
                     Email = "andrea.salazar@example.com",
                     Estado = true
                 },
@@ -86,7 +86,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Miguel",
                     Apellido1 = "Vera",
                     Direccion = "Km 6.5 Via Daule, Guayaquil",
-                    Telefono = "+593955555555",
+                    Telefono = "0991110005",
                     Email = "miguel.vera@example.com",
                     Estado = true
                 },
@@ -98,7 +98,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Fernanda",
                     Apellido1 = "Ortiz",
                     Direccion = "Av. Loja 12-34, Loja",
-                    Telefono = "+593944444444",
+                    Telefono = "0991110006",
                     Email = "fernanda.ortiz@example.com",
                     Estado = true
                 },
@@ -110,7 +110,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Jorge",
                     Apellido1 = "Cedeno",
                     Direccion = "Malecon 2000, Guayaquil",
-                    Telefono = "+593933333333",
+                    Telefono = "0991110007",
                     Email = "jorge.cedeno@example.com",
                     Estado = true
                 },
@@ -122,7 +122,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Lucia",
                     Apellido1 = "Morales",
                     Direccion = "Av. Pedro Vicente Maldonado 123, Latacunga",
-                    Telefono = "+593922222222",
+                    Telefono = "0991110008",
                     Email = "lucia.morales@example.com",
                     Estado = true
                 },
@@ -134,7 +134,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Ricardo",
                     Apellido1 = "Suarez",
                     Direccion = "Av. Solano 987, Cuenca",
-                    Telefono = "+593911111111",
+                    Telefono = "0991110009",
                     Email = "ricardo.suarez@example.com",
                     Estado = true
                 },
@@ -146,7 +146,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Veronica",
                     Apellido1 = "Martinez",
                     Direccion = "Av. Esmeraldas 456, Esmeraldas",
-                    Telefono = "+593900000000",
+                    Telefono = "0991110010",
                     Email = "veronica.martinez@example.com",
                     Estado = true
                 },
@@ -158,7 +158,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Patricio",
                     Apellido1 = "Aguirre",
                     Direccion = "Av. 6 de Diciembre 100, Quito",
-                    Telefono = "+593989898989",
+                    Telefono = "0991110011",
                     Email = "patricio.aguirre@example.com",
                     Estado = true
                 },
@@ -170,7 +170,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Gabriela",
                     Apellido1 = "Reyes",
                     Direccion = "Ruta del Sol, Santa Elena",
-                    Telefono = "+593979797979",
+                    Telefono = "0991110012",
                     Email = "gabriela.reyes@example.com",
                     Estado = true
                 },
@@ -182,7 +182,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Hector",
                     Apellido1 = "Villalba",
                     Direccion = "Av. Universitaria 567, Ambato",
-                    Telefono = "+593969696969",
+                    Telefono = "0991110013",
                     Email = "hector.villalba@example.com",
                     Estado = true
                 },
@@ -194,7 +194,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Paola",
                     Apellido1 = "Correa",
                     Direccion = "Av. Gonzalez Suarez 135, Quito",
-                    Telefono = "+593959595959",
+                    Telefono = "0991110014",
                     Email = "paola.correa@example.com",
                     Estado = true
                 },
@@ -206,7 +206,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Diego",
                     Apellido1 = "Paredes",
                     Direccion = "Av. Amazonas y Republica, Quito",
-                    Telefono = "+593949494949",
+                    Telefono = "0991110015",
                     Email = "diego.paredes@example.com",
                     Estado = true
                 },
@@ -218,7 +218,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Natalia",
                     Apellido1 = "Carrillo",
                     Direccion = "Av. Bolivariana 345, Riobamba",
-                    Telefono = "+593939393939",
+                    Telefono = "0991110016",
                     Email = "natalia.carrillo@example.com",
                     Estado = true
                 },
@@ -230,7 +230,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Sebastian",
                     Apellido1 = "Yanez",
                     Direccion = "Av. Manabi 456, Portoviejo",
-                    Telefono = "+593929292929",
+                    Telefono = "0991110017",
                     Email = "sebastian.yanez@example.com",
                     Estado = true
                 },
@@ -242,7 +242,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Daniela",
                     Apellido1 = "Pico",
                     Direccion = "Av. 24 de Mayo 678, Ibarra",
-                    Telefono = "+593919191919",
+                    Telefono = "0991110018",
                     Email = "daniela.pico@example.com",
                     Estado = true
                 },
@@ -254,7 +254,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Gustavo",
                     Apellido1 = "Montero",
                     Direccion = "Av. Quito 123, Santo Domingo",
-                    Telefono = "+593909090909",
+                    Telefono = "0991110019",
                     Email = "gustavo.montero@example.com",
                     Estado = true
                 },
@@ -266,7 +266,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Nombre1 = "Silvia",
                     Apellido1 = "Penafiel",
                     Direccion = "Av. Olmedo 345, Machala",
-                    Telefono = "+593998877665",
+                    Telefono = "0991110020",
                     Email = "silvia.penafiel@example.com",
                     Estado = true
                 }

@@ -22,6 +22,8 @@ namespace SistemaFacturacionSRI.Application.Services
         /// <inheritdoc />
         public async Task<ClienteDto> CrearClienteAsync(CrearClienteDto dto)
         {
+            ValidarIdentificacionSegunTipo(dto.TipoIdentificacionId, dto.Identificacion);
+
             // 1. VALIDAR QUE LA IDENTIFICACIÓN NO EXISTA
             var clienteExistente = await _clienteRepository.ObtenerPorIdentificacionAsync(dto.Identificacion);
             if (clienteExistente != null)
@@ -108,6 +110,8 @@ namespace SistemaFacturacionSRI.Application.Services
         /// <inheritdoc />
 public async Task<ClienteDto> ActualizarClienteAsync(ActualizarClienteDto dto)
 {
+    ValidarIdentificacionSegunTipo(dto.TipoIdentificacionId, dto.Identificacion);
+
     // 1. VALIDAR QUE EL CLIENTE EXISTA
     var clienteExistente = await _clienteRepository.ObtenerPorIdAsync(dto.ClienteId);
     if (clienteExistente == null)
@@ -224,6 +228,33 @@ public async Task<List<ClienteListDto>> BuscarClientesAsync(string termino, int 
                 Email = cliente.Email,
                 Estado = cliente.Estado
             };
+        }
+
+        private static void ValidarIdentificacionSegunTipo(int tipoIdentificacionId, string identificacion)
+        {
+            if (string.IsNullOrWhiteSpace(identificacion))
+            {
+                throw new InvalidOperationException("La identificación es obligatoria");
+            }
+
+            var (codigoSri, descripcionTipo) = tipoIdentificacionId switch
+            {
+                1 => ("05", "cédula"),
+                2 => ("04", "RUC"),
+                3 => ("06", "pasaporte"),
+                _ => (null, "tipo de identificación")
+            };
+
+            if (codigoSri is null)
+            {
+                throw new InvalidOperationException("Tipo de identificación no soportado");
+            }
+
+            if (!IdentificacionValidator.ValidarFormato(codigoSri, identificacion.Trim()))
+            {
+                var mensaje = IdentificacionValidator.ObtenerMensajeError(codigoSri);
+                throw new InvalidOperationException(mensaje ?? $"El {descripcionTipo} no es válido");
+            }
         }
 
         /// <summary>

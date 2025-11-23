@@ -39,8 +39,8 @@ namespace SistemaFacturacionSRI.Application.DTOs.Cliente
         [StringLength(300, ErrorMessage = "La dirección no puede exceder 300 caracteres")]
         public string? Direccion { get; set; }
 
-        [Phone(ErrorMessage = "El formato del teléfono no es válido")]
-        [StringLength(20, ErrorMessage = "El teléfono no puede exceder 20 caracteres")]
+        [StringLength(10, MinimumLength = 10, ErrorMessage = "El teléfono debe tener 10 dígitos")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "El teléfono solo puede contener números")]
         public string? Telefono { get; set; }
 
         [EmailAddress(ErrorMessage = "El formato del email no es válido")]

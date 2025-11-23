@@ -2,6 +2,7 @@
 @page "/clientes/editar/{ClienteId:int}"
 @rendermode InteractiveServer
 @using SistemaFacturacionSRI.Application.DTOs.Cliente
+@using SistemaFacturacionSRI.Application.Validators
 @using SistemaFacturacionSRI.WebUI.Services
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
@@ -60,6 +61,8 @@
                         <InputText class="form-control" 
                                    @bind-Value="_modelo.Identificacion" 
                                    placeholder="@_placeholderIdentificacion"
+                                   maxlength="@_maxIdentificacion"
+                                   inputmode="@GetIdentificacionInputMode()"
                                    disabled="@(ClienteId.HasValue)" />
                         <ValidationMessage For="@(() => _modelo.Identificacion)" class="text-danger" />
                         @if (!string.IsNullOrEmpty(_errorIdentificacion))
@@ -110,7 +113,7 @@
                     <!-- Teléfono -->
                     <div class="col-md-6">
                         <label class="form-label">Teléfono</label>
-                        <InputText class="form-control" @bind-Value="_modelo.Telefono" placeholder="Ej: 0987654321" />
+                        <InputText class="form-control" @bind-Value="_modelo.Telefono" placeholder="Ej: 0987654321" maxlength="10" inputmode="numeric" pattern="[0-9]*" />
                         <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
                         @if (!string.IsNullOrEmpty(_errorTelefono))
                         {
@@ -167,6 +170,7 @@
     private bool _guardando = false;
     private string _mensajeError = string.Empty;
     private string _placeholderIdentificacion = "Seleccione tipo de identificación";
+    private int _maxIdentificacion = 20;
     private string _errorIdentificacion = string.Empty;
     private string _errorTelefono = string.Empty;
     private string _errorEmail = string.Empty;
@@ -232,12 +236,12 @@
 
     private void ActualizarPlaceholder()
     {
-        _placeholderIdentificacion = _modelo.TipoIdentificacionId switch
+        (_placeholderIdentificacion, _maxIdentificacion) = _modelo.TipoIdentificacionId switch
         {
-            1 => "Ej: 1234567890 (10 dígitos)",
-            2 => "Ej: 1234567890001 (13 dígitos)",
-            3 => "Ej: AB123456 (6-20 caracteres)",
-            _ => "Seleccione tipo de identificación"
+            1 => ("Ej: 1234567890 (10 dígitos)", 10),
+            2 => ("Ej: 1234567890001 (13 dígitos)", 13),
+            3 => ("Ej: AB123456 (6-20 caracteres)", 20),
+            _ => ("Seleccione tipo de identificación", 20)
         };
     }
 
@@ -314,41 +318,18 @@
         }
 
         var id = _modelo.Identificacion.Trim();
+        var codigoSri = ObtenerCodigoSriPorTipo(_modelo.TipoIdentificacionId);
 
-        switch (_modelo.TipoIdentificacionId)
+        if (codigoSri is null)
         {
-            case 1: // Cédula
-                if (id.Length != 10 || !id.All(char.IsDigit))
-                {
-                    _errorIdentificacion = "La cédula debe tener exactamente 10 dígitos numéricos";
-                    return false;
-                }
-                break;
+            _errorIdentificacion = "Debe seleccionar un tipo de identificación";
+            return false;
+        }
 
-            case 2: // RUC
-                if (id.Length != 13 || !id.All(char.IsDigit))
-                {
-                    _errorIdentificacion = "El RUC debe tener exactamente 13 dígitos numéricos";
-                    return false;
-                }
-                break;
-
-            case 3: // Pasaporte
-                if (id.Length < 6 || id.Length > 20)
-                {
-                    _errorIdentificacion = "El pasaporte debe tener entre 6 y 20 caracteres";
-                    return false;
-                }
-                if (!id.All(c => char.IsLetterOrDigit(c)))
-                {
-                    _errorIdentificacion = "El pasaporte solo puede contener letras y números";
-                    return false;
-                }
-                break;
-
-            default:
-                _errorIdentificacion = "Debe seleccionar un tipo de identificación";
-                return false;
+        if (!IdentificacionValidator.ValidarFormato(codigoSri, id))
+        {
+            _errorIdentificacion = IdentificacionValidator.ObtenerMensajeError(codigoSri);
+            return false;
         }
 
         return true;
@@ -363,9 +344,9 @@
 
         var telefono = _modelo.Telefono.Trim();
         
-        if (telefono.Length < 7 || telefono.Length > 20)
+        if (telefono.Length != 10 || !telefono.All(char.IsDigit))
         {
-            _errorTelefono = "El teléfono debe tener entre 7 y 20 caracteres";
+            _errorTelefono = "El teléfono debe tener exactamente 10 dígitos numéricos";
             return false;
         }
 
@@ -395,4 +376,15 @@
     {
         Navigation.NavigateTo("/clientes");
     }
+
+    private string GetIdentificacionInputMode() =>
+        _modelo.TipoIdentificacionId == 3 ? "text" : "numeric";
+
+    private static string? ObtenerCodigoSriPorTipo(int tipoId) => tipoId switch
+    {
+        1 => "05",
+        2 => "04",
+        3 => "06",
+        _ => null
+    };
 }
