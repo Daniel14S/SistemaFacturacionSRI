@@ -6,6 +6,7 @@
 @using SistemaFacturacionSRI.Application.DTOs.Producto
 @using SistemaFacturacionSRI.WebUI.Services
 @using System.ComponentModel.DataAnnotations
+@using System.Linq
 @using SistemaFacturacionSRI.Application.Interfaces.Services
 @inject ILoteService LoteService
 @inject IProductoHttpService ProductoHttpService
@@ -57,7 +58,7 @@
                                 <ul class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
                                     @foreach (var producto in productosEncontrados)
                                     {
-                                        <li class="list-group-item list-group-item-action" @onclick="() => SeleccionarProducto(producto)">
+                                        <li class="list-group-item list-group-item-action" @onclick="() => SeleccionarProductoAsync(producto)">
                                             <strong>@producto.Codigo</strong> - @producto.Nombre
                                             <p class="mb-0 text-muted"><small>@producto.Descripcion</small></p>
                                         </li>
@@ -124,6 +125,11 @@
     private bool mostrarConfirmacionPVP = false;
     private decimal pvpAnterior = 0m;
     private decimal pvpNuevo = 0m;
+    private bool mostrarConfirmacionPvpMenor = false;
+    private bool confirmoPvpMenor = false;
+    private decimal? pvpReferenciaProducto = null;
+    private decimal diferenciaRebaja = 0m;
+    private decimal pvpNuevoMenor = 0m;
 
     private string terminoBusquedaProducto = string.Empty;
     private List<ProductoDto> productosEncontrados = new();
@@ -138,6 +144,7 @@
             if (loteDto != null)
             {
                 pvpAnterior = loteDto.PVP;
+                pvpReferenciaProducto = loteDto.PVP;
                 modelo = new CrearLoteDto
                 {
                     ProductoId = loteDto.ProductoId,
@@ -184,11 +191,12 @@
         StateHasChanged();
     }
 
-    private void SeleccionarProducto(ProductoDto producto)
+    private async Task SeleccionarProductoAsync(ProductoDto producto)
     {
         modelo.ProductoId = producto.Id;
         terminoBusquedaProducto = $"{producto.Codigo} - {producto.Nombre}";
         productosEncontrados.Clear();
+        await EstablecerPvpReferenciaProductoAsync(producto.Id);
     }
 
     private bool isRetryingWithForce = false;
@@ -210,6 +218,16 @@
             };
             customValidation?.DisplayErrors(errors);
             guardando = false;
+            return;
+        }
+
+        if (!confirmoPvpMenor && pvpReferenciaProducto.HasValue && modelo.PVP < pvpReferenciaProducto.Value)
+        {
+            guardando = false;
+            diferenciaRebaja = pvpReferenciaProducto.Value - modelo.PVP;
+            pvpNuevoMenor = modelo.PVP;
+            mostrarConfirmacionPvpMenor = true;
+            StateHasChanged();
             return;
         }
 
@@ -236,11 +254,13 @@
                     ForzarActualizacionPVP = isRetryingWithForce
                 };
                 await LoteService.ActualizarAsync(actualizarDto);
+                pvpReferenciaProducto = modelo.PVP;
             }
             else
             {
                 modelo.ForzarActualizacionPVP = isRetryingWithForce;
                 await LoteService.CrearAsync(modelo);
+                pvpReferenciaProducto = modelo.PVP;
             }
             Navigation.NavigateTo("/lotes");
         }
@@ -271,7 +291,24 @@
             guardando = false;
             isRetryingWithForce = false;
             margenConfirmado = false;
+            confirmoPvpMenor = false;
         }
+    }
+
+    private async Task EstablecerPvpReferenciaProductoAsync(int productoId)
+    {
+        if (productoId <= 0)
+        {
+            pvpReferenciaProducto = null;
+            return;
+        }
+
+        var lotesProducto = (await LoteService.ObtenerPorProductoAsync(productoId))?.ToList() ?? new List<LoteDto>();
+        var loteReferencia = lotesProducto
+            .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue)
+            .FirstOrDefault();
+
+        pvpReferenciaProducto = loteReferencia?.PVP;
     }
 
     private void CancelarConfirmacionMargen()
@@ -284,6 +321,19 @@
     {
         mostrarConfirmacionMargen = false;
         margenConfirmado = true;
+        await GuardarLote();
+    }
+
+    private void CancelarConfirmacionPvpMenor()
+    {
+        mostrarConfirmacionPvpMenor = false;
+        confirmoPvpMenor = false;
+    }
+
+    private async Task ConfirmarPvpMenorAsync()
+    {
+        mostrarConfirmacionPvpMenor = false;
+        confirmoPvpMenor = true;
         await GuardarLote();
     }
 
@@ -315,11 +365,13 @@
                 };
 
                 await LoteService.ActualizarAsync(actualizarDto);
+                    pvpReferenciaProducto = modelo.PVP;
             }
             else
             {
                 modelo.ForzarActualizacionPVP = true;
                 await LoteService.CrearAsync(modelo);
+                    pvpReferenciaProducto = modelo.PVP;
             }
 
             Navigation.NavigateTo("/lotes");
@@ -340,6 +392,37 @@
         mostrarConfirmacionPVP = false;
         isRetryingWithForce = false;
     }
+}
+
+@if (mostrarConfirmacionPvpMenor)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="bi bi-arrow-down-circle-fill me-2"></i>
+                        Confirmar disminución de PVP
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CancelarConfirmacionPvpMenor"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        El PVP nuevo (<strong>$@pvpNuevoMenor.ToString("N2")</strong>) es
+                        <strong>$@diferenciaRebaja.ToString("N2")</strong> menor al PVP registrado
+                        <strong>$@pvpReferenciaProducto.Value.ToString("N2")</strong>.
+                    </p>
+                    <p class="mb-0">¿Desea continuar con esta reducción de precio?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelarConfirmacionPvpMenor">Cancelar</button>
+                    <button class="btn btn-warning" @onclick="ConfirmarPvpMenorAsync">
+                        Sí, bajar el PVP
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @if (mostrarConfirmacionMargen)
