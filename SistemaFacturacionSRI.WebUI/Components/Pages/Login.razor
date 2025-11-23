@@ -87,7 +87,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
         padding: 1rem;
     }
 
@@ -119,18 +119,18 @@
 
     .login-header i {
         font-size: 4rem;
-        color: #667eea;
+        color: #2c5282;
         margin-bottom: 1rem;
     }
 
     .login-header h3 {
         margin-bottom: 0.5rem;
-        color: #2d3748;
+        color: #1e3a5f;
         font-weight: 700;
     }
 
     .login-header p {
-        color: #718096;
+        color: #64748b;
         margin-bottom: 0;
     }
 
@@ -158,22 +158,31 @@
     }
 
     .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #2b6cb0;
+        box-shadow: 0 0 0 0.2rem rgba(43, 108, 176, 0.25);
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
+        background: linear-gradient(135deg, #2b6cb0 0%, #2c5282 100%);
+        border: 1px solid #2c5282;
         padding: 0.875rem;
         font-weight: 600;
         border-radius: 0.5rem;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
+        color: white;
     }
 
     .btn-primary:hover:not(:disabled) {
+        background: linear-gradient(135deg, #2c5282 0%, #1e3a5f 100%);
+        border-color: #1e3a5f;
         transform: translateY(-2px);
-        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 10px 20px rgba(30, 58, 95, 0.3);
+    }
+
+    .btn-primary:active:not(:disabled) {
+        background: linear-gradient(135deg, #1e3a5f 0%, #163150 100%);
+        transform: translateY(0);
+        box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
     }
 
     .btn-primary:disabled {
@@ -201,116 +210,113 @@
     private string? returnUrl;
 
     protected override Task OnInitializedAsync()
-{
-    var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-    
-    // Obtener returnUrl de la query string
-    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var url))
     {
-        returnUrl = url;
-    }
-
-    // Verificar si viene de token expirado
-    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("expired", out var expired))
-    {
-        ErrorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
-    }
-
-    // ⭐ MOSTRAR MENSAJE DE CAMBIO EXITOSO
-    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("cambioExitoso", out var cambio))
-    {
-        SuccessMessage = "✅ Contraseña cambiada exitosamente. Inicia sesión con tu nueva contraseña.";
-    }
-
-    return Task.CompletedTask;
-}
-
-private async Task HandleLogin()
-{
-    if (string.IsNullOrWhiteSpace(loginModel.Username) || 
-        string.IsNullOrWhiteSpace(loginModel.Password))
-    {
-        ErrorMessage = "Usuario y contraseña son requeridos.";
-        return;
-    }
-
-    ErrorMessage = null;
-    SuccessMessage = null;
-    isLoading = true;
-
-    try
-    {
-        var result = await AuthService.Login(loginModel.Username.Trim(), loginModel.Password);
-
-        if (result == null)
-        {
-            ErrorMessage = "Respuesta inválida del servidor.";
-            isLoading = false;
-            return;
-        }
-
-        if (!result.Success)
-        {
-            ErrorMessage = result.Message ?? "No se pudo iniciar sesión.";
-            isLoading = false;
-            return;
-        }
-
-        // ⭐ DETECTAR PRIMER INGRESO
-        if (result.EsPrimerIngreso)
-        {
-            SuccessMessage = "Primer ingreso detectado. Redirigiendo a cambio de contraseña...";
-            StateHasChanged();
-            
-            // ⚠️ IMPORTANTE: Esperar a que el token se propague
-            await Task.Delay(500);
-            
-            // Redirigir SIN forceLoad para mantener el estado de autenticación
-            Navigation.NavigateTo("/cambiar-password-obligatorio", forceLoad: false);
-            return;
-        }
-
-        // ✅ Login normal
-        SuccessMessage = "¡Login exitoso! Redirigiendo...";
-        StateHasChanged();
-        await Task.Delay(1000);
-
-        string targetUrl = "/";
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         
-        if (!string.IsNullOrEmpty(result.Role))
+        // Obtener returnUrl de la query string
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var url))
         {
-            if (result.Role.Equals("Administrador", StringComparison.OrdinalIgnoreCase))
-            {
-                targetUrl = "/admin/dashboard";
-            }
-            else if (result.Role.Equals("Vendedor", StringComparison.OrdinalIgnoreCase))
-            {
-                targetUrl = "/vendedor/dashboard";
-            }
-        }
-        else if (!string.IsNullOrEmpty(returnUrl))
-        {
-            targetUrl = returnUrl;
+            returnUrl = url;
         }
 
-        Navigation.NavigateTo(targetUrl, forceLoad: true);
+        // Verificar si viene de token expirado
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("expired", out var expired))
+        {
+            ErrorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
+        }
+
+        // ⭐ MOSTRAR MENSAJE DE CAMBIO EXITOSO
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("cambioExitoso", out var cambio))
+        {
+            SuccessMessage = "✅ Contraseña cambiada exitosamente. Inicia sesión con tu nueva contraseña.";
+        }
+
+        return Task.CompletedTask;
     }
-    catch (Exception ex)
+
+    private async Task HandleLogin()
     {
-        ErrorMessage = $"Error: {ex.Message}";
-        isLoading = false;
+        if (string.IsNullOrWhiteSpace(loginModel.Username) || 
+            string.IsNullOrWhiteSpace(loginModel.Password))
+        {
+            ErrorMessage = "Usuario y contraseña son requeridos.";
+            return;
+        }
+
+        ErrorMessage = null;
+        SuccessMessage = null;
+        isLoading = true;
+
+        try
+        {
+            var result = await AuthService.Login(loginModel.Username.Trim(), loginModel.Password);
+
+            if (result == null)
+            {
+                ErrorMessage = "Respuesta inválida del servidor.";
+                isLoading = false;
+                return;
+            }
+
+            if (!result.Success)
+            {
+                ErrorMessage = result.Message ?? "No se pudo iniciar sesión.";
+                isLoading = false;
+                return;
+            }
+
+            // ⭐ DETECTAR PRIMER INGRESO
+            if (result.EsPrimerIngreso)
+            {
+                SuccessMessage = "Primer ingreso detectado. Redirigiendo a cambio de contraseña...";
+                StateHasChanged();
+                
+                // ⚠️ IMPORTANTE: Esperar a que el token se propague
+                await Task.Delay(500);
+                
+                // Redirigir SIN forceLoad para mantener el estado de autenticación
+                Navigation.NavigateTo("/cambiar-password-obligatorio", forceLoad: false);
+                return;
+            }
+
+            // ✅ Login normal
+            SuccessMessage = "¡Login exitoso! Redirigiendo...";
+            StateHasChanged();
+            await Task.Delay(1000);
+
+            string targetUrl = "/";
+            
+            if (!string.IsNullOrEmpty(result.Role))
+            {
+                if (result.Role.Equals("Administrador", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetUrl = "/admin/dashboard";
+                }
+                else if (result.Role.Equals("Vendedor", StringComparison.OrdinalIgnoreCase))
+                {
+                    targetUrl = "/vendedor/dashboard";
+                }
+            }
+            else if (!string.IsNullOrEmpty(returnUrl))
+            {
+                targetUrl = returnUrl;
+            }
+
+            Navigation.NavigateTo(targetUrl, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            isLoading = false;
+        }
     }
-}
-
-
-
 
     public class LoginModel
     {
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El usuario es requerido")]
-        public string Username { get; set; } = "admin";
+        public string Username { get; set; } = "";
 
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es requerida")]
-        public string Password { get; set; } = "Admin123*";
+        public string Password { get; set; } = "";
     }
 }

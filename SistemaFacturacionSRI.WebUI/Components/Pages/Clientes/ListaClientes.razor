@@ -1,14 +1,15 @@
-@page "/usuarios"
+@page "/clientes"
 @rendermode InteractiveServer
-@using SistemaFacturacionSRI.Application.DTOs.Auth
+@using SistemaFacturacionSRI.Application.DTOs.Cliente
+@using SistemaFacturacionSRI.Application.DTOs.Common
 @using SistemaFacturacionSRI.WebUI.Services
 @using Microsoft.AspNetCore.Authorization
-@attribute [Authorize(Roles = "Administrador")]
-@inject IUsuarioHttpService UsuarioService
+@attribute [Authorize]
+@inject IClienteHttpService ClienteService
 @inject ToastService ToastService
 @inject NavigationManager Navigation
 
-<PageTitle>Gestión de Usuarios</PageTitle>
+<PageTitle>Gestión de Clientes</PageTitle>
 
 <div class="container-fluid px-3 px-md-4 py-4">
     <!-- Header Corporativo -->
@@ -20,18 +21,18 @@
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div>
-                        <h2 class="titulo-corporativo mb-1">Gestión de Usuarios</h2>
+                        <h2 class="titulo-corporativo mb-1">Gestión de Clientes</h2>
                         <p class="subtitulo-corporativo mb-0">
-                            <i class="bi bi-shield-lock me-2"></i>
-                            Control de acceso y permisos del sistema
+                            <i class="bi bi-graph-up me-2"></i>
+                            Administra y controla tu cartera de clientes
                         </p>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-lg-4">
-                <button class="btn btn-corporativo w-100" @onclick="CrearNuevoUsuario">
-                    <i class="bi bi-person-plus-fill me-2"></i>
-                    Nuevo Usuario
+                <button class="btn btn-corporativo w-100" @onclick="CrearNuevoCliente">
+                    <i class="bi bi-plus-circle-fill me-2"></i>
+                    Nuevo Cliente
                 </button>
             </div>
         </div>
@@ -52,7 +53,7 @@
                         </span>
                         <input type="text" 
                                class="form-control" 
-                               placeholder="Buscar por usuario, email o nombre..." 
+                               placeholder="Buscar por nombre, identificación..." 
                                @bind="_searchTerm"
                                @bind:event="oninput"
                                @onkeyup="OnSearchChanged" />
@@ -65,15 +66,16 @@
                     </div>
                 </div>
 
-                <!-- Filtro Rol -->
+                <!-- Filtro Tipo ID -->
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label label-corporativo">
-                        <i class="bi bi-person-badge me-2"></i>Rol
+                        <i class="bi bi-card-text me-2"></i>Tipo de Identificación
                     </label>
-                    <select class="form-select select-corporativo" @bind="_filtroRol" @bind:after="OnFiltroChanged">
-                        <option value="">Todos los roles</option>
-                        <option value="Administrador">Administrador</option>
-                        <option value="Vendedor">Vendedor</option>
+                    <select class="form-select select-corporativo" @bind="_filtroTipoId" @bind:after="OnFiltroChanged">
+                        <option value="">Todos los tipos</option>
+                        <option value="1">Cédula</option>
+                        <option value="2">RUC</option>
+                        <option value="3">Pasaporte</option>
                     </select>
                 </div>
 
@@ -101,16 +103,16 @@
                     <span class="visually-hidden">Cargando...</span>
                 </div>
             </div>
-            <p class="loading-text">Cargando usuarios...</p>
+            <p class="loading-text">Cargando clientes...</p>
         </div>
     }
-    else if (!_usuariosFiltrados.Any())
+    else if (_clientes == null || !_clientes.Items.Any())
     {
         <div class="alert alert-empty">
             <div class="text-center">
-                <i class="bi bi-person-x display-1 mb-3 d-block"></i>
-                <h5>No se encontraron usuarios</h5>
-                <p class="mb-0">No hay usuarios que coincidan con los criterios de búsqueda.</p>
+                <i class="bi bi-inbox display-1 mb-3 d-block"></i>
+                <h5>No se encontraron clientes</h5>
+                <p class="mb-0">No hay clientes que coincidan con los criterios de búsqueda.</p>
             </div>
         </div>
     }
@@ -119,7 +121,7 @@
         <!-- Contador de resultados -->
         <div class="alert alert-resultados mb-3">
             <i class="bi bi-check2-circle me-2"></i>
-            Mostrando <strong>@_usuariosPaginados.Count</strong> de <strong>@_usuariosFiltrados.Count</strong> usuarios encontrados
+            Mostrando <strong>@_clientes.Items.Count</strong> de <strong>@_clientes.TotalItems</strong> clientes encontrados
         </div>
 
         <!-- Vista Desktop - Tabla -->
@@ -129,93 +131,92 @@
                     <thead>
                         <tr>
                             <th width="80" class="text-center">ID</th>
-                            <th width="180">Usuario</th>
-                            <th>Email</th>
-                            <th>Nombre Completo</th>
-                            <th width="140" class="text-center">Rol</th>
+                            <th width="140">Tipo ID</th>
+                            <th width="150">Identificación</th>
+                            <th>Cliente</th>
+                            <th width="200" class="text-center">Contacto</th>
                             <th width="110" class="text-center">Estado</th>
-                            <th width="150" class="text-center">Último Acceso</th>
                             <th width="140" class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var usuario in _usuariosPaginados)
+                        @foreach (var cliente in _clientes.Items)
                         {
                             <tr>
                                 <td class="text-center">
-                                    <span class="badge-id">#@usuario.Id</span>
+                                    <span class="badge-id">#@cliente.ClienteId</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-tipo-@GetTipoIdClass(cliente.TipoIdentificacion)">
+                                        <i class="@GetTipoIdIcon(cliente.TipoIdentificacion) me-1"></i>
+                                        @cliente.TipoIdentificacion
+                                    </span>
+                                </td>
+                                <td>
+                                    <code class="codigo-identificacion">@cliente.Identificacion</code>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-usuario me-2">
-                                            @GetInitials(usuario.Username)
+                                        <div class="avatar-corporativo me-3">
+                                            @GetInitials(cliente.NombreCompleto)
                                         </div>
                                         <div>
-                                            <div class="nombre-usuario">@usuario.Username</div>
+                                            <div class="nombre-cliente">@cliente.NombreCompleto</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="email-container">
-                                        <i class="bi bi-envelope-fill text-primary me-2"></i>
-                                        <span class="text-truncate">@usuario.Email</span>
+                                    <div class="contacto-info">
+                                        @if (!string.IsNullOrEmpty(cliente.Telefono))
+                                        {
+                                            <div class="contacto-item">
+                                                <a href="tel:@cliente.Telefono" class="link-contacto">
+                                                    <i class="bi bi-telephone-fill text-success"></i>
+                                                    <span>@cliente.Telefono</span>
+                                                </a>
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrEmpty(cliente.Email))
+                                        {
+                                            <div class="contacto-item">
+                                                <a href="mailto:@cliente.Email" class="link-contacto">
+                                                    <i class="bi bi-envelope-fill text-primary"></i>
+                                                    <span class="text-truncate" style="max-width: 150px;">@cliente.Email</span>
+                                                </a>
+                                            </div>
+                                        }
+                                        @if (string.IsNullOrEmpty(cliente.Telefono) && string.IsNullOrEmpty(cliente.Email))
+                                        {
+                                            <small class="text-muted">Sin contacto</small>
+                                        }
                                     </div>
                                 </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(usuario.NombreCompleto))
-                                    {
-                                        <span>@usuario.NombreCompleto</span>
-                                    }
-                                    else
-                                    {
-                                        <small class="text-muted">Sin nombre completo</small>
-                                    }
-                                </td>
                                 <td class="text-center">
-                                    <span class="badge badge-rol-@GetRolClass(usuario.Rol)">
-                                        <i class="@GetRolIcon(usuario.Rol) me-1"></i>
-                                        @usuario.Rol
+                                    <span class="badge badge-estado-@(cliente.Estado ? "activo" : "inactivo")">
+                                        <i class="bi @(cliente.Estado ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                        @(cliente.Estado ? "Activo" : "Inactivo")
                                     </span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge badge-estado-@(usuario.Estado ? "activo" : "inactivo")">
-                                        <i class="bi @(usuario.Estado ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
-                                        @(usuario.Estado ? "Activo" : "Inactivo")
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    @if (usuario.UltimoAcceso.HasValue)
-                                    {
-                                        <div class="ultimo-acceso">
-                                            <small class="d-block">@usuario.UltimoAcceso.Value.ToString("dd/MM/yyyy")</small>
-                                            <small class="text-muted">@usuario.UltimoAcceso.Value.ToString("HH:mm")</small>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <small class="text-muted">Sin accesos</small>
-                                    }
                                 </td>
                                 <td>
                                     <div class="btn-group-acciones">
                                         <button class="btn btn-accion btn-editar" 
-                                                @onclick="() => EditarUsuario(usuario.Id)"
-                                                title="Editar usuario">
+                                                @onclick="() => EditarCliente(cliente.ClienteId)"
+                                                title="Editar cliente">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
-                                        @if (usuario.Estado)
+                                        @if (cliente.Estado)
                                         {
                                             <button class="btn btn-accion btn-desactivar" 
-                                                    @onclick="() => MostrarConfirmacionEstado(usuario.Id, false, usuario.Username)"
-                                                    title="Desactivar usuario">
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, false, cliente.NombreCompleto)"
+                                                    title="Desactivar cliente">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn btn-accion btn-activar" 
-                                                    @onclick="() => MostrarConfirmacionEstado(usuario.Id, true, usuario.Username)"
-                                                    title="Activar usuario">
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, true, cliente.NombreCompleto)"
+                                                    title="Activar cliente">
                                                 <i class="bi bi-check-circle"></i>
                                             </button>
                                         }
@@ -230,73 +231,68 @@
 
         <!-- Vista Tablet - Cards Horizontales -->
         <div class="d-none d-md-block d-lg-none">
-            @foreach (var usuario in _usuariosPaginados)
+            @foreach (var cliente in _clientes.Items)
             {
-                <div class="card card-usuario-tablet mb-3">
+                <div class="card card-cliente-tablet mb-3">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-md-6">
                                 <div class="d-flex align-items-center mb-2">
-                                    <div class="avatar-usuario me-3">
-                                        @GetInitials(usuario.Username)
+                                    <div class="avatar-corporativo me-3">
+                                        @GetInitials(cliente.NombreCompleto)
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="nombre-usuario mb-1">@usuario.Username</h6>
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="badge badge-rol-@GetRolClass(usuario.Rol)">
-                                                <i class="@GetRolIcon(usuario.Rol) me-1"></i>
-                                                @usuario.Rol
+                                        <h6 class="nombre-cliente mb-1">@cliente.NombreCompleto</h6>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge badge-tipo-@GetTipoIdClass(cliente.TipoIdentificacion)">
+                                                <i class="@GetTipoIdIcon(cliente.TipoIdentificacion) me-1"></i>
+                                                @cliente.TipoIdentificacion
                                             </span>
-                                            <small class="text-muted">ID: @usuario.Id</small>
+                                            <code class="codigo-identificacion">@cliente.Identificacion</code>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="info-contacto-tablet">
-                                    <div class="mb-1">
-                                        <i class="bi bi-envelope-fill text-primary me-2"></i>
-                                        <span>@usuario.Email</span>
+                                @if (!string.IsNullOrEmpty(cliente.Telefono) || !string.IsNullOrEmpty(cliente.Email))
+                                {
+                                    <div class="contacto-info-tablet">
+                                        @if (!string.IsNullOrEmpty(cliente.Telefono))
+                                        {
+                                            <a href="tel:@cliente.Telefono" class="link-contacto me-3">
+                                                <i class="bi bi-telephone-fill text-success"></i>
+                                                <span>@cliente.Telefono</span>
+                                            </a>
+                                        }
+                                        @if (!string.IsNullOrEmpty(cliente.Email))
+                                        {
+                                            <a href="mailto:@cliente.Email" class="link-contacto">
+                                                <i class="bi bi-envelope-fill text-primary"></i>
+                                                <span>@cliente.Email</span>
+                                            </a>
+                                        }
                                     </div>
-                                    @if (!string.IsNullOrEmpty(usuario.NombreCompleto))
-                                    {
-                                        <div>
-                                            <i class="bi bi-person-fill text-secondary me-2"></i>
-                                            <span>@usuario.NombreCompleto</span>
-                                        </div>
-                                    }
-                                </div>
+                                }
                             </div>
                             <div class="col-md-6">
                                 <div class="d-flex justify-content-md-end align-items-center gap-2 mt-3 mt-md-0">
-                                    <div class="info-acceso">
-                                        @if (usuario.UltimoAcceso.HasValue)
-                                        {
-                                            <small class="text-muted d-block">Último acceso:</small>
-                                            <small class="fw-semibold">@usuario.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")</small>
-                                        }
-                                        else
-                                        {
-                                            <small class="text-muted">Sin accesos</small>
-                                        }
-                                    </div>
-                                    <span class="badge badge-estado-@(usuario.Estado ? "activo" : "inactivo")">
-                                        <i class="bi @(usuario.Estado ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
-                                        @(usuario.Estado ? "Activo" : "Inactivo")
+                                    <span class="badge badge-estado-@(cliente.Estado ? "activo" : "inactivo")">
+                                        <i class="bi @(cliente.Estado ? "bi-check-circle-fill" : "bi-x-circle-fill")"></i>
+                                        @(cliente.Estado ? "Activo" : "Inactivo")
                                     </span>
                                     <div class="btn-group-acciones">
-                                        <button class="btn btn-accion btn-editar" @onclick="() => EditarUsuario(usuario.Id)">
+                                        <button class="btn btn-accion btn-editar" @onclick="() => EditarCliente(cliente.ClienteId)">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
-                                        @if (usuario.Estado)
+                                        @if (cliente.Estado)
                                         {
                                             <button class="btn btn-accion btn-desactivar" 
-                                                    @onclick="() => MostrarConfirmacionEstado(usuario.Id, false, usuario.Username)">
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, false, cliente.NombreCompleto)">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         }
                                         else
                                         {
                                             <button class="btn btn-accion btn-activar" 
-                                                    @onclick="() => MostrarConfirmacionEstado(usuario.Id, true, usuario.Username)">
+                                                    @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, true, cliente.NombreCompleto)">
                                                 <i class="bi bi-check-circle"></i>
                                             </button>
                                         }
@@ -311,77 +307,70 @@
 
         <!-- Vista Mobile - Cards Verticales -->
         <div class="d-md-none">
-            @foreach (var usuario in _usuariosPaginados)
+            @foreach (var cliente in _clientes.Items)
             {
-                <div class="card card-usuario-mobile mb-3">
+                <div class="card card-cliente-mobile mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div class="d-flex align-items-center flex-grow-1">
-                                <div class="avatar-usuario me-2">
-                                    @GetInitials(usuario.Username)
+                                <div class="avatar-corporativo me-2">
+                                    @GetInitials(cliente.NombreCompleto)
                                 </div>
                                 <div class="flex-grow-1">
-                                    <h6 class="nombre-usuario mb-0">@usuario.Username</h6>
-                                    <small class="text-muted">ID: @usuario.Id</small>
+                                    <h6 class="nombre-cliente mb-0">@cliente.NombreCompleto</h6>
+                                    <small class="text-muted">ID: @cliente.ClienteId</small>
                                 </div>
                             </div>
-                            <span class="badge badge-estado-@(usuario.Estado ? "activo" : "inactivo")">
-                                @(usuario.Estado ? "Activo" : "Inactivo")
+                            <span class="badge badge-estado-@(cliente.Estado ? "activo" : "inactivo")">
+                                @(cliente.Estado ? "Activo" : "Inactivo")
                             </span>
                         </div>
 
                         <div class="info-mobile mb-3">
-                            <div class="mb-2">
-                                <span class="badge badge-rol-@GetRolClass(usuario.Rol)">
-                                    <i class="@GetRolIcon(usuario.Rol) me-1"></i>
-                                    @usuario.Rol
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge badge-tipo-@GetTipoIdClass(cliente.TipoIdentificacion) me-2">
+                                    <i class="@GetTipoIdIcon(cliente.TipoIdentificacion) me-1"></i>
+                                    @cliente.TipoIdentificacion
                                 </span>
+                                <code class="codigo-identificacion">@cliente.Identificacion</code>
                             </div>
 
-                            <div class="contacto-item-mobile mb-2">
-                                <i class="bi bi-envelope-fill text-primary me-2"></i>
-                                <span class="text-break">@usuario.Email</span>
-                            </div>
-
-                            @if (!string.IsNullOrEmpty(usuario.NombreCompleto))
+                            @if (!string.IsNullOrEmpty(cliente.Telefono))
                             {
                                 <div class="contacto-item-mobile mb-2">
-                                    <i class="bi bi-person-fill text-secondary me-2"></i>
-                                    <span>@usuario.NombreCompleto</span>
+                                    <a href="tel:@cliente.Telefono" class="link-contacto">
+                                        <i class="bi bi-telephone-fill text-success"></i>
+                                        <span>@cliente.Telefono</span>
+                                    </a>
                                 </div>
                             }
 
-                            @if (usuario.UltimoAcceso.HasValue)
+                            @if (!string.IsNullOrEmpty(cliente.Email))
                             {
                                 <div class="contacto-item-mobile">
-                                    <i class="bi bi-clock-fill text-info me-2"></i>
-                                    <span>@usuario.UltimoAcceso.Value.ToString("dd/MM/yyyy HH:mm")</span>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="contacto-item-mobile">
-                                    <i class="bi bi-clock-fill text-muted me-2"></i>
-                                    <span class="text-muted">Sin accesos registrados</span>
+                                    <a href="mailto:@cliente.Email" class="link-contacto">
+                                        <i class="bi bi-envelope-fill text-primary"></i>
+                                        <span class="text-break">@cliente.Email</span>
+                                    </a>
                                 </div>
                             }
                         </div>
 
                         <div class="acciones-mobile">
-                            <button class="btn btn-mobile btn-editar" @onclick="() => EditarUsuario(usuario.Id)">
+                            <button class="btn btn-mobile btn-editar" @onclick="() => EditarCliente(cliente.ClienteId)">
                                 <i class="bi bi-pencil-square me-2"></i>Editar
                             </button>
-                            @if (usuario.Estado)
+                            @if (cliente.Estado)
                             {
                                 <button class="btn btn-mobile btn-desactivar" 
-                                        @onclick="() => MostrarConfirmacionEstado(usuario.Id, false, usuario.Username)">
+                                        @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, false, cliente.NombreCompleto)">
                                     <i class="bi bi-x-circle me-2"></i>Desactivar
                                 </button>
                             }
                             else
                             {
                                 <button class="btn btn-mobile btn-activar" 
-                                        @onclick="() => MostrarConfirmacionEstado(usuario.Id, true, usuario.Username)">
+                                        @onclick="() => MostrarConfirmacionEstado(cliente.ClienteId, true, cliente.NombreCompleto)">
                                     <i class="bi bi-check-circle me-2"></i>Activar
                                 </button>
                             }
@@ -392,22 +381,22 @@
         </div>
 
         <!-- Paginación -->
-        @if (_totalPaginas > 1)
+        @if (_clientes.TotalPages > 1)
         {
-            <nav aria-label="Paginación de usuarios" class="mt-4">
+            <nav aria-label="Paginación de clientes" class="mt-4">
                 <ul class="pagination pagination-corporativa justify-content-center">
-                    <li class="page-item @(_paginaActual == 1 ? "disabled" : "")">
-                        <button class="page-link" @onclick="() => CambiarPagina(_paginaActual - 1)">
+                    <li class="page-item @(_clientes.PageNumber == 1 ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(_clientes.PageNumber - 1)">
                             <i class="bi bi-chevron-left"></i>
                         </button>
                     </li>
 
-                    @if (_totalPaginas <= 7)
+                    @if (_clientes.TotalPages <= 7)
                     {
-                        @for (int i = 1; i <= _totalPaginas; i++)
+                        @for (int i = 1; i <= _clientes.TotalPages; i++)
                         {
                             var pagina = i;
-                            <li class="page-item @(_paginaActual == pagina ? "active" : "")">
+                            <li class="page-item @(_clientes.PageNumber == pagina ? "active" : "")">
                                 <button class="page-link" @onclick="() => CambiarPagina(pagina)">
                                     @pagina
                                 </button>
@@ -416,30 +405,30 @@
                     }
                     else
                     {
-                        @if (_paginaActual <= 4)
+                        @if (_clientes.PageNumber <= 4)
                         {
                             @for (int i = 1; i <= 5; i++)
                             {
                                 var pagina = i;
-                                <li class="page-item @(_paginaActual == pagina ? "active" : "")">
+                                <li class="page-item @(_clientes.PageNumber == pagina ? "active" : "")">
                                     <button class="page-link" @onclick="() => CambiarPagina(pagina)">@pagina</button>
                                 </li>
                             }
                             <li class="page-item disabled"><span class="page-link">...</span></li>
                             <li class="page-item">
-                                <button class="page-link" @onclick="() => CambiarPagina(_totalPaginas)">@_totalPaginas</button>
+                                <button class="page-link" @onclick="() => CambiarPagina(_clientes.TotalPages)">@_clientes.TotalPages</button>
                             </li>
                         }
-                        else if (_paginaActual >= _totalPaginas - 3)
+                        else if (_clientes.PageNumber >= _clientes.TotalPages - 3)
                         {
                             <li class="page-item">
                                 <button class="page-link" @onclick="() => CambiarPagina(1)">1</button>
                             </li>
                             <li class="page-item disabled"><span class="page-link">...</span></li>
-                            @for (int i = _totalPaginas - 4; i <= _totalPaginas; i++)
+                            @for (int i = _clientes.TotalPages - 4; i <= _clientes.TotalPages; i++)
                             {
                                 var pagina = i;
-                                <li class="page-item @(_paginaActual == pagina ? "active" : "")">
+                                <li class="page-item @(_clientes.PageNumber == pagina ? "active" : "")">
                                     <button class="page-link" @onclick="() => CambiarPagina(pagina)">@pagina</button>
                                 </li>
                             }
@@ -450,22 +439,22 @@
                                 <button class="page-link" @onclick="() => CambiarPagina(1)">1</button>
                             </li>
                             <li class="page-item disabled"><span class="page-link">...</span></li>
-                            @for (int i = _paginaActual - 1; i <= _paginaActual + 1; i++)
+                            @for (int i = _clientes.PageNumber - 1; i <= _clientes.PageNumber + 1; i++)
                             {
                                 var pagina = i;
-                                <li class="page-item @(_paginaActual == pagina ? "active" : "")">
+                                <li class="page-item @(_clientes.PageNumber == pagina ? "active" : "")">
                                     <button class="page-link" @onclick="() => CambiarPagina(pagina)">@pagina</button>
                                 </li>
                             }
                             <li class="page-item disabled"><span class="page-link">...</span></li>
                             <li class="page-item">
-                                <button class="page-link" @onclick="() => CambiarPagina(_totalPaginas)">@_totalPaginas</button>
+                                <button class="page-link" @onclick="() => CambiarPagina(_clientes.TotalPages)">@_clientes.TotalPages</button>
                             </li>
                         }
                     }
 
-                    <li class="page-item @(_paginaActual == _totalPaginas ? "disabled" : "")">
-                        <button class="page-link" @onclick="() => CambiarPagina(_paginaActual + 1)">
+                    <li class="page-item @(_clientes.PageNumber == _clientes.TotalPages ? "disabled" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(_clientes.PageNumber + 1)">
                             <i class="bi bi-chevron-right"></i>
                         </button>
                     </li>
@@ -491,19 +480,12 @@
                 <div class="modal-body">
                     <p class="mb-3">
                         ¿Está seguro que desea <strong class="@(_nuevoEstadoModal ? "text-success" : "text-danger")">
-                        @(_nuevoEstadoModal ? "ACTIVAR" : "DESACTIVAR")</strong> al siguiente usuario?
+                        @(_nuevoEstadoModal ? "ACTIVAR" : "DESACTIVAR")</strong> al siguiente cliente?
                     </p>
                     <div class="alert alert-info-modal">
                         <i class="bi bi-person-fill me-2"></i>
-                        <strong>@_nombreUsuarioModal</strong>
+                        <strong>@_nombreClienteModal</strong>
                     </div>
-                    @if (!_nuevoEstadoModal)
-                    {
-                        <div class="alert alert-warning-modal">
-                            <i class="bi bi-info-circle me-2"></i>
-                            El usuario no podrá acceder al sistema una vez desactivado.
-                        </div>
-                    }
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CancelarCambioEstado">
@@ -726,7 +708,18 @@
     font-size: 0.85rem;
 }
 
-.avatar-usuario {
+.codigo-identificacion {
+    background: rgba(43, 108, 176, 0.08);
+    border: 1px solid rgba(43, 108, 176, 0.2);
+    color: var(--color-primary-dark);
+    padding: 0.35rem 0.75rem;
+    border-radius: 0.375rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.avatar-corporativo {
     width: 45px;
     height: 45px;
     border-radius: 50%;
@@ -741,25 +734,10 @@
     box-shadow: 0 2px 8px rgba(43, 108, 176, 0.2);
 }
 
-.nombre-usuario {
+.nombre-cliente {
     font-weight: 600;
     color: var(--color-dark);
     font-size: 0.95rem;
-}
-
-.email-container {
-    display: flex;
-    align-items: center;
-    max-width: 250px;
-}
-
-.email-container span {
-    display: inline-block;
-    max-width: 100%;
-}
-
-.ultimo-acceso {
-    line-height: 1.3;
 }
 
 /* ============================================
@@ -772,16 +750,22 @@
     font-size: 0.8rem;
 }
 
-.badge-rol-administrador {
-    background: rgba(220, 53, 69, 0.1);
-    color: #c53030;
-    border: 1px solid rgba(220, 53, 69, 0.25);
-}
-
-.badge-rol-vendedor {
+.badge-tipo-cedula {
     background: rgba(43, 108, 176, 0.1);
     color: var(--color-primary);
     border: 1px solid rgba(43, 108, 176, 0.2);
+}
+
+.badge-tipo-ruc {
+    background: rgba(40, 167, 69, 0.1);
+    color: #198754;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.badge-tipo-pasaporte {
+    background: rgba(23, 162, 184, 0.1);
+    color: #0dcaf0;
+    border: 1px solid rgba(23, 162, 184, 0.2);
 }
 
 .badge-estado-activo {
@@ -794,6 +778,36 @@
     background: rgba(220, 53, 69, 0.1);
     color: #721c24;
     border: 1px solid rgba(220, 53, 69, 0.25);
+}
+
+/* ============================================
+   CONTACTO
+   ============================================ */
+.contacto-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.contacto-item {
+    font-size: 0.85rem;
+}
+
+.link-contacto {
+    color: var(--color-gray);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: var(--transition);
+}
+
+.link-contacto:hover {
+    color: var(--color-primary);
+}
+
+.link-contacto i {
+    font-size: 0.9rem;
 }
 
 /* ============================================
@@ -855,38 +869,36 @@
 /* ============================================
    CARDS TABLET
    ============================================ */
-.card-usuario-tablet {
+.card-cliente-tablet {
     border: none;
     border-radius: var(--border-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: var(--transition);
 }
 
-.card-usuario-tablet:hover {
+.card-cliente-tablet:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     transform: translateY(-2px);
 }
 
-.info-contacto-tablet {
+.contacto-info-tablet {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
     font-size: 0.85rem;
-    margin-top: 0.5rem;
-}
-
-.info-acceso {
-    text-align: right;
 }
 
 /* ============================================
    CARDS MOBILE
    ============================================ */
-.card-usuario-mobile {
+.card-cliente-mobile {
     border: none;
     border-radius: var(--border-radius);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: var(--transition);
 }
 
-.card-usuario-mobile:hover {
+.card-cliente-mobile:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
@@ -897,8 +909,6 @@
 
 .contacto-item-mobile {
     font-size: 0.9rem;
-    display: flex;
-    align-items: center;
 }
 
 .acciones-mobile {
@@ -1011,15 +1021,6 @@
     color: var(--color-primary-dark);
 }
 
-.alert-warning-modal {
-    background: rgba(255, 193, 7, 0.08);
-    border: 1px solid rgba(255, 193, 7, 0.3);
-    border-radius: 0.375rem;
-    padding: 0.75rem;
-    color: #856404;
-    font-size: 0.9rem;
-}
-
 .modal-corporativo .modal-footer {
     border-top: 1px solid #e2e8f0;
     padding: 1rem 1.5rem;
@@ -1091,7 +1092,7 @@
         font-size: 0.9rem;
     }
     
-    .avatar-usuario {
+    .avatar-corporativo {
         width: 40px;
         height: 40px;
         font-size: 0.85rem;
@@ -1099,13 +1100,13 @@
 }
 
 @@media (max-width: 575px) {
-    .avatar-usuario {
+    .avatar-corporativo {
         width: 35px;
         height: 35px;
         font-size: 0.75rem;
     }
     
-    .nombre-usuario {
+    .nombre-cliente {
         font-size: 0.9rem;
     }
     
@@ -1116,44 +1117,42 @@
 </style>
 
 @code {
-    private List<UsuarioDto> _usuarios = new();
-    private List<UsuarioDto> _usuariosFiltrados = new();
-    private List<UsuarioDto> _usuariosPaginados = new();
-    
+    private PagedResultDto<ClienteListDto> _clientes = new();
     private string _searchTerm = string.Empty;
-    private string _filtroRol = string.Empty;
+    private string _filtroTipoId = string.Empty;
     private string _filtroEstado = string.Empty;
-    
     private bool _loading = true;
     private Timer? _searchTimer;
-
-    // Paginación
-    private int _paginaActual = 1;
-    private int _itemsPorPagina = 10;
-    private int _totalPaginas = 1;
-
-    // Modal
     private bool _mostrarModalEstado = false;
-    private int _usuarioIdModal = 0;
+    private int _clienteIdModal = 0;
     private bool _nuevoEstadoModal = false;
-    private string _nombreUsuarioModal = string.Empty;
+    private string _nombreClienteModal = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        await CargarUsuarios();
+        await CargarClientes();
     }
 
-    private async Task CargarUsuarios()
+    private async Task CargarClientes()
     {
         try
         {
             _loading = true;
-            _usuarios = await UsuarioService.ObtenerTodosAsync();
-            AplicarFiltros();
+
+            var filtro = new FiltroClienteDto
+            {
+                Busqueda = string.IsNullOrWhiteSpace(_searchTerm) ? null : _searchTerm,
+                TipoIdentificacionId = string.IsNullOrWhiteSpace(_filtroTipoId) ? null : int.Parse(_filtroTipoId),
+                Estado = string.IsNullOrWhiteSpace(_filtroEstado) ? null : bool.Parse(_filtroEstado),
+                PageNumber = _clientes.PageNumber > 0 ? _clientes.PageNumber : 1,
+                PageSize = 10
+            };
+
+            _clientes = await ClienteService.ObtenerClientesAsync(filtro);
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al cargar usuarios: {ex.Message}");
+            ToastService.ShowError($"Error al cargar clientes: {ex.Message}");
         }
         finally
         {
@@ -1166,10 +1165,10 @@
         _searchTimer?.Dispose();
         _searchTimer = new Timer(_ =>
         {
-            InvokeAsync(() =>
+            InvokeAsync(async () =>
             {
-                _paginaActual = 1;
-                AplicarFiltros();
+                _clientes.PageNumber = 1;
+                await CargarClientes();
                 StateHasChanged();
             });
         }, null, 300, Timeout.Infinite);
@@ -1178,81 +1177,30 @@
     private void ClearSearch()
     {
         _searchTerm = string.Empty;
-        _paginaActual = 1;
-        AplicarFiltros();
+        _clientes.PageNumber = 1;
+        InvokeAsync(CargarClientes);
     }
 
-    private void OnFiltroChanged()
+    private async Task OnFiltroChanged()
     {
-        _paginaActual = 1;
-        AplicarFiltros();
+        _clientes.PageNumber = 1;
+        await CargarClientes();
     }
 
-    private void AplicarFiltros()
+    private async Task CambiarPagina(int nuevaPagina)
     {
-        _usuariosFiltrados = _usuarios;
-
-        // Filtro de búsqueda
-        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        if (nuevaPagina >= 1 && nuevaPagina <= _clientes.TotalPages)
         {
-            _usuariosFiltrados = _usuariosFiltrados
-                .Where(u => 
-                    u.Username.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    u.Email.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                    (u.NombreCompleto != null && u.NombreCompleto.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
-                )
-                .ToList();
-        }
-
-        // Filtro de rol
-        if (!string.IsNullOrWhiteSpace(_filtroRol))
-        {
-            _usuariosFiltrados = _usuariosFiltrados
-                .Where(u => u.Rol.Equals(_filtroRol, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
-
-        // Filtro de estado
-        if (!string.IsNullOrWhiteSpace(_filtroEstado))
-        {
-            bool estado = bool.Parse(_filtroEstado);
-            _usuariosFiltrados = _usuariosFiltrados.Where(u => u.Estado == estado).ToList();
-        }
-
-        // Calcular paginación
-        _totalPaginas = (int)Math.Ceiling(_usuariosFiltrados.Count / (double)_itemsPorPagina);
-        _totalPaginas = Math.Max(_totalPaginas, 1);
-        
-        if (_paginaActual > _totalPaginas)
-        {
-            _paginaActual = _totalPaginas;
-        }
-
-        AplicarPaginacion();
-    }
-
-    private void AplicarPaginacion()
-    {
-        _usuariosPaginados = _usuariosFiltrados
-            .Skip((_paginaActual - 1) * _itemsPorPagina)
-            .Take(_itemsPorPagina)
-            .ToList();
-    }
-
-    private void CambiarPagina(int nuevaPagina)
-    {
-        if (nuevaPagina >= 1 && nuevaPagina <= _totalPaginas)
-        {
-            _paginaActual = nuevaPagina;
-            AplicarPaginacion();
+            _clientes.PageNumber = nuevaPagina;
+            await CargarClientes();
         }
     }
 
-    private void MostrarConfirmacionEstado(int usuarioId, bool activar, string nombreUsuario)
+    private void MostrarConfirmacionEstado(int clienteId, bool activar, string nombreCliente)
     {
-        _usuarioIdModal = usuarioId;
+        _clienteIdModal = clienteId;
         _nuevoEstadoModal = activar;
-        _nombreUsuarioModal = nombreUsuario;
+        _nombreClienteModal = nombreCliente;
         _mostrarModalEstado = true;
     }
 
@@ -1260,19 +1208,10 @@
     {
         try
         {
-            if (_nuevoEstadoModal)
-            {
-                await UsuarioService.ActivarAsync(_usuarioIdModal);
-                ToastService.ShowSuccess("Usuario activado exitosamente");
-            }
-            else
-            {
-                await UsuarioService.DesactivarAsync(_usuarioIdModal);
-                ToastService.ShowSuccess("Usuario desactivado exitosamente");
-            }
-
+            await ClienteService.CambiarEstadoAsync(_clienteIdModal, _nuevoEstadoModal);
+            ToastService.ShowSuccess(_nuevoEstadoModal ? "Cliente activado exitosamente" : "Cliente desactivado exitosamente");
             _mostrarModalEstado = false;
-            await CargarUsuarios();
+            await CargarClientes();
         }
         catch (Exception ex)
         {
@@ -1286,45 +1225,32 @@
         _mostrarModalEstado = false;
     }
 
-    private void CrearNuevoUsuario()
-    {
-        Navigation.NavigateTo("/usuarios/crear");
-    }
+    private void CrearNuevoCliente() => Navigation.NavigateTo("/clientes/crear");
+    private void EditarCliente(int id) => Navigation.NavigateTo($"/clientes/editar/{id}");
 
-    private void EditarUsuario(int id)
+    private string GetTipoIdClass(string tipoId) => tipoId.ToLower() switch
     {
-        Navigation.NavigateTo($"/usuarios/editar/{id}");
-    }
-
-    private string GetRolClass(string rol) => rol.ToLower() switch
-    {
-        "administrador" => "administrador",
-        "vendedor" => "vendedor",
-        _ => "vendedor"
+        "cédula" or "cedula" => "cedula",
+        "ruc" => "ruc",
+        "pasaporte" => "pasaporte",
+        _ => "cedula"
     };
 
-    private string GetRolIcon(string rol) => rol switch
+    private string GetTipoIdIcon(string tipoId) => tipoId switch
     {
-        "Administrador" => "bi-shield-fill-check",
-        "Vendedor" => "bi-person-badge-fill",
-        _ => "bi-person-fill"
+        "Cédula" => "bi-person-vcard-fill",
+        "RUC" => "bi-building-fill",
+        "Pasaporte" => "bi-airplane-fill",
+        _ => "bi-card-text"
     };
 
-    private string GetInitials(string username)
+    private string GetInitials(string nombreCompleto)
     {
-        if (string.IsNullOrEmpty(username)) return "?";
-        
-        var parts = username.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = nombreCompleto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2)
             return $"{parts[0][0]}{parts[1][0]}".ToUpper();
-        
-        return username.Length >= 2 
-            ? username.Substring(0, 2).ToUpper() 
-            : username[0].ToString().ToUpper();
+        return parts.Length > 0 ? parts[0][0].ToString().ToUpper() : "?";
     }
 
-    public void Dispose()
-    {
-        _searchTimer?.Dispose();
-    }
+    public void Dispose() => _searchTimer?.Dispose();
 }

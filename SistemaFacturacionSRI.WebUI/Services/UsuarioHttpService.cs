@@ -78,25 +78,26 @@ public async Task<List<UsuarioDto>> ObtenerTodosAsync()
         /// POST /api/usuarios
         /// </summary>
         public async Task<UsuarioDto> CrearAsync(CrearUsuarioDto dto)
+{
+    try
+    {
+        var response = await _httpClient.PostAsJsonAsync(API_BASE_URL, dto);
+        
+        if (!response.IsSuccessStatusCode)
         {
-            try
-            {
-                var response = await _httpClient.PostAsJsonAsync(API_BASE_URL, dto);
-                
-                if (!response.IsSuccessStatusCode)
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    throw new Exception($"Error al crear usuario: {error}");
-                }
-
-                var usuarioCreado = await response.Content.ReadFromJsonAsync<UsuarioDto>();
-                return usuarioCreado ?? throw new Exception("No se recibió respuesta del servidor");
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new Exception($"Error de conexión al crear usuario: {ex.Message}", ex);
-            }
+            var error = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"❌ ERROR DEL BACKEND: {error}"); // ⭐ AGREGAR ESTO
+            throw new Exception($"Error al crear usuario: {error}");
         }
+
+        var usuarioCreado = await response.Content.ReadFromJsonAsync<UsuarioDto>();
+        return usuarioCreado ?? throw new Exception("No se recibió respuesta del servidor");
+    }
+    catch (HttpRequestException ex)
+    {
+        throw new Exception($"Error de conexión al crear usuario: {ex.Message}", ex);
+    }
+}
 
         /// <summary>
         /// Actualiza un usuario existente.
@@ -227,6 +228,31 @@ public async Task CambiarPasswordAsync(CambiarPasswordDto dto)
         throw new Exception($"Error al cambiar contraseña: {error}");
     }
 }
+
+
+/// <summary>
+/// Verifica si una cédula ya existe en el sistema.
+/// GET /api/usuarios/existe-cedula?cedula=xxx
+/// </summary>
+/*
+public async Task<bool> ExisteCedulaAsync(string cedula, int? excluirUsuarioId = null)
+{
+    try
+    {
+        var url = excluirUsuarioId.HasValue 
+            ? $"{API_BASE_URL}/existe-cedula?cedula={cedula}&excluirUsuarioId={excluirUsuarioId}"
+            : $"{API_BASE_URL}/existe-cedula?cedula={cedula}";
+            
+        var response = await _httpClient.GetFromJsonAsync<bool>(url);
+        return response;
+    }
+    catch (Exception )
+    {
+        return false; // En caso de error, asumimos que no existe
+    }
+}
+*/
+
 
     }
 }

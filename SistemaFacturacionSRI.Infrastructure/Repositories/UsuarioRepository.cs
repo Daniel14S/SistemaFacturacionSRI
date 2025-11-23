@@ -122,6 +122,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return (usuarios, totalRegistros);
         }
 
+        // TODO: Descomentar cuando se agregue Cedula a la BD
+/*
+public async Task<Usuario?> ObtenerPorCedulaAsync(string cedula)
+{
+    return await _context.Usuarios
+        .Include(u => u.Rol)
+        .FirstOrDefaultAsync(u => u.Cedula == cedula);
+}
+*/
+
         
 
     }

@@ -33,7 +33,31 @@
                     }
                     else
                     {
-                        <EditForm Model="_modelo" OnValidSubmit="HandleSubmit">
+                        @if (!string.IsNullOrEmpty(_errorGeneral))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <strong>Error:</strong> @_errorGeneral
+                                <button type="button" class="btn-close" @onclick="@(() => _errorGeneral = null)"></button>
+                            </div>
+                        }
+
+                        @if (_erroresValidacion.Any())
+                        {
+                            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                <strong>Corrija los siguientes errores:</strong>
+                                <ul class="mb-0 mt-2">
+                                    @foreach (var error in _erroresValidacion)
+                                    {
+                                        <li>@error</li>
+                                    }
+                                </ul>
+                                <button type="button" class="btn-close" @onclick="@(() => _erroresValidacion.Clear())"></button>
+                            </div>
+                        }
+
+                        <EditForm Model="_modelo" OnValidSubmit="HandleSubmit" OnInvalidSubmit="HandleInvalidSubmit">
                             <DataAnnotationsValidator />
                             
                             <!-- Datos de Autenticación -->
@@ -59,7 +83,6 @@
 
                                 @if (!_esEdicion)
                                 {
-                                    <!-- ⭐ ALERTA EN LUGAR DE CAMPOS DE CONTRASEÑA -->
                                     <div class="col-12">
                                         <div class="alert alert-info">
                                             <i class="bi bi-info-circle me-2"></i>
@@ -79,7 +102,6 @@
                                     </h5>
                                 </div>
 
-                                <!-- ⭐ CÉDULA PRIMERO Y OBLIGATORIA -->
                                 <div class="col-12 mb-3">
                                     <label class="form-label">Cédula Ecuatoriana * 
                                         @if (!_esEdicion)
@@ -87,15 +109,29 @@
                                             <span class="text-muted">(Será la contraseña inicial)</span>
                                         }
                                     </label>
-                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" />
+                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" @oninput="ValidarCedulaEnTiempoReal" />
                                     @if (!_esEdicion)
                                     {
                                         <small class="form-text text-muted">
                                             <i class="bi bi-shield-lock me-1"></i>
-                                            10 dígitos - Esta será la contraseña temporal que el usuario deberá cambiar en su primer acceso
+                                            10 dígitos válidos - Esta será la contraseña temporal
                                         </small>
                                     }
                                     <ValidationMessage For="@(() => _modelo.Cedula)" class="text-danger" />
+                                    @if (_cedulaInvalida)
+                                    {
+                                        <div class="text-danger small mt-1">
+                                            <i class="bi bi-x-circle me-1"></i>
+                                            La cédula ecuatoriana ingresada no es válida
+                                        </div>
+                                    }
+                                    @if (_cedulaValida)
+                                    {
+                                        <div class="text-success small mt-1">
+                                            <i class="bi bi-check-circle me-1"></i>
+                                            Cédula válida
+                                        </div>
+                                    }
                                 </div>
 
                                 <div class="col-md-6 mb-3">
@@ -151,7 +187,6 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Rol *</label>
                                     <InputSelect @bind-Value="_modelo.RolId" class="form-select">
-                                        <option value="0">-- Seleccionar Rol --</option>
                                         <option value="1">Administrador</option>
                                         <option value="2">Vendedor</option>
                                     </InputSelect>
@@ -210,10 +245,14 @@
 @code {
     [Parameter] public int? Id { get; set; }
 
-    private CrearUsuarioDto _modelo = new() { Estado = true };
+    private CrearUsuarioDto _modelo = new() { Estado = true, RolId = 1 };
     private bool _esEdicion => Id.HasValue && Id.Value > 0;
     private bool _cargando = false;
     private bool _guardando = false;
+    private string? _errorGeneral;
+    private List<string> _erroresValidacion = new();
+    private bool _cedulaInvalida = false;
+    private bool _cedulaValida = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -221,6 +260,64 @@
         {
             await CargarUsuario();
         }
+    }
+
+    private void ValidarCedulaEnTiempoReal(ChangeEventArgs e)
+    {
+        var cedula = e.Value?.ToString() ?? "";
+        _cedulaInvalida = false;
+        _cedulaValida = false;
+
+        if (string.IsNullOrEmpty(cedula))
+            return;
+
+        if (cedula.Length == 10)
+        {
+            if (ValidarCedulaEcuatoriana(cedula))
+            {
+                _cedulaValida = true;
+            }
+            else
+            {
+                _cedulaInvalida = true;
+            }
+        }
+    }
+
+    private bool ValidarCedulaEcuatoriana(string cedula)
+    {
+        if (string.IsNullOrEmpty(cedula) || cedula.Length != 10)
+            return false;
+
+        if (!cedula.All(char.IsDigit))
+            return false;
+
+        var digitos = cedula.Select(c => int.Parse(c.ToString())).ToArray();
+        var provincia = int.Parse(cedula.Substring(0, 2));
+
+        if (provincia < 1 || provincia > 24)
+            return false;
+
+        var coeficientes = new[] { 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+        var suma = 0;
+
+        for (int i = 0; i < 9; i++)
+        {
+            var resultado = digitos[i] * coeficientes[i];
+            if (resultado >= 10)
+                resultado -= 9;
+            suma += resultado;
+        }
+
+        var digitoVerificador = (10 - (suma % 10)) % 10;
+        return digitoVerificador == digitos[9];
+    }
+
+    private void HandleInvalidSubmit()
+    {
+        _erroresValidacion.Clear();
+        _erroresValidacion.Add("Por favor complete todos los campos obligatorios marcados con (*)");
+        ToastService.ShowWarning("Revise los campos del formulario");
     }
 
     private async Task CargarUsuario()
@@ -237,16 +334,19 @@
                 return;
             }
 
-            // Mapear a modelo de edición
+            var partes = (usuario.NombreCompleto ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
             _modelo = new CrearUsuarioDto
             {
-                Username = usuario.Username,
-                Email = usuario.Email,
-                Cedula = "", // Por seguridad, no cargar la cédula en edición
-                Nombre1 = usuario.NombreCompleto?.Split(' ').FirstOrDefault() ?? "",
-                Nombre2 = usuario.NombreCompleto?.Split(' ').Skip(1).FirstOrDefault(),
-                Apellido1 = usuario.NombreCompleto?.Split(' ').Skip(2).FirstOrDefault() ?? "",
-                Apellido2 = usuario.NombreCompleto?.Split(' ').Skip(3).FirstOrDefault(),
+                Username = usuario.Username ?? string.Empty,
+                Email = usuario.Email ?? string.Empty,
+                Cedula = string.Empty,
+                Nombre1 = partes.Length > 0 ? partes[0] : string.Empty,
+                Nombre2 = partes.Length > 1 ? partes[1] : null,
+                Apellido1 = partes.Length > 2 ? partes[2] : string.Empty,
+                Apellido2 = partes.Length > 3 ? partes[3] : null,
+                Telefono = null,
+                Direccion = null,
                 RolId = usuario.Rol == "Administrador" ? 1 : 2,
                 Estado = usuario.Estado
             };
@@ -267,6 +367,16 @@
         try
         {
             _guardando = true;
+            _errorGeneral = null;
+            _erroresValidacion.Clear();
+
+            if (!_esEdicion && !ValidarCedulaEcuatoriana(_modelo.Cedula))
+            {
+                _erroresValidacion.Add("La cédula ecuatoriana no es válida");
+                _cedulaInvalida = true;
+                ToastService.ShowError("Cédula inválida");
+                return;
+            }
 
             if (_esEdicion)
             {
@@ -297,7 +407,26 @@
         }
         catch (Exception ex)
         {
-            ToastService.ShowError($"Error al guardar: {ex.Message}");
+            _errorGeneral = ex.Message;
+            
+            if (ex.Message.Contains("Email") || ex.Message.Contains("email") || ex.Message.Contains("correo"))
+            {
+                _erroresValidacion.Add("El email ya está registrado en el sistema");
+            }
+            else if (ex.Message.Contains("Username") || ex.Message.Contains("usuario"))
+            {
+                _erroresValidacion.Add("El nombre de usuario ya existe");
+            }
+            else if (ex.Message.Contains("Cedula") || ex.Message.Contains("cédula"))
+            {
+                _erroresValidacion.Add("La cédula ya está registrada");
+            }
+            else if (ex.Message.Contains("400"))
+            {
+                _erroresValidacion.Add("Datos inválidos. Verifique todos los campos");
+            }
+            
+            ToastService.ShowError("No se pudo guardar el usuario");
         }
         finally
         {

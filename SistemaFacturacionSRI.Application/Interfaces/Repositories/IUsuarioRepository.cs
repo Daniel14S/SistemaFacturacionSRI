@@ -33,6 +33,11 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
         Task ActualizarAsync(Usuario usuario);
 
         /// <summary>
+/// Obtiene un usuario por su cédula.
+/// </summary>
+//Task<Usuario?> ObtenerPorCedulaAsync(string cedula);
+
+        /// <summary>
         /// Lista usuarios con filtros y paginación.
         /// </summary>
         Task<(List<Usuario> Usuarios, int TotalRegistros)> ListarConFiltrosAsync(
@@ -45,6 +50,8 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
             string? orderBy,
             bool orderAscending);
         }
+
+        
 
         
 

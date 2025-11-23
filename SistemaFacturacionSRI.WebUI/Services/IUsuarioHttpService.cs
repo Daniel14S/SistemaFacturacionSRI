@@ -62,5 +62,11 @@ namespace SistemaFacturacionSRI.WebUI.Services
 /// </summary>
 Task CambiarPasswordAsync(CambiarPasswordDto dto);
 
+/// <summary>
+/// Verifica si una cédula ya existe en el sistema.
+/// GET /api/usuarios/existe-cedula?cedula=xxx
+/// </summary>
+//Task<bool> ExisteCedulaAsync(string cedula, int? excluirUsuarioId = null);
+
     }
 }
