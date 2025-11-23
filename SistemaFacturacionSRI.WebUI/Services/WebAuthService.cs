@@ -117,5 +117,14 @@ public async Task Logout()
             var user = await GetCurrentUser();
             return user.IsInRole(role);
         }
+
+        /// <summary>
+/// Obtiene el estado de autenticación actual.
+/// </summary>
+public async Task<AuthenticationState> GetAuthenticationStateAsync()
+{
+    return await _authStateProvider.GetAuthenticationStateAsync();
+}
+
     }
 }

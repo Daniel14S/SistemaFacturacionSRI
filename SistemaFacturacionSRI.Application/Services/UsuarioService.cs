@@ -29,52 +29,89 @@ namespace SistemaFacturacionSRI.Application.Services
         // ========== CREAR USUARIO ==========
 
         /// <inheritdoc />
-        public async Task<UsuarioDto> CrearUsuarioAsync(CrearUsuarioDto dto)
-        {
-            // 1. VALIDACIONES PREVIAS
-            await ValidarDatosUnicos(dto.Username, dto.Email);
+public async Task<UsuarioDto> CrearUsuarioAsync(CrearUsuarioDto dto)
+{
+    // 1. VALIDACIONES PREVIAS
+    await ValidarDatosUnicos(dto.Username, dto.Email);
 
-            // 2. VALIDAR QUE EL ROL EXISTA
-            ValidarRol(dto.RolId);
+    // 2. VALIDAR QUE EL ROL EXISTA
+    ValidarRol(dto.RolId);
 
-            // 3. HASHEAR LA CONTRASEÑA
-            var passwordHash = _passwordHasher.HashPassword(dto.Password);
+    // ⭐ 3. VALIDAR CÉDULA ECUATORIANA
+    if (!ValidarCedulaEcuatoriana(dto.Cedula))
+    {
+        throw new InvalidOperationException("La cédula ecuatoriana no es válida");
+    }
 
-            // 4. CREAR LA ENTIDAD USUARIO
-            var usuario = new Usuario
-            {
-                Username = dto.Username.Trim(),
-                Email = dto.Email.Trim().ToLower(),
-                PasswordHash = passwordHash,
-                
-                // Datos personales
-                Nombre1 = dto.Nombre1.Trim(),
-                Nombre2 = dto.Nombre2?.Trim(),
-                Apellido1 = dto.Apellido1.Trim(),
-                Apellido2 = dto.Apellido2?.Trim(),
-                
-                // Configuración de cuenta
-                RolId = dto.RolId,
-                Estado = dto.Estado,
-                IntentosLogin = 0,
-                FechaCreacion = DateTime.UtcNow,
-                UltimoAcceso = null
-            };
+    // ⭐ 4. USAR CÉDULA COMO CONTRASEÑA INICIAL
+    var passwordHash = _passwordHasher.HashPassword(dto.Cedula);
 
-            // 5. GUARDAR EN BASE DE DATOS
-            await _usuarioRepository.CrearAsync(usuario);
+    // 5. CREAR LA ENTIDAD USUARIO
+    var usuario = new Usuario
+    {
+        Username = dto.Username.Trim(),
+        Email = dto.Email.Trim().ToLower(),
+        PasswordHash = passwordHash, // ⭐ Hash de la cédula
+        
+        // Datos personales
+        Nombre1 = dto.Nombre1.Trim(),
+        Nombre2 = dto.Nombre2?.Trim(),
+        Apellido1 = dto.Apellido1.Trim(),
+        Apellido2 = dto.Apellido2?.Trim(),
+        
+        // Configuración de cuenta
+        RolId = dto.RolId,
+        Estado = dto.Estado,
+        IntentosLogin = 0,
+        FechaCreacion = DateTime.UtcNow,
+        UltimoAcceso = null
+    };
 
-            // 6. RECARGAR USUARIO CON ROL (para obtener el nombre del rol)
-            var usuarioCreado = await _usuarioRepository.ObtenerPorIdAsync(usuario.UsuarioId);
+    // 6. GUARDAR EN BASE DE DATOS
+    await _usuarioRepository.CrearAsync(usuario);
 
-            if (usuarioCreado == null)
-            {
-                throw new InvalidOperationException("Error al crear el usuario");
-            }
+    // 7. RECARGAR USUARIO CON ROL
+    var usuarioCreado = await _usuarioRepository.ObtenerPorIdAsync(usuario.UsuarioId);
 
-            // 7. MAPEAR A DTO Y RETORNAR
-            return MapearUsuarioDto(usuarioCreado);
-        }
+    if (usuarioCreado == null)
+    {
+        throw new InvalidOperationException("Error al crear el usuario");
+    }
+
+    // 8. MAPEAR A DTO Y RETORNAR
+    return MapearUsuarioDto(usuarioCreado);
+}
+
+
+private bool ValidarCedulaEcuatoriana(string cedula)
+{
+    if (string.IsNullOrWhiteSpace(cedula) || cedula.Length != 10)
+        return false;
+
+    if (!cedula.All(char.IsDigit))
+        return false;
+
+    var digitos = cedula.Select(c => int.Parse(c.ToString())).ToArray();
+    var provincia = int.Parse(cedula.Substring(0, 2));
+
+    if (provincia < 1 || provincia > 24)
+        return false;
+
+    var coeficientes = new[] { 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+    var suma = 0;
+
+    for (int i = 0; i < 9; i++)
+    {
+        var valor = digitos[i] * coeficientes[i];
+        suma += valor > 9 ? valor - 9 : valor;
+    }
+
+    var digitoVerificador = suma % 10 == 0 ? 0 : 10 - (suma % 10);
+    return digitoVerificador == digitos[9];
+}
+
+
+
 
         // ========== LISTAR USUARIOS ==========
 
@@ -380,15 +417,19 @@ public async Task<bool> CambiarRolAsync(CambiarRolDto dto)
 // ========== CAMBIAR PASSWORD ==========
 
 /// <inheritdoc />
+
+// ========== RESETEAR PASSWORD (ADMIN) ==========
+
+/// <inheritdoc />
+/// 
+// Application/Services/UsuarioService.cs - Modificar método existente
 public async Task<bool> CambiarPasswordAsync(CambiarPasswordDto dto)
 {
-    // 1. VALIDAR QUE EL DTO NO SEA NULO
     if (dto == null)
     {
         throw new ArgumentNullException(nameof(dto), "Los datos del cambio de contraseña no pueden ser nulos");
     }
 
-    // 2. BUSCAR EL USUARIO
     var usuario = await _usuarioRepository.ObtenerPorIdAsync(dto.UsuarioId);
     
     if (usuario == null)
@@ -396,7 +437,6 @@ public async Task<bool> CambiarPasswordAsync(CambiarPasswordDto dto)
         throw new KeyNotFoundException($"No se encontró el usuario con ID {dto.UsuarioId}");
     }
 
-    // 3. VERIFICAR QUE LA CONTRASEÑA ACTUAL SEA CORRECTA
     var passwordActualValido = _passwordHasher.VerifyPassword(dto.PasswordActual, usuario.PasswordHash);
     
     if (!passwordActualValido)
@@ -404,30 +444,26 @@ public async Task<bool> CambiarPasswordAsync(CambiarPasswordDto dto)
         throw new InvalidOperationException("La contraseña actual es incorrecta");
     }
 
-    // 4. VALIDAR QUE LA NUEVA CONTRASEÑA SEA DIFERENTE
     if (dto.PasswordActual == dto.NuevaPassword)
     {
         throw new InvalidOperationException("La nueva contraseña debe ser diferente a la actual");
     }
 
-    // 5. HASHEAR LA NUEVA CONTRASEÑA
+    // ⭐ NUEVO: NO PERMITIR USAR CÉDULA COMO CONTRASEÑA
+    if (dto.NuevaPassword.Length == 10 && dto.NuevaPassword.All(char.IsDigit))
+    {
+        throw new InvalidOperationException("No puedes usar una cédula como contraseña");
+    }
+
     var nuevoPasswordHash = _passwordHasher.HashPassword(dto.NuevaPassword);
-
-    // 6. ACTUALIZAR LA CONTRASEÑA
     usuario.PasswordHash = nuevoPasswordHash;
-
-    // 7. RESETEAR INTENTOS DE LOGIN (por seguridad)
     usuario.IntentosLogin = 0;
 
-    // 8. GUARDAR CAMBIOS
     await _usuarioRepository.ActualizarAsync(usuario);
 
     return true;
 }
 
-// ========== RESETEAR PASSWORD (ADMIN) ==========
-
-/// <inheritdoc />
 public async Task<string> ResetearPasswordAsync(int usuarioId)
 {
     // 1. VALIDAR QUE EL ID SEA VÁLIDO

@@ -200,22 +200,30 @@
     private string? SuccessMessage;
     private string? returnUrl;
 
-    protected override void OnInitialized()
+    protected override Task OnInitializedAsync()
+{
+    var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+    
+    // Obtener returnUrl de la query string
+    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var url))
     {
-        // Obtener returnUrl de la query string
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var url))
-        {
-            returnUrl = url;
-        }
-
-        // Verificar si viene de token expirado
-        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("expired", out var expired))
-        {
-            ErrorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
-        }
+        returnUrl = url;
     }
 
+    // Verificar si viene de token expirado
+    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("expired", out var expired))
+    {
+        ErrorMessage = "Tu sesión ha expirado. Por favor, inicia sesión nuevamente.";
+    }
+
+    // ⭐ MOSTRAR MENSAJE DE CAMBIO EXITOSO
+    if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("cambioExitoso", out var cambio))
+    {
+        SuccessMessage = "✅ Contraseña cambiada exitosamente. Inicia sesión con tu nueva contraseña.";
+    }
+
+    return Task.CompletedTask;
+}
 
 private async Task HandleLogin()
 {
@@ -248,14 +256,25 @@ private async Task HandleLogin()
             return;
         }
 
-        // ✅ Login exitoso
+        // ⭐ DETECTAR PRIMER INGRESO
+        if (result.EsPrimerIngreso)
+        {
+            SuccessMessage = "Primer ingreso detectado. Redirigiendo a cambio de contraseña...";
+            StateHasChanged();
+            
+            // ⚠️ IMPORTANTE: Esperar a que el token se propague
+            await Task.Delay(500);
+            
+            // Redirigir SIN forceLoad para mantener el estado de autenticación
+            Navigation.NavigateTo("/cambiar-password-obligatorio", forceLoad: false);
+            return;
+        }
+
+        // ✅ Login normal
         SuccessMessage = "¡Login exitoso! Redirigiendo...";
         StateHasChanged();
+        await Task.Delay(1000);
 
-        // ⏱️ ESPERAR A QUE SE PROPAGUE EL ESTADO
-        await Task.Delay(2000);
-
-        // 🔥 FORZAR REFRESH COMPLETO DE LA PÁGINA
         string targetUrl = "/";
         
         if (!string.IsNullOrEmpty(result.Role))
@@ -274,7 +293,6 @@ private async Task HandleLogin()
             targetUrl = returnUrl;
         }
 
-        // ✅ USAR forceLoad: true PARA RECARGAR TODO
         Navigation.NavigateTo(targetUrl, forceLoad: true);
     }
     catch (Exception ex)
@@ -283,6 +301,8 @@ private async Task HandleLogin()
         isLoading = false;
     }
 }
+
+
 
 
     public class LoginModel

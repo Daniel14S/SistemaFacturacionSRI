@@ -122,5 +122,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
             return (usuarios, totalRegistros);
         }
 
+        
+
     }
 }

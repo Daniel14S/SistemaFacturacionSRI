@@ -29,84 +29,82 @@ namespace SistemaFacturacionSRI.Application.Services
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
+{
+    if (request == null)
+    {
+        throw new ArgumentNullException(nameof(request));
+    }
+
+    var usuario = await _usuarioRepository.ObtenerPorUsernameAsync(request.Username);
+    if (usuario == null)
+    {
+        return CredencialesInvalidas();
+    }
+
+    if (!usuario.Estado)
+    {
+        return Bloqueado();
+    }
+
+    if (usuario.IntentosLogin >= MaxIntentosFallidos)
+    {
+        usuario.Estado = false;
+        await _usuarioRepository.ActualizarAsync(usuario);
+        return Bloqueado();
+    }
+
+    var passwordValido = _passwordHasher.VerifyPassword(request.Password, usuario.PasswordHash);
+    if (!passwordValido)
+    {
+        usuario.IntentosLogin += 1;
+        if (usuario.IntentosLogin >= MaxIntentosFallidos)
         {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            var usuario = await _usuarioRepository.ObtenerPorUsernameAsync(request.Username);
-            if (usuario == null)
-            {
-                return CredencialesInvalidas();
-            }
-
-            if (!usuario.Estado)
-            {
-                return Bloqueado();
-            }
-
-            if (usuario.IntentosLogin >= MaxIntentosFallidos)
-            {
-                usuario.Estado = false;
-                await _usuarioRepository.ActualizarAsync(usuario);
-                return Bloqueado();
-            }
-
-            var passwordValido = _passwordHasher.VerifyPassword(request.Password, usuario.PasswordHash);
-            if (!passwordValido)
-            {
-                usuario.IntentosLogin += 1;
-                if (usuario.IntentosLogin >= MaxIntentosFallidos)
-                {
-                    usuario.Estado = false;
-                }
-
-                await _usuarioRepository.ActualizarAsync(usuario);
-
-                return usuario.Estado
-                    ? CredencialesInvalidas(MaxIntentosFallidos - usuario.IntentosLogin)
-                    : Bloqueado();
-            }
-
-            usuario.IntentosLogin = 0;
-            usuario.UltimoAcceso = DateTime.UtcNow;
-            await _usuarioRepository.ActualizarAsync(usuario);
-
-            // Generar token con rol
-            var token = _jwtTokenGenerator.GenerateToken(
-                usuario.UsuarioId,
-                usuario.Username,
-                usuario.Email,
-                usuario.Rol?.NombreRol ?? string.Empty);
-
-            var expiresAt = _jwtTokenGenerator.GetExpirationDate(token);
-
-            return new LoginResponseDto
-            {
-                Success = true,
-                Message = "Inicio de sesión exitoso",
-                Token = token,
-                Usuario = MapearUsuario(usuario),
-                ExpiresAt = expiresAt,
-
-                // 🔥 AQUÍ AGREGAMOS EL ROL PARA REDIRECCIÓN EN BLAZOR
-                Role = usuario.Rol?.NombreRol
-            };
+            usuario.Estado = false;
         }
+
+        await _usuarioRepository.ActualizarAsync(usuario);
+
+        return usuario.Estado
+            ? CredencialesInvalidas(MaxIntentosFallidos - usuario.IntentosLogin)
+            : Bloqueado();
+    }
+
+    // ⭐ DETECTAR SI ES PRIMER INGRESO (está usando cédula como contraseña)
+    bool esPrimerIngreso = request.Password.Length == 10 && 
+                           request.Password.All(char.IsDigit);
+
+    usuario.IntentosLogin = 0;
+    usuario.UltimoAcceso = DateTime.UtcNow;
+    await _usuarioRepository.ActualizarAsync(usuario);
+
+    var token = _jwtTokenGenerator.GenerateToken(
+        usuario.UsuarioId,
+        usuario.Username,
+        usuario.Email,
+        usuario.Rol?.NombreRol ?? string.Empty);
+
+    var expiresAt = _jwtTokenGenerator.GetExpirationDate(token);
+
+    return new LoginResponseDto
+    {
+        Success = true,
+        Message = "Inicio de sesión exitoso",
+        Token = token,
+        Usuario = MapearUsuario(usuario),
+        ExpiresAt = expiresAt,
+        Role = usuario.Rol?.NombreRol,
+        EsPrimerIngreso = esPrimerIngreso // ⭐ NUEVO
+    };
+}
+
 
         public async Task<bool> LogoutAsync(int usuarioId)
-        {
-            var usuario = await _usuarioRepository.ObtenerPorIdAsync(usuarioId);
-            if (usuario == null)
-            {
-                return false;
-            }
+{
+    // ⭐ NO HACER NADA EN EL LOGOUT
+    // Solo retornar true para confirmar
+    return await Task.FromResult(true);
+}
 
-            usuario.UltimoAcceso = DateTime.UtcNow;
-            await _usuarioRepository.ActualizarAsync(usuario);
-            return true;
-        }
 
         public Task<bool> ValidarTokenAsync(string token)
         {

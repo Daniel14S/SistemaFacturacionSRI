@@ -45,4 +45,8 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Repositories
             string? orderBy,
             bool orderAscending);
         }
+
+        
+
+        
 }
