@@ -147,5 +147,16 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
         /// <param name="usuarioId">ID del usuario a verificar</param>
         /// <returns>True si es el último administrador</returns>
         Task<bool> EsUltimoAdministradorAsync(int usuarioId);
+
+        /// <summary>
+/// Verifica si una cédula ya existe en el sistema.
+/// </summary>
+/// <param name="cedula">Cédula a verificar</param>
+/// <param name="usuarioIdExcluir">ID del usuario a excluir de la búsqueda (para actualización)</param>
+/// <returns>True si la cédula ya existe</returns>
+//Task<bool> ExisteCedulaAsync(string cedula, int? usuarioIdExcluir = null);
+
+
+        
     }
 }

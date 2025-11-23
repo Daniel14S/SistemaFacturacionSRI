@@ -736,5 +736,27 @@ private string GenerarPasswordTemporal()
             var nombreCompleto = string.Join(" ", nombres.Where(n => !string.IsNullOrWhiteSpace(n)));
             return string.IsNullOrWhiteSpace(nombreCompleto) ? null : nombreCompleto;
         }
+
+
+        // TODO: Descomentar cuando se agregue Cedula a la BD
+/*
+public async Task<bool> ExisteCedulaAsync(string cedula, int? usuarioIdExcluir = null)
+{
+    if (string.IsNullOrWhiteSpace(cedula))
+        return false;
+
+    var usuarioExistente = await _usuarioRepository.ObtenerPorCedulaAsync(cedula.Trim());
+
+    if (usuarioExistente == null)
+        return false;
+
+    if (usuarioIdExcluir.HasValue && usuarioExistente.UsuarioId == usuarioIdExcluir.Value)
+        return false;
+
+    return true;
+}
+*/
+
+
     }
 }

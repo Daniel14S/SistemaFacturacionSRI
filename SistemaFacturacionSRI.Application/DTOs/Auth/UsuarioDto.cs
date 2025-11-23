@@ -17,5 +17,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Auth
         /// Nombre completo del usuario (si existe)
         /// </summary>
         public string? NombreCompleto { get; set; }
+        public string? Cedula { get; set; }
     }
 }

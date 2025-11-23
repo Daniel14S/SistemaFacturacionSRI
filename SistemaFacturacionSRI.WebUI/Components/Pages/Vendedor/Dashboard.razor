@@ -2,15 +2,21 @@
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "Vendedor")]
 @using SistemaFacturacionSRI.WebUI.Services
+@using SistemaFacturacionSRI.Application.DTOs.Common
 @using Microsoft.AspNetCore.Authorization
 @inject IProductoHttpService ProductoService
+@inject IClienteHttpService ClienteService
 @inject NavigationManager Navigation
 
 <PageTitle>Dashboard - Vendedor</PageTitle>
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+    </div>
 }
 
 <div class="container py-4">
@@ -29,12 +35,12 @@
     <!-- Cards con métricas clave (Vista limitada) -->
     <div class="row g-4 mb-4">
         <!-- Total Productos -->
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <div class="card shadow-sm border-primary">
                 <div class="card-header bg-primary text-white">
                     <h6 class="mb-0">
                         <i class="bi bi-box-seam me-2"></i>
-                        Productos Disponibles
+                        Productos
                     </h6>
                 </div>
                 <div class="card-body">
@@ -55,7 +61,7 @@
         </div>
 
         <!-- Productos con Stock -->
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <div class="card shadow-sm border-success">
                 <div class="card-header bg-success text-white">
                     <h6 class="mb-0">
@@ -80,17 +86,43 @@
             </div>
         </div>
 
-        <!-- Próximamente: Facturas del día -->
-        <div class="col-md-4 col-sm-6">
+        <!-- Total Clientes -->
+        <div class="col-md-3 col-sm-6">
             <div class="card shadow-sm border-info">
                 <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-badge me-2"></i>
+                        Clientes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if (cargandoClientes)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-info mb-1">@totalClientes</h3>
+                        <small class="text-muted">Activos: @clientesActivos</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximamente: Facturas -->
+        <div class="col-md-3 col-sm-6">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
                     <h6 class="mb-0">
                         <i class="bi bi-receipt me-2"></i>
                         Facturas Hoy
                     </h6>
                 </div>
                 <div class="card-body">
-                    <h3 class="text-info mb-1">0</h3>
+                    <h3 class="text-warning mb-1">0</h3>
                     <small class="text-muted">Próximamente</small>
                 </div>
             </div>
@@ -104,25 +136,31 @@
         Accesos Rápidos
     </h4>
     <div class="row g-3">
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="MostrarProximamente">
                 <i class="bi bi-plus-square-fill fs-4 d-block mb-2"></i>
                 <strong>Nueva Factura</strong>
                 <small class="d-block text-muted">(Próximamente)</small>
             </button>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrAProductos">
                 <i class="bi bi-box-seam fs-4 d-block mb-2"></i>
                 <strong>Ver Productos</strong>
                 <small class="d-block text-muted">Solo lectura</small>
             </button>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <button type="button" class="btn btn-outline-primary w-100 py-3" @onclick="IrALotes">
                 <i class="bi bi-grid-3x3-gap-fill fs-4 d-block mb-2"></i>
                 <strong>Ver Lotes</strong>
                 <small class="d-block text-muted">Solo lectura</small>
+            </button>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <button type="button" class="btn btn-outline-info w-100 py-3" @onclick="IrAClientes">
+                <i class="bi bi-person-badge fs-4 d-block mb-2"></i>
+                <strong>Gestionar Clientes</strong>
             </button>
         </div>
     </div>
@@ -130,7 +168,7 @@
     <!-- Información importante -->
     <div class="alert alert-info mt-4">
         <i class="bi bi-info-circle-fill me-2"></i>
-        <strong>Nota:</strong> Como vendedor, no puedes gestionar usuarios o modificar inventario, contacta a un administrador.
+        <strong>Nota:</strong> Como vendedor, puedes gestionar clientes pero no usuarios ni modificar inventario. Contacta a un administrador para esas funciones.
     </div>
 
     @if (mostrarMensaje)
@@ -148,8 +186,11 @@
 @code {
     private int productosActivos = 0;
     private int productosConStock = 0;
+    private int totalClientes = 0;
+    private int clientesActivos = 0;
     
     private bool cargandoProductos = true;
+    private bool cargandoClientes = true;
     private bool mostrarMensaje = false;
     private string mensajeProximamente = string.Empty;
     private string? errorMessage;
@@ -165,6 +206,7 @@
 
     private async Task CargarEstadisticas()
     {
+        // Cargar productos
         try
         {
             cargandoProductos = true;
@@ -180,10 +222,33 @@
         {
             cargandoProductos = false;
         }
+
+        // Cargar clientes
+        try
+        {
+            cargandoClientes = true;
+            var filtro = new SistemaFacturacionSRI.Application.DTOs.Cliente.FiltroClienteDto
+            {
+                PageNumber = 1,
+                PageSize = 1000
+            };
+            var resultado = await ClienteService.ObtenerClientesAsync(filtro);
+            totalClientes = resultado.TotalItems;
+            clientesActivos = resultado.Items.Count(c => c.Estado);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar clientes: {ex.Message}";
+        }
+        finally
+        {
+            cargandoClientes = false;
+        }
     }
 
     private void IrAProductos() => Navigation.NavigateTo("/productos");
     private void IrALotes() => Navigation.NavigateTo("/lotes");
+    private void IrAClientes() => Navigation.NavigateTo("/clientes");
 
     private async Task MostrarProximamente()
     {

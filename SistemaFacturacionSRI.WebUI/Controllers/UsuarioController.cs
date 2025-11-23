@@ -417,7 +417,37 @@ public async Task<ActionResult> CambiarPassword(int id, [FromBody] CambiarPasswo
             new { message = "Error interno al cambiar contraseña" });
     }
 }
+// ================= VERIFICAR CÉDULA DUPLICADA =================
 
+/// <summary>
+/// Verifica si una cédula ya está registrada en el sistema.
+/// </summary>
+/*
+[HttpGet("existe-cedula")]
+[ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<ActionResult<bool>> ExisteCedula(
+    [FromQuery] string cedula, 
+    [FromQuery] int? excluirUsuarioId = null)
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(cedula))
+        {
+            return BadRequest(new { message = "La cédula es requerida" });
+        }
+
+        var existe = await _usuarioService.ExisteCedulaAsync(cedula, excluirUsuarioId);
+        return Ok(existe);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al verificar cédula duplicada");
+        return StatusCode(StatusCodes.Status500InternalServerError, 
+            new { message = "Error al verificar la cédula" });
+    }
+}
+*/
 
 
 

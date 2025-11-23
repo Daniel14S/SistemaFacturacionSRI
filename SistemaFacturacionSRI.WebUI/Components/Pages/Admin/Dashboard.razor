@@ -2,16 +2,22 @@
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "Administrador")]
 @using SistemaFacturacionSRI.WebUI.Services
+@using SistemaFacturacionSRI.Application.DTOs.Common
 @using Microsoft.AspNetCore.Authorization
 @inject IProductoHttpService ProductoService
 @inject IUsuarioHttpService UsuarioService
+@inject IClienteHttpService ClienteService
 @inject NavigationManager Navigation
 
 <PageTitle>Dashboard - Administrador</PageTitle>
 
 @if (!string.IsNullOrEmpty(errorMessage))
 {
-    <div class="alert alert-danger">@errorMessage</div>
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
+    </div>
 }
 
 <div class="container py-4">
@@ -81,7 +87,7 @@
             </div>
         </div>
 
-        <!-- Próximamente: Clientes -->
+        <!-- Total Clientes -->
         <div class="col-md-3 col-sm-6">
             <div class="card shadow-sm border-info">
                 <div class="card-header bg-info text-white">
@@ -91,8 +97,18 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <h3 class="text-info mb-1">0</h3>
-                    <small class="text-muted">Próximamente</small>
+                    @if (cargandoClientes)
+                    {
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <div class="spinner-border spinner-border-sm" role="status"></div>
+                            <span>Cargando...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <h3 class="text-info mb-1">@totalClientes</h3>
+                        <small class="text-muted">Activos: @clientesActivos</small>
+                    }
                 </div>
             </div>
         </div>
@@ -140,9 +156,9 @@
             </button>
         </div>
         <div class="col-md-3 col-sm-6">
-            <button type="button" class="btn btn-outline-info w-100 py-3" @onclick="MostrarProximamente">
+            <button type="button" class="btn btn-outline-info w-100 py-3" @onclick="IrAClientes">
                 <i class="bi bi-person-badge fs-4 d-block mb-2"></i>
-                <strong>Clientes (Próximamente)</strong>
+                <strong>Gestionar Clientes</strong>
             </button>
         </div>
     </div>
@@ -164,9 +180,12 @@
     private int productosActivos = 0;
     private int totalUsuarios = 0;
     private int usuariosActivos = 0;
+    private int totalClientes = 0;
+    private int clientesActivos = 0;
     
     private bool cargandoProductos = true;
     private bool cargandoUsuarios = true;
+    private bool cargandoClientes = true;
     private bool mostrarMensaje = false;
     private string mensajeProximamente = string.Empty;
     private string? errorMessage;
@@ -215,11 +234,34 @@
         {
             cargandoUsuarios = false;
         }
+
+        // Cargar clientes
+        try
+        {
+            cargandoClientes = true;
+            var filtro = new SistemaFacturacionSRI.Application.DTOs.Cliente.FiltroClienteDto
+            {
+                PageNumber = 1,
+                PageSize = 1000
+            };
+            var resultado = await ClienteService.ObtenerClientesAsync(filtro);
+            totalClientes = resultado.TotalItems;
+            clientesActivos = resultado.Items.Count(c => c.Estado);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar clientes: {ex.Message}";
+        }
+        finally
+        {
+            cargandoClientes = false;
+        }
     }
 
     private void IrAProductos() => Navigation.NavigateTo("/productos");
     private void IrALotes() => Navigation.NavigateTo("/lotes");
     private void IrAUsuarios() => Navigation.NavigateTo("/usuarios");
+    private void IrAClientes() => Navigation.NavigateTo("/clientes");
 
     private async Task MostrarProximamente()
     {
