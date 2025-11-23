@@ -51,6 +51,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     UltimoAcceso = null,
                     IntentosLogin = 0
+                },
+                new Usuario
+                {
+                    UsuarioId = 2,
+                    RolId = 2,
+                    Username = "vendedor1",
+                    PasswordHash = "K6FhJ3pkkLQo6VCZ1hH4zmlxqxgAYleOSmCmjrxdWa8=",
+                    Nombre1 = "Vendedor",
+                    Nombre2 = "Demo",
+                    Apellido1 = "Principal",
+                    Apellido2 = null,
+                    Email = "vendedor@sistemafacturacion.com",
+                    Estado = true,
+                    FechaCreacion = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                    UltimoAcceso = null,
+                    IntentosLogin = 0
                 }
             );
         }

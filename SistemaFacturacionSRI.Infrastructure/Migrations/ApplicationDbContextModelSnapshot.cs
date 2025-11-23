@@ -871,6 +871,20 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             PasswordHash = "ClvD40JDLxutkv/VG3hTQ+xykGzbpqJhMQYLAI54ZlY=",
                             RolId = 1,
                             Username = "admin"
+                        },
+                        new
+                        {
+                            UsuarioId = 2,
+                            Apellido1 = "Principal",
+                            Email = "vendedor@sistemafacturacion.com",
+                            Estado = true,
+                            FechaCreacion = new DateTime(2024, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IntentosLogin = 0,
+                            Nombre1 = "Vendedor",
+                            Nombre2 = "Demo",
+                            PasswordHash = "K6FhJ3pkkLQo6VCZ1hH4zmlxqxgAYleOSmCmjrxdWa8=",
+                            RolId = 2,
+                            Username = "vendedor1"
                         });
                 });
 
