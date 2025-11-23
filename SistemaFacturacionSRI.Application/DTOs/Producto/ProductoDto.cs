@@ -36,17 +36,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         public decimal? Precio { get; set; }
 
         /// <summary>
-        /// Identificador del tipo de IVA (catálogo en base de datos).
-        /// </summary>
-        public int TipoIVAId { get; set; }
-
-        /// <summary>
-        /// Descripción legible del tipo de IVA (desde el catálogo).
-        /// Ejemplo: "IVA 12%"
-        /// </summary>
-        public string TipoIVADescripcion { get; set; } = string.Empty;
-
-        /// <summary>
         /// Identificador de la categoría a la que pertenece el producto.
         /// </summary>
         public int CategoriaId { get; set; }
@@ -60,16 +49,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         /// Cantidad en stock.
         /// </summary>
         public int Stock { get; set; }
-
-        /// <summary>
-        /// Valor del IVA calculado para una unidad en base al precio actual.
-        /// </summary>
-        public decimal? ValorIVA { get; set; }
-
-        /// <summary>
-        /// Precio total incluyendo IVA (si existe precio base).
-        /// </summary>
-        public decimal? PrecioConIVA { get; set; }
 
         /// <summary>
         /// Indica si el producto tiene stock disponible.
@@ -126,12 +105,5 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
         /// Lista de lotes asociados al producto.
         /// </summary>
         public List<LoteDto> Lotes { get; set; } = new();
-        /// <summary>
-        /// Porcentaje del IVA en formato decimal (ej: 0.12 para 12%)
-        /// </summary>
-        public decimal PorcentajeIVA { get; set; }
-
-
-
     }
 }

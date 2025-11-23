@@ -658,9 +658,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("NVARCHAR");
 
-                    b.Property<int>("TipoIVAId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CategoriaId");
@@ -668,8 +665,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.HasIndex("Codigo")
                         .IsUnique()
                         .HasDatabaseName("IX_Productos_Codigo");
-
-                    b.HasIndex("TipoIVAId");
 
                     b.ToTable("Productos", (string)null);
                 });
@@ -952,16 +947,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasForeignKey("CategoriaId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", "TipoIVACatalogo")
-                        .WithMany("Productos")
-                        .HasForeignKey("TipoIVAId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Productos_TiposIVA");
-
                     b.Navigation("Categoria");
-
-                    b.Navigation("TipoIVACatalogo");
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Usuario", b =>
@@ -994,11 +980,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Rol", b =>
                 {
                     b.Navigation("Usuarios");
-                });
-
-            modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", b =>
-                {
-                    b.Navigation("Productos");
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIdentificacion", b =>

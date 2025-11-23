@@ -42,13 +42,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Producto
     [StringLength(1000, ErrorMessage = "La descripción no puede exceder 1000 caracteres")]
     public string Descripcion { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Tipo de IVA aplicable (FK del catálogo TiposIVA).
-    /// </summary>
-    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-    [Range(1, int.MaxValue, ErrorMessage = "Seleccione un tipo de IVA válido")]
-    public int TipoIVAId { get; set; }
-
         /// <summary>
         /// Categoría del producto.
         /// </summary>

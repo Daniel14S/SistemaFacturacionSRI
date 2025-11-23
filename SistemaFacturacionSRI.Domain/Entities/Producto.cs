@@ -36,18 +36,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
     public string Descripcion { get; set; } = string.Empty;
 
     /// <summary>
-    /// Clave foránea al catálogo de Tipos de IVA almacenado en BD.
-    /// Reemplaza el uso del enum TipoIVA y es obligatoria.
-    /// </summary>
-    [Required(ErrorMessage = "El tipo de IVA es obligatorio")]
-    public int TipoIVAId { get; set; }
-
-    /// <summary>
-    /// Navegación al catálogo de Tipos de IVA.
-    /// </summary>
-    public TipoIVACatalogo? TipoIVACatalogo { get; set; }
-
-    /// <summary>
     /// Clave foránea opcional a Categoría del producto.
     /// </summary>
     public int? CategoriaId { get; set; }
@@ -76,22 +64,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
         /// Calcula el stock disponible sumando la cantidad disponible de cada lote.
         /// </summary>
         public int StockDisponible => Lotes?.Sum(l => l.CantidadDisponible) ?? 0;
-
-        /// <summary>
-        /// Calcula el valor del IVA para una unidad del producto en base al precio actual.
-        /// Retorna null cuando no hay precio vigente o el catálogo no está cargado.
-        /// </summary>
-        public decimal? ValorIVA => PrecioActual.HasValue && TipoIVACatalogo != null
-            ? PrecioActual.Value * (TipoIVACatalogo.Porcentaje / 100m)
-            : null;
-
-        /// <summary>
-        /// Calcula el precio final incluyendo IVA.
-        /// Retorna null cuando no hay precio vigente.
-        /// </summary>
-        public decimal? PrecioConIVA => PrecioActual.HasValue
-            ? PrecioActual + (ValorIVA ?? 0m)
-            : null;
 
         /// <summary>
         /// Indica si existe stock disponible.

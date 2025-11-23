@@ -192,6 +192,9 @@
     }
 
     private bool isRetryingWithForce = false;
+    private bool mostrarConfirmacionMargen = false;
+    private bool margenConfirmado = false;
+    private decimal diferenciaMargen = 0m;
 
     private async Task GuardarLote()
     {
@@ -207,6 +210,16 @@
             };
             customValidation?.DisplayErrors(errors);
             guardando = false;
+            return;
+        }
+
+        var diferenciaPrecio = Math.Abs(modelo.PVP - modelo.PrecioCosto);
+        if (!margenConfirmado && diferenciaPrecio > 1m)
+        {
+            guardando = false;
+            diferenciaMargen = diferenciaPrecio;
+            mostrarConfirmacionMargen = true;
+            StateHasChanged();
             return;
         }
 
@@ -257,7 +270,21 @@
         {
             guardando = false;
             isRetryingWithForce = false;
+            margenConfirmado = false;
         }
+    }
+
+    private void CancelarConfirmacionMargen()
+    {
+        mostrarConfirmacionMargen = false;
+        margenConfirmado = false;
+    }
+
+    private async Task ConfirmarMargenAsync()
+    {
+        mostrarConfirmacionMargen = false;
+        margenConfirmado = true;
+        await GuardarLote();
     }
 
     private void Volver()
@@ -313,6 +340,39 @@
         mostrarConfirmacionPVP = false;
         isRetryingWithForce = false;
     }
+}
+
+@if (mostrarConfirmacionMargen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-question-circle-fill me-2"></i>
+                        Confirmar PVP del lote
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CancelarConfirmacionMargen"></button>
+                </div>
+                <div class="modal-body">
+                    <p>
+                        El PVP que deseas registrar tiene una diferencia de
+                        <strong>$@diferenciaMargen.ToString("N2")</strong>
+                        respecto al precio de compra.
+                    </p>
+                    <p class="mb-0">
+                        ¿Estás seguro de continuar con este PVP para el lote?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelarConfirmacionMargen">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="ConfirmarMargenAsync">
+                        Sí, continuar con este PVP
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @if (mostrarConfirmacionPVP)

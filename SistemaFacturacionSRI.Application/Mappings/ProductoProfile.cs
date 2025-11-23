@@ -21,12 +21,6 @@ namespace SistemaFacturacionSRI.Application.Mappings
 
             // Mapeo de Entidad → DTO (para lectura/GET)
             CreateMap<Producto, ProductoDto>()
-                .ForMember(dest => dest.TipoIVADescripcion,
-                    opt => opt.MapFrom(src => src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Descripcion : string.Empty))
-                .ForMember(dest => dest.TipoIVAId,
-                    opt => opt.MapFrom(src => src.TipoIVAId))
-                .ForMember(dest => dest.PorcentajeIVA,
-        opt => opt.MapFrom(src => src.TipoIVACatalogo != null ? src.TipoIVACatalogo.Porcentaje / 100m : 0m))
                 .ForMember(dest => dest.CategoriaId, opt => opt.MapFrom(src => src.CategoriaId))
                 .ForMember(dest => dest.CategoriaNombre, opt => opt.MapFrom(src => src.Categoria != null ? src.Categoria.Nombre : string.Empty))
                 .ForMember(dest => dest.Precio,
@@ -35,10 +29,6 @@ namespace SistemaFacturacionSRI.Application.Mappings
                     opt => opt.MapFrom(src => src.StockDisponible))
                 .ForMember(dest => dest.TieneStock,
                     opt => opt.MapFrom(src => src.TieneStock))
-                .ForMember(dest => dest.ValorIVA,
-                    opt => opt.MapFrom(src => src.ValorIVA))
-                .ForMember(dest => dest.PrecioConIVA,
-                    opt => opt.MapFrom(src => src.PrecioConIVA))
                 .ForMember(dest => dest.ValorInventario,
                     opt => opt.MapFrom(src => src.ValorInventario));
 

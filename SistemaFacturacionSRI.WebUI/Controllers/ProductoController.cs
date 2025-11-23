@@ -44,7 +44,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         {
             try
             {
-                var productos = await _productoService.ObtenerTodosAsync();
+                var productos = await _productoService.ObtenerTodosConLotePrioritarioAsync();
                 return Ok(productos);
             }
             catch (Exception ex)

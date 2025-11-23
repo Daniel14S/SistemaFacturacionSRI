@@ -4,10 +4,8 @@
 @using SistemaFacturacionSRI.Application.DTOs.Producto
 @using SistemaFacturacionSRI.Application.Interfaces.Services
 @using SistemaFacturacionSRI.Application.DTOs.Categoria
-@using SistemaFacturacionSRI.Application.DTOs.TipoIVA
 @using SistemaFacturacionSRI.WebUI.Services
 @inject IProductoService ProductoService
-@inject ITipoIVAService TipoIVAService
 @inject NavigationManager Navigation
 @inject ICategoriaHttpService CategoriaHttpService
 @inject IJSRuntime JSRuntime
@@ -72,22 +70,6 @@
                             <ValidationMessage For="@(() => modelo.Descripcion)" class="text-danger" />
                         </div>
 
-                        <!-- Tipo de IVA -->
-                        <div class="col-md-6">
-                            <label class="form-label">Tipo de IVA <span class="text-danger">*</span></label>
-                            <InputSelect class="form-select" @bind-Value="modelo.TipoIVAId">
-                                <option value="0">-- Seleccione --</option>
-                                @if (tiposIVA is not null)
-                                {
-                                    @foreach (var t in tiposIVA)
-                                    {
-                                        <option value="@t.TipoIVAId">@t.Descripcion</option>
-                                    }
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="@(() => modelo.TipoIVAId)" class="text-danger" />
-                        </div>
-
                         <!-- Categoría -->
                         <div class="col-md-6">
                             <label class="form-label">Categoría <span class="text-danger">*</span></label>
@@ -143,7 +125,6 @@
         private CrearProductoDto modelo = new();
         private ActualizarProductoDto modeloActualizar = new();
         private List<CategoriaDto>? categorias;
-        private List<TipoIVADto>? tiposIVA;
         private bool guardando = false;
         private string mensajeError = string.Empty;
         private string mensajeExito = string.Empty;
@@ -152,7 +133,6 @@
         protected override async Task OnInitializedAsync()
         {
             await CargarCategorias();
-            await CargarTiposIVA();
 
             if (IdProducto.HasValue)
             {
@@ -161,8 +141,7 @@
             }
             else
             {
-                modelo.TipoIVAId = 0;
-                modelo.CategoriaId = categorias?.Count > 0 ? 0 : 0;
+                modelo.CategoriaId = 0;
             }
         }
 
@@ -170,12 +149,6 @@
         {
             try { categorias = await CategoriaHttpService.ObtenerTodasAsync(); }
             catch (Exception ex) { mensajeError = $"Error al cargar categorías: {ex.Message}"; }
-        }
-
-        private async Task CargarTiposIVA()
-        {
-            try { tiposIVA = await TipoIVAService.ObtenerTodosAsync(); }
-            catch (Exception ex) { mensajeError = $"Error al cargar tipos de IVA: {ex.Message}"; }
         }
 
         private async Task CargarProducto()
@@ -191,14 +164,12 @@
                         Codigo = producto.Codigo,
                         Nombre = producto.Nombre,
                         Descripcion = producto.Descripcion ?? string.Empty,
-                        TipoIVAId = producto.TipoIVAId,
                         CategoriaId = producto.CategoriaId
                     };
 
                     modelo.Codigo = producto.Codigo;
                     modelo.Nombre = producto.Nombre;
                     modelo.Descripcion = producto.Descripcion ?? string.Empty;
-                    modelo.TipoIVAId = producto.TipoIVAId;
                     modelo.CategoriaId = producto.CategoriaId;
                 }
                 else
@@ -231,7 +202,6 @@
                 {
                     modeloActualizar.Nombre = modelo.Nombre;
                     modeloActualizar.Descripcion = modelo.Descripcion;
-                    modeloActualizar.TipoIVAId = modelo.TipoIVAId;
                     modeloActualizar.CategoriaId = modelo.CategoriaId;
 
                     await ProductoService.ActualizarAsync(modeloActualizar);

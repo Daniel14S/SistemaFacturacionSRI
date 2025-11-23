@@ -138,8 +138,6 @@
                             <th>Nombre</th>
                             <th>Descripción</th>
                             <th>PVP</th>
-                            <th>IVA</th>
-                            <th>Precio c/IVA</th>
                             <th>Stock</th>
                             <th>Categoría</th>
                             <th>Lote Prioritario</th>
@@ -168,17 +166,6 @@
                                     @if (producto.Precio.HasValue)
                                     {
                                         <strong>$@producto.Precio.Value.ToString("N2")</strong>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">N/A</span>
-                                    }
-                                </td>
-                                <td><span class="badge bg-info">@producto.TipoIVADescripcion</span></td>
-                                <td>
-                                    @if (producto.PrecioConIVA.HasValue)
-                                    {
-                                        <strong class="text-success">$@producto.PrecioConIVA.Value.ToString("N2")</strong>
                                     }
                                     else
                                     {
@@ -254,7 +241,7 @@
                         <tr>
                             <th>Código</th>
                             <th>Nombre</th>
-                            <th>Precio c/IVA</th>
+                            <th>Precio</th>
                             <th>Stock</th>
                             <th>Lote</th>
                             <th class="text-center">Acciones</th>
@@ -271,9 +258,9 @@
                                     <small class="text-muted">@producto.CategoriaNombre</small>
                                 </td>
                                 <td>
-                                    @if (producto.PrecioConIVA.HasValue)
+                                    @if (producto.Precio.HasValue)
                                     {
-                                        <strong class="text-success">$@producto.PrecioConIVA.Value.ToString("N2")</strong>
+                                        <strong>$@producto.Precio.Value.ToString("N2")</strong>
                                     }
                                     else
                                     {
@@ -339,10 +326,10 @@
                                 <span class="badge bg-secondary">@producto.CategoriaNombre</span>
                             </div>
                             <div class="col-6">
-                                <small class="text-muted d-block">Precio c/IVA</small>
-                                @if (producto.PrecioConIVA.HasValue)
+                                <small class="text-muted d-block">Precio estimado</small>
+                                @if (producto.Precio.HasValue)
                                 {
-                                    <strong class="text-success">$@producto.PrecioConIVA.Value.ToString("N2")</strong>
+                                    <strong>$@producto.Precio.Value.ToString("N2")</strong>
                                 }
                                 else
                                 {

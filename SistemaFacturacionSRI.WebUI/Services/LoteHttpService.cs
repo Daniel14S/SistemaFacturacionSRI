@@ -57,7 +57,7 @@ namespace SistemaFacturacionSRI.WebUI.Services
         // Obtener lotes por producto
         public async Task<IEnumerable<LoteDto>> ObtenerLotesPorProductoAsync(int productoId)
         {
-            var response = await _httpClient.GetAsync($"api/lote/por-producto/{productoId}");
+            var response = await _httpClient.GetAsync($"api/lote/producto/{productoId}");
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<IEnumerable<LoteDto>>() ?? new List<LoteDto>();
         }

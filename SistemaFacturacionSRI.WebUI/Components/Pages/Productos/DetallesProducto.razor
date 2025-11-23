@@ -87,13 +87,6 @@
                             </p>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="text-muted small mb-1">Tipo de IVA</label>
-                            <p class="mb-0">
-                                <span class="badge bg-secondary">@producto.TipoIVADescripcion</span>
-                            </p>
-                        </div>
-
                         <hr />
 
                         <div class="mb-3">
@@ -114,22 +107,19 @@
         .ThenBy(l => l.FechaCompra)
         .FirstOrDefault();
     
-    var precioCostoLotePrioritario = lotePrioritarioCalculado?.PrecioCosto;
+    var pvpLotePrioritario = lotePrioritarioCalculado?.PVP;
 }
 
-@if (precioCostoLotePrioritario.HasValue && lotePrioritarioCalculado != null)
+@if (pvpLotePrioritario.HasValue && lotePrioritarioCalculado != null)
 {
-    var valorIVA = precioCostoLotePrioritario.Value * producto.PorcentajeIVA;
-    var precioConIVA = precioCostoLotePrioritario.Value + valorIVA;
-    
     <div class="mb-3">
         <label class="text-muted small mb-1">
-            Precio Base (Lote Prioritario)
+            PVP (Lote Prioritario)
             <i class="bi bi-info-circle text-primary" 
-               title="Precio del lote más próximo a vencer con stock disponible"></i>
+               title="Precio de venta del lote más próximo a vencer con stock disponible"></i>
         </label>
         <h4 class="text-success mb-1">
-            $@precioCostoLotePrioritario.Value.ToString("N2")
+            $@pvpLotePrioritario.Value.ToString("N2")
         </h4>
         <small class="text-muted">
             <i class="bi bi-tag-fill me-1"></i>
@@ -142,12 +132,6 @@
                 </span>
             }
         </small>
-    </div>
-
-    <div class="mb-0">
-        <label class="text-muted small mb-1">Precio con IVA</label>
-        <h4 class="text-primary mb-1">$@precioConIVA.ToString("N2")</h4>
-        <small class="text-muted">Incluye @((producto.PorcentajeIVA * 100).ToString("N0"))% IVA</small>
     </div>
 }
 else if (producto.Precio.HasValue)

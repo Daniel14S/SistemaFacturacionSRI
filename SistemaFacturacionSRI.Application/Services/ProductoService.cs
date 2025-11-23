@@ -65,7 +65,14 @@ namespace SistemaFacturacionSRI.Application.Services
         public async Task<ProductoDto?> ObtenerPorIdAsync(int id)
         {
             var producto = await _productoRepository.ObtenerPorIdAsync(id);
-            return producto == null ? null : _mapper.Map<ProductoDto>(producto);
+            if (producto == null)
+            {
+                return null;
+            }
+
+            var dto = _mapper.Map<ProductoDto>(producto);
+            await EnriquecerProductoConLotePrioritarioAsync(dto);
+            return dto;
         }
 
         /// <summary>
@@ -77,7 +84,14 @@ namespace SistemaFacturacionSRI.Application.Services
                 throw new ArgumentException("El código no puede estar vacío", nameof(codigo));
 
             var producto = await _productoRepository.ObtenerPorCodigoAsync(codigo);
-            return producto == null ? null : _mapper.Map<ProductoDto>(producto);
+            if (producto == null)
+            {
+                return null;
+            }
+
+            var dto = _mapper.Map<ProductoDto>(producto);
+            await EnriquecerProductoConLotePrioritarioAsync(dto);
+            return dto;
         }
 
         /// <summary>
@@ -140,82 +154,12 @@ namespace SistemaFacturacionSRI.Application.Services
 
 public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync()
 {
-    // Traer TODOS los productos (activos e inactivos) desde el repositorio base
     var productos = await _productoRepository.ObtenerTodosIncluyendoInactivosAsync();
     var productosDto = _mapper.Map<List<ProductoDto>>(productos);
 
     foreach (var producto in productosDto)
     {
-        // Obtener el producto original para acceder al TipoIVACatalogo
-        var productoOriginal = productos.First(p => p.Id == producto.Id);
-        
-        // Obtener todos los lotes con stock disponible
-        var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(producto.Id);
-        var lotesDisponibles = lotes.Where(l => l.CantidadDisponible > 0).ToList();
-
-        if (lotesDisponibles.Any())
-        {
-            // ===============================
-            // 1️⃣ Lote prioritario (FEFO: vence primero)
-            // ===============================
-            var lotePrioritario = lotesDisponibles
-                .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue)
-                .First();
-
-            producto.LotePrioritario = lotePrioritario.LoteId.ToString();
-            producto.FechaExpiracionLotePrioritario = lotePrioritario.FechaExpiracion;
-
-            // ✅ Usar el PVP del lote prioritario como precio base para la vista de productos
-            producto.Precio = lotePrioritario.PVP;
-
-            // ✅ CALCULAR IVA Y PRECIO CON IVA DEL PVP DEL LOTE PRIORITARIO
-            if (producto.Precio.HasValue && productoOriginal.TipoIVACatalogo != null)
-            {
-                decimal porcentajeIVA = productoOriginal.TipoIVACatalogo.Porcentaje;
-                producto.ValorIVA = producto.Precio.Value * (porcentajeIVA / 100m);
-                producto.PrecioConIVA = producto.Precio.Value + producto.ValorIVA.Value;
-            }
-
-            // ===============================
-            // 2️⃣ Verificar variación de precios entre lotes
-            // ===============================
-            producto.TieneVariacionPrecios = lotesDisponibles
-                .Select(l => l.PrecioCosto)
-                .Distinct()
-                .Count() > 1;
-
-            // ===============================
-            // 3️⃣ Precio promedio ponderado
-            // ===============================
-            var costoTotal = lotesDisponibles.Sum(l => l.PrecioCosto * l.CantidadDisponible);
-            var cantidadTotal = lotesDisponibles.Sum(l => l.CantidadDisponible);
-            producto.PrecioCostoPromedio = cantidadTotal > 0 ? costoTotal / cantidadTotal : 0;
-
-            // ===============================
-            // 4️⃣ Stock total sumando todos los lotes
-            // ===============================
-            producto.Stock = lotesDisponibles.Sum(l => l.CantidadDisponible);
-            producto.TieneStock = producto.Stock > 0;
-            
-            // ✅ CALCULAR VALOR DEL INVENTARIO CON EL PVP DEL LOTE PRIORITARIO
-            producto.ValorInventario = producto.Precio.HasValue 
-                ? producto.Stock * producto.Precio.Value 
-                : null;
-        }
-        else
-        {
-            // Si no hay lotes disponibles
-            producto.Precio = null;
-            producto.ValorIVA = null;
-            producto.PrecioConIVA = null;
-            producto.PrecioCostoPromedio = null;
-            producto.TieneVariacionPrecios = false;
-            producto.Stock = 0;
-            producto.TieneStock = false;
-            producto.LotePrioritario = null;
-            producto.FechaExpiracionLotePrioritario = null;
-            producto.ValorInventario = null;
-        }
+        await EnriquecerProductoConLotePrioritarioAsync(producto);
     }
 
     return productosDto;
@@ -259,6 +203,55 @@ public async Task<IEnumerable<ProductoDto>> ObtenerTodosConLotePrioritarioAsync(
 
             producto.Activo = true;
             await _productoRepository.ActualizarAsync(producto);
+        }
+
+        private async Task EnriquecerProductoConLotePrioritarioAsync(ProductoDto producto)
+        {
+            if (producto == null)
+            {
+                return;
+            }
+
+            var lotes = (await _loteRepository.ObtenerLotesPorProductoAsync(producto.Id)).ToList();
+            var lotesDisponibles = lotes.Where(l => l.CantidadDisponible > 0).ToList();
+
+            if (lotesDisponibles.Any())
+            {
+                var lotePrioritario = lotesDisponibles
+                    .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue)
+                    .ThenBy(l => l.FechaCompra)
+                    .First();
+
+                producto.LotePrioritario = lotePrioritario.LoteId.ToString();
+                producto.FechaExpiracionLotePrioritario = lotePrioritario.FechaExpiracion;
+                producto.Precio = lotePrioritario.PVP;
+
+                producto.TieneVariacionPrecios = lotesDisponibles
+                    .Select(l => l.PVP)
+                    .Distinct()
+                    .Count() > 1;
+
+                var costoTotal = lotesDisponibles.Sum(l => l.PrecioCosto * l.CantidadDisponible);
+                var stockTotal = lotesDisponibles.Sum(l => l.CantidadDisponible);
+
+                producto.PrecioCostoPromedio = stockTotal > 0 ? costoTotal / stockTotal : null;
+                producto.Stock = stockTotal;
+                producto.TieneStock = producto.Stock > 0;
+                producto.ValorInventario = producto.Precio.HasValue
+                    ? producto.Stock * producto.Precio.Value
+                    : null;
+            }
+            else
+            {
+                producto.Precio = null;
+                producto.PrecioCostoPromedio = null;
+                producto.TieneVariacionPrecios = false;
+                producto.Stock = 0;
+                producto.TieneStock = false;
+                producto.LotePrioritario = null;
+                producto.FechaExpiracionLotePrioritario = null;
+                producto.ValorInventario = null;
+            }
         }
     }
 }
