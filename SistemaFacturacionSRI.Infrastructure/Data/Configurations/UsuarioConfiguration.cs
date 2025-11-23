@@ -15,6 +15,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(u => u.Username).IsRequired().HasMaxLength(50);
             builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(256);
             builder.Property(u => u.Email).IsRequired().HasMaxLength(100);
+            builder.Property(u => u.Cedula).IsRequired().HasMaxLength(10);
+            builder.Property(u => u.Telefono).HasMaxLength(15);
+            builder.Property(u => u.Direccion).HasMaxLength(200);
 
             builder.Property(u => u.Nombre1).IsRequired().HasMaxLength(100);
             builder.Property(u => u.Nombre2).HasMaxLength(100);
@@ -28,6 +31,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             builder.HasIndex(u => u.Username).IsUnique();
             builder.HasIndex(u => u.Email).IsUnique();
+            builder.HasIndex(u => u.Cedula).IsUnique();
 
             builder.HasOne(u => u.Rol)
                 .WithMany(r => r.Usuarios)
@@ -47,6 +51,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Apellido1 = "Principal",
                     Apellido2 = null,
                     Email = "admin@sistemafacturacion.com",
+                    Cedula = "0102030405",
+                    Telefono = "0991234567",
+                    Direccion = "Oficina Matriz",
                     Estado = true,
                     FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     UltimoAcceso = null,
@@ -63,6 +70,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Apellido1 = "Principal",
                     Apellido2 = null,
                     Email = "vendedor@sistemafacturacion.com",
+                    Cedula = "0607080910",
+                    Telefono = "0987654321",
+                    Direccion = "Sucursal Centro",
                     Estado = true,
                     FechaCreacion = new DateTime(2024, 1, 2, 0, 0, 0, DateTimeKind.Utc),
                     UltimoAcceso = null,

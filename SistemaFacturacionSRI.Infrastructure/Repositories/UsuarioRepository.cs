@@ -47,6 +47,13 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Email == email.ToLower());
         }
 
+        public async Task<Usuario?> ObtenerPorCedulaAsync(string cedula)
+        {
+            return await _context.Usuarios
+                .Include(u => u.Rol)
+                .FirstOrDefaultAsync(u => u.Cedula == cedula);
+        }
+
         public async Task<(List<Usuario> Usuarios, int TotalRegistros)> ListarConFiltrosAsync(
             string? busqueda,
             int? rolId,
@@ -67,6 +74,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 query = query.Where(u =>
                     u.Username.ToLower().Contains(busquedaLower) ||
                     u.Email.ToLower().Contains(busquedaLower) ||
+                    u.Cedula.Contains(busquedaLower) ||
                     u.Nombre1.ToLower().Contains(busquedaLower) ||
                     (u.Nombre2 != null && u.Nombre2.ToLower().Contains(busquedaLower)) ||
                     u.Apellido1.ToLower().Contains(busquedaLower) ||

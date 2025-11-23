@@ -41,9 +41,10 @@ namespace SistemaFacturacionSRI.Application.DTOs.Usuario
         [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$", ErrorMessage = "El apellido solo puede contener letras")]
         public string? Apellido2 { get; set; }
 
+        [Required(ErrorMessage = "La cédula es obligatoria")]
         [StringLength(10, MinimumLength = 10, ErrorMessage = "La cédula debe tener exactamente 10 dígitos")]
         [RegularExpression(@"^\d{10}$", ErrorMessage = "La cédula debe contener solo números")]
-        public string? Cedula { get; set; }
+        public string Cedula { get; set; } = string.Empty;
 
         [Phone(ErrorMessage = "El formato del teléfono no es válido")]
         [StringLength(15, ErrorMessage = "El teléfono no puede exceder 15 caracteres")]

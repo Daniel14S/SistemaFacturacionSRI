@@ -804,6 +804,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Cedula")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -837,6 +846,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<int>("RolId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
                     b.Property<DateTime?>("UltimoAcceso")
                         .HasColumnType("datetime2");
 
@@ -846,6 +859,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("UsuarioId");
+
+                    b.HasIndex("Cedula")
+                        .IsUnique();
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -862,6 +878,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         {
                             UsuarioId = 1,
                             Apellido1 = "Principal",
+                            Cedula = "0102030405",
+                            Direccion = "Oficina Matriz",
                             Email = "admin@sistemafacturacion.com",
                             Estado = true,
                             FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -870,12 +888,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Nombre2 = "Sistema",
                             PasswordHash = "ClvD40JDLxutkv/VG3hTQ+xykGzbpqJhMQYLAI54ZlY=",
                             RolId = 1,
+                            Telefono = "0991234567",
                             Username = "admin"
                         },
                         new
                         {
                             UsuarioId = 2,
                             Apellido1 = "Principal",
+                            Cedula = "0607080910",
+                            Direccion = "Sucursal Centro",
                             Email = "vendedor@sistemafacturacion.com",
                             Estado = true,
                             FechaCreacion = new DateTime(2024, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -884,6 +905,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Nombre2 = "Demo",
                             PasswordHash = "K6FhJ3pkkLQo6VCZ1hH4zmlxqxgAYleOSmCmjrxdWa8=",
                             RolId = 2,
+                            Telefono = "0987654321",
                             Username = "vendedor1"
                         });
                 });

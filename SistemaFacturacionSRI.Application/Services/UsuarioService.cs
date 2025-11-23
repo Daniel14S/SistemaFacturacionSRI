@@ -37,14 +37,18 @@ public async Task<UsuarioDto> CrearUsuarioAsync(CrearUsuarioDto dto)
     // 2. VALIDAR QUE EL ROL EXISTA
     ValidarRol(dto.RolId);
 
+    var cedulaNormalizada = dto.Cedula.Trim();
+
     // ⭐ 3. VALIDAR CÉDULA ECUATORIANA
-    if (!ValidarCedulaEcuatoriana(dto.Cedula))
+    if (!ValidarCedulaEcuatoriana(cedulaNormalizada))
     {
         throw new InvalidOperationException("La cédula ecuatoriana no es válida");
     }
 
+    await ValidarCedulaUnica(cedulaNormalizada);
+
     // ⭐ 4. USAR CÉDULA COMO CONTRASEÑA INICIAL
-    var passwordHash = _passwordHasher.HashPassword(dto.Cedula);
+    var passwordHash = _passwordHasher.HashPassword(cedulaNormalizada);
 
     // 5. CREAR LA ENTIDAD USUARIO
     var usuario = new Usuario
@@ -52,13 +56,16 @@ public async Task<UsuarioDto> CrearUsuarioAsync(CrearUsuarioDto dto)
         Username = dto.Username.Trim(),
         Email = dto.Email.Trim().ToLower(),
         PasswordHash = passwordHash, // ⭐ Hash de la cédula
-        
+
         // Datos personales
         Nombre1 = dto.Nombre1.Trim(),
         Nombre2 = dto.Nombre2?.Trim(),
         Apellido1 = dto.Apellido1.Trim(),
         Apellido2 = dto.Apellido2?.Trim(),
-        
+        Cedula = cedulaNormalizada,
+        Telefono = string.IsNullOrWhiteSpace(dto.Telefono) ? null : dto.Telefono.Trim(),
+        Direccion = string.IsNullOrWhiteSpace(dto.Direccion) ? null : dto.Direccion.Trim(),
+
         // Configuración de cuenta
         RolId = dto.RolId,
         Estado = dto.Estado,
@@ -227,6 +234,18 @@ private bool ValidarCedulaEcuatoriana(string cedula)
             usuario.Nombre2 = dto.Nombre2?.Trim();
             usuario.Apellido1 = dto.Apellido1.Trim();
             usuario.Apellido2 = dto.Apellido2?.Trim();
+            var cedulaNormalizada = dto.Cedula!.Trim();
+
+            if (!ValidarCedulaEcuatoriana(cedulaNormalizada))
+            {
+                throw new InvalidOperationException("La cédula ecuatoriana no es válida");
+            }
+
+            await ValidarCedulaUnica(cedulaNormalizada, dto.UsuarioId);
+
+            usuario.Cedula = cedulaNormalizada;
+            usuario.Telefono = string.IsNullOrWhiteSpace(dto.Telefono) ? null : dto.Telefono.Trim();
+            usuario.Direccion = string.IsNullOrWhiteSpace(dto.Direccion) ? null : dto.Direccion.Trim();
 
             // NOTA: NO actualizamos el rol aquí (eso es con CambiarRolAsync)
             // NOTA: NO actualizamos la contraseña aquí (eso es con CambiarPasswordAsync)
@@ -656,17 +675,26 @@ private string GenerarPasswordTemporal()
         private async Task ValidarDatosUnicos(string username, string email, int? usuarioIdExcluir = null)
         {
             // Verificar username
-            var usuarioConUsername = await _usuarioRepository.ObtenerPorUsernameAsync(username);
+            var usuarioConUsername = await _usuarioRepository.ObtenerPorUsernameAsync(username.Trim());
             if (usuarioConUsername != null && usuarioConUsername.UsuarioId != usuarioIdExcluir)
             {
                 throw new InvalidOperationException($"El usuario '{username}' ya está en uso");
             }
 
             // Verificar email
-            var usuarioConEmail = await _usuarioRepository.ObtenerPorEmailAsync(email);
+            var usuarioConEmail = await _usuarioRepository.ObtenerPorEmailAsync(email.Trim().ToLower());
             if (usuarioConEmail != null && usuarioConEmail.UsuarioId != usuarioIdExcluir)
             {
                 throw new InvalidOperationException($"El email '{email}' ya está en uso");
+            }
+        }
+
+        private async Task ValidarCedulaUnica(string cedula, int? usuarioIdExcluir = null)
+        {
+            var usuarioConCedula = await _usuarioRepository.ObtenerPorCedulaAsync(cedula);
+            if (usuarioConCedula != null && usuarioConCedula.UsuarioId != usuarioIdExcluir)
+            {
+                throw new InvalidOperationException($"La cédula '{cedula}' ya está registrada");
             }
         }
 
@@ -691,11 +719,19 @@ private string GenerarPasswordTemporal()
                 Id = usuario.UsuarioId,
                 Username = usuario.Username,
                 Email = usuario.Email,
+                Nombre1 = usuario.Nombre1,
+                Nombre2 = usuario.Nombre2,
+                Apellido1 = usuario.Apellido1,
+                Apellido2 = usuario.Apellido2,
                 Rol = usuario.Rol?.NombreRol ?? "Sin Rol",
+                RolId = usuario.RolId,
                 Estado = usuario.Estado,
                 FechaCreacion = usuario.FechaCreacion,
                 UltimoAcceso = usuario.UltimoAcceso,
-                NombreCompleto = ConstruirNombreCompleto(usuario)
+                NombreCompleto = ConstruirNombreCompleto(usuario),
+                Cedula = usuario.Cedula,
+                Telefono = usuario.Telefono,
+                Direccion = usuario.Direccion
             };
         }
 

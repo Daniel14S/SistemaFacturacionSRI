@@ -109,7 +109,7 @@
                                             <span class="text-muted">(Será la contraseña inicial)</span>
                                         }
                                     </label>
-                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" @oninput="ValidarCedulaEnTiempoReal" />
+                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" inputmode="numeric" pattern="[0-9]*" @oninput="ValidarCedulaEnTiempoReal" />
                                     @if (!_esEdicion)
                                     {
                                         <small class="form-text text-muted">
@@ -160,7 +160,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Teléfono</label>
-                                    <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" />
+                                    <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" maxlength="10" inputmode="numeric" pattern="[0-9]*" />
                                     <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
                                 </div>
 
@@ -334,20 +334,18 @@
                 return;
             }
 
-            var partes = (usuario.NombreCompleto ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
             _modelo = new CrearUsuarioDto
             {
                 Username = usuario.Username ?? string.Empty,
                 Email = usuario.Email ?? string.Empty,
-                Cedula = string.Empty,
-                Nombre1 = partes.Length > 0 ? partes[0] : string.Empty,
-                Nombre2 = partes.Length > 1 ? partes[1] : null,
-                Apellido1 = partes.Length > 2 ? partes[2] : string.Empty,
-                Apellido2 = partes.Length > 3 ? partes[3] : null,
-                Telefono = null,
-                Direccion = null,
-                RolId = usuario.Rol == "Administrador" ? 1 : 2,
+                Cedula = usuario.Cedula,
+                Nombre1 = usuario.Nombre1,
+                Nombre2 = usuario.Nombre2,
+                Apellido1 = usuario.Apellido1,
+                Apellido2 = usuario.Apellido2,
+                Telefono = usuario.Telefono,
+                Direccion = usuario.Direccion,
+                RolId = usuario.RolId,
                 Estado = usuario.Estado
             };
         }
