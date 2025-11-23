@@ -59,10 +59,10 @@ namespace SistemaFacturacionSRI.Application.DTOs.Cliente
         public string? Direccion { get; set; }
 
         /// <summary>
-        /// Teléfono de contacto
+        /// Teléfono de contacto (10 dígitos ecuatorianos)
         /// </summary>
-        [Phone(ErrorMessage = "El formato del teléfono no es válido")]
-        [StringLength(20, ErrorMessage = "El teléfono no puede exceder 20 caracteres")]
+        [StringLength(10, MinimumLength = 10, ErrorMessage = "El teléfono debe tener 10 dígitos")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "El teléfono solo puede contener números")]
         public string? Telefono { get; set; }
 
         /// <summary>

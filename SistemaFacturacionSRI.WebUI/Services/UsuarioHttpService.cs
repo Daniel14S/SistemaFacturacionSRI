@@ -41,11 +41,15 @@ public async Task<List<UsuarioDto>> ObtenerTodosAsync()
             Id = u.UsuarioId,
             Username = u.Username,
             Email = u.Email,
+            Nombre1 = string.Empty,
+            Apellido1 = string.Empty,
             Rol = u.Rol,
+            RolId = u.RolId,
             Estado = u.Estado,
             FechaCreacion = u.FechaCreacion,
             UltimoAcceso = u.UltimoAcceso,
-            NombreCompleto = u.NombreCompleto
+            NombreCompleto = u.NombreCompleto,
+            Cedula = string.Empty
         }).ToList();
         
         return usuarios;

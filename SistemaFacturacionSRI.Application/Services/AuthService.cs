@@ -145,11 +145,19 @@ namespace SistemaFacturacionSRI.Application.Services
                 Id = usuario.UsuarioId,
                 Username = usuario.Username,
                 Email = usuario.Email,
+                Nombre1 = usuario.Nombre1,
+                Nombre2 = usuario.Nombre2,
+                Apellido1 = usuario.Apellido1,
+                Apellido2 = usuario.Apellido2,
                 Rol = usuario.Rol?.NombreRol ?? string.Empty,
+                RolId = usuario.RolId,
                 Estado = usuario.Estado,
                 FechaCreacion = usuario.FechaCreacion,
                 UltimoAcceso = usuario.UltimoAcceso,
-                NombreCompleto = ConstruirNombreCompleto(usuario)
+                NombreCompleto = ConstruirNombreCompleto(usuario),
+                Cedula = usuario.Cedula,
+                Telefono = usuario.Telefono,
+                Direccion = usuario.Direccion
             };
         }
 

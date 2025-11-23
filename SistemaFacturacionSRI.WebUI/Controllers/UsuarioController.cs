@@ -5,6 +5,7 @@ using SistemaFacturacionSRI.Application.DTOs.Common;
 using SistemaFacturacionSRI.Application.DTOs.Usuario;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.WebUI.Authorization;
+using System.Security.Claims;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
 {
@@ -14,7 +15,6 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// </summary>
     [Route("api/usuarios")]
     [ApiController]
-    [AdminAuthorize]
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _usuarioService;
@@ -33,6 +33,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Lista todos los usuarios del sistema con filtros y paginación.
         /// </summary>
+        [AdminAuthorize]
         [HttpGet]
         [ProducesResponseType(typeof(PagedResultDto<UsuarioListDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -76,6 +77,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Obtiene un usuario específico por su ID.
         /// </summary>
+        [AdminAuthorize]
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -112,6 +114,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Crea un nuevo usuario en el sistema.
         /// </summary>
+        [AdminAuthorize]
         [HttpPost]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -161,6 +164,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Actualiza la información de un usuario existente.
         /// </summary>
+        [AdminAuthorize]
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(UsuarioDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -223,6 +227,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Desactiva un usuario (soft delete). No se elimina físicamente de la BD.
         /// </summary>
+        [AdminAuthorize]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -262,6 +267,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// <summary>
         /// Activa un usuario previamente desactivado y resetea intentos de login.
         /// </summary>
+        [AdminAuthorize]
         [HttpPut("{id}/activar")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -302,6 +308,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         /// Cambia el rol de un usuario (solo Admin).
         /// No permite degradar al último administrador del sistema.
         /// </summary>
+        [AdminAuthorize]
         [HttpPut("{id}/rol")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -366,6 +373,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 /// <summary>
 /// Permite a un usuario cambiar su propia contraseña.
 /// </summary>
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
 [HttpPut("{id}/cambiar-password")]
 [ProducesResponseType(StatusCodes.Status204NoContent)]
 [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -375,6 +383,18 @@ public async Task<ActionResult> CambiarPassword(int id, [FromBody] CambiarPasswo
 {
     try
     {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)
+                         ?? User.FindFirst("userId")
+                         ?? User.FindFirst("sub");
+
+        if (!User.IsInRole("Administrador"))
+        {
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out var userIdFromToken) || userIdFromToken != id)
+            {
+                return Forbid();
+            }
+        }
+
         if (dto == null)
         {
             return BadRequest(new { message = "Los datos son requeridos" });

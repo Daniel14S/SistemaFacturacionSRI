@@ -6,6 +6,7 @@
 @using SistemaFacturacionSRI.WebUI.Services
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
+@using System.Text.Json
 @attribute [Authorize(Roles = "Administrador")]
 @inject IUsuarioHttpService UsuarioService
 @inject ToastService ToastService
@@ -109,7 +110,7 @@
                                             <span class="text-muted">(Será la contraseña inicial)</span>
                                         }
                                     </label>
-                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" @oninput="ValidarCedulaEnTiempoReal" />
+                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" inputmode="numeric" pattern="[0-9]*" @oninput="ValidarCedulaEnTiempoReal" />
                                     @if (!_esEdicion)
                                     {
                                         <small class="form-text text-muted">
@@ -160,7 +161,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Teléfono</label>
-                                    <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" />
+                                    <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" maxlength="10" inputmode="numeric" pattern="[0-9]*" />
                                     <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
                                 </div>
 
@@ -334,20 +335,18 @@
                 return;
             }
 
-            var partes = (usuario.NombreCompleto ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
             _modelo = new CrearUsuarioDto
             {
                 Username = usuario.Username ?? string.Empty,
                 Email = usuario.Email ?? string.Empty,
-                Cedula = string.Empty,
-                Nombre1 = partes.Length > 0 ? partes[0] : string.Empty,
-                Nombre2 = partes.Length > 1 ? partes[1] : null,
-                Apellido1 = partes.Length > 2 ? partes[2] : string.Empty,
-                Apellido2 = partes.Length > 3 ? partes[3] : null,
-                Telefono = null,
-                Direccion = null,
-                RolId = usuario.Rol == "Administrador" ? 1 : 2,
+                Cedula = usuario.Cedula,
+                Nombre1 = usuario.Nombre1,
+                Nombre2 = usuario.Nombre2,
+                Apellido1 = usuario.Apellido1,
+                Apellido2 = usuario.Apellido2,
+                Telefono = usuario.Telefono,
+                Direccion = usuario.Direccion,
+                RolId = usuario.RolId,
                 Estado = usuario.Estado
             };
         }
@@ -407,25 +406,30 @@
         }
         catch (Exception ex)
         {
-            _errorGeneral = ex.Message;
-            
-            if (ex.Message.Contains("Email") || ex.Message.Contains("email") || ex.Message.Contains("correo"))
+            var mensajeBackend = ExtraerMensajeDesdeBackend(ex.Message);
+            _errorGeneral = mensajeBackend;
+
+            if (ContieneTexto(mensajeBackend, "email") || ContieneTexto(mensajeBackend, "correo"))
             {
                 _erroresValidacion.Add("El email ya está registrado en el sistema");
             }
-            else if (ex.Message.Contains("Username") || ex.Message.Contains("usuario"))
+            else if (ContieneTexto(mensajeBackend, "username"))
             {
                 _erroresValidacion.Add("El nombre de usuario ya existe");
             }
-            else if (ex.Message.Contains("Cedula") || ex.Message.Contains("cédula"))
+            else if (ContieneTexto(mensajeBackend, "cédula") || ContieneTexto(mensajeBackend, "cedula"))
             {
                 _erroresValidacion.Add("La cédula ya está registrada");
             }
-            else if (ex.Message.Contains("400"))
+            else if (ContieneTexto(mensajeBackend, "datos inválidos") || ContieneTexto(mensajeBackend, "400"))
             {
                 _erroresValidacion.Add("Datos inválidos. Verifique todos los campos");
             }
-            
+            else if (!string.IsNullOrWhiteSpace(mensajeBackend))
+            {
+                _erroresValidacion.Add(mensajeBackend);
+            }
+
             ToastService.ShowError("No se pudo guardar el usuario");
         }
         finally
@@ -437,5 +441,39 @@
     private void Cancelar()
     {
         Navigation.NavigateTo("/usuarios");
+    }
+
+    private static string ExtraerMensajeDesdeBackend(string? rawMessage)
+    {
+        if (string.IsNullOrWhiteSpace(rawMessage))
+        {
+            return string.Empty;
+        }
+
+        var jsonStart = rawMessage.IndexOf('{');
+        if (jsonStart >= 0)
+        {
+            var posibleJson = rawMessage.Substring(jsonStart);
+            try
+            {
+                using var doc = JsonDocument.Parse(posibleJson);
+                if (doc.RootElement.TryGetProperty("message", out var mensaje) && mensaje.ValueKind == JsonValueKind.String)
+                {
+                    return mensaje.GetString() ?? rawMessage;
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignorar, caeremos en el retorno original
+            }
+        }
+
+        return rawMessage;
+    }
+
+    private static bool ContieneTexto(string origen, string texto)
+    {
+        return !string.IsNullOrWhiteSpace(origen) &&
+               origen.Contains(texto, StringComparison.OrdinalIgnoreCase);
     }
 }

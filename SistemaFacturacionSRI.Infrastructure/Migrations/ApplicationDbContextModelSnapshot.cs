@@ -219,8 +219,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Telefono")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<int>("TipoIdentificacionId")
                         .HasColumnType("int");
@@ -244,7 +244,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "0102030405",
                             Nombre1 = "Juan",
-                            Telefono = "+593999999999",
+                            Telefono = "0991110001",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -256,7 +256,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "0607080910",
                             Nombre1 = "Maria",
-                            Telefono = "+593988888888",
+                            Telefono = "0991110002",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -268,7 +268,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "1718192021",
                             Nombre1 = "Carlos",
-                            Telefono = "+593977777777",
+                            Telefono = "0991110003",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -280,7 +280,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "2122232425",
                             Nombre1 = "Andrea",
-                            Telefono = "+593966666666",
+                            Telefono = "0991110004",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -292,7 +292,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "2627282930",
                             Nombre1 = "Miguel",
-                            Telefono = "+593955555555",
+                            Telefono = "0991110005",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -304,7 +304,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "3132333435",
                             Nombre1 = "Fernanda",
-                            Telefono = "+593944444444",
+                            Telefono = "0991110006",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -316,7 +316,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "3637383940",
                             Nombre1 = "Jorge",
-                            Telefono = "+593933333333",
+                            Telefono = "0991110007",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -328,7 +328,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "4142434445",
                             Nombre1 = "Lucia",
-                            Telefono = "+593922222222",
+                            Telefono = "0991110008",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -340,7 +340,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "4647484950",
                             Nombre1 = "Ricardo",
-                            Telefono = "+593911111111",
+                            Telefono = "0991110009",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -352,7 +352,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "5152535455",
                             Nombre1 = "Veronica",
-                            Telefono = "+593900000000",
+                            Telefono = "0991110010",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -364,7 +364,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "5657585960",
                             Nombre1 = "Patricio",
-                            Telefono = "+593989898989",
+                            Telefono = "0991110011",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -376,7 +376,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "6162636465",
                             Nombre1 = "Gabriela",
-                            Telefono = "+593979797979",
+                            Telefono = "0991110012",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -388,7 +388,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "6667686970",
                             Nombre1 = "Hector",
-                            Telefono = "+593969696969",
+                            Telefono = "0991110013",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -400,7 +400,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "7172737475",
                             Nombre1 = "Paola",
-                            Telefono = "+593959595959",
+                            Telefono = "0991110014",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -412,7 +412,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "7677787980",
                             Nombre1 = "Diego",
-                            Telefono = "+593949494949",
+                            Telefono = "0991110015",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -424,7 +424,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "8182838485",
                             Nombre1 = "Natalia",
-                            Telefono = "+593939393939",
+                            Telefono = "0991110016",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -436,7 +436,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "8687888990",
                             Nombre1 = "Sebastian",
-                            Telefono = "+593929292929",
+                            Telefono = "0991110017",
                             TipoIdentificacionId = 2
                         },
                         new
@@ -448,7 +448,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "9192939495",
                             Nombre1 = "Daniela",
-                            Telefono = "+593919191919",
+                            Telefono = "0991110018",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -460,7 +460,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "9697989991",
                             Nombre1 = "Gustavo",
-                            Telefono = "+593909090909",
+                            Telefono = "0991110019",
                             TipoIdentificacionId = 1
                         },
                         new
@@ -472,7 +472,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Estado = true,
                             Identificacion = "0192837465",
                             Nombre1 = "Silvia",
-                            Telefono = "+593998877665",
+                            Telefono = "0991110020",
                             TipoIdentificacionId = 2
                         });
                 });
@@ -804,6 +804,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Cedula")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -837,6 +846,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<int>("RolId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
+
                     b.Property<DateTime?>("UltimoAcceso")
                         .HasColumnType("datetime2");
 
@@ -846,6 +859,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("UsuarioId");
+
+                    b.HasIndex("Cedula")
+                        .IsUnique();
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -862,6 +878,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         {
                             UsuarioId = 1,
                             Apellido1 = "Principal",
+                            Cedula = "0102030405",
+                            Direccion = "Oficina Matriz",
                             Email = "admin@sistemafacturacion.com",
                             Estado = true,
                             FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -870,7 +888,25 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             Nombre2 = "Sistema",
                             PasswordHash = "ClvD40JDLxutkv/VG3hTQ+xykGzbpqJhMQYLAI54ZlY=",
                             RolId = 1,
+                            Telefono = "0991234567",
                             Username = "admin"
+                        },
+                        new
+                        {
+                            UsuarioId = 2,
+                            Apellido1 = "Principal",
+                            Cedula = "0607080910",
+                            Direccion = "Sucursal Centro",
+                            Email = "vendedor@sistemafacturacion.com",
+                            Estado = true,
+                            FechaCreacion = new DateTime(2024, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IntentosLogin = 0,
+                            Nombre1 = "Vendedor",
+                            Nombre2 = "Demo",
+                            PasswordHash = "K6FhJ3pkkLQo6VCZ1hH4zmlxqxgAYleOSmCmjrxdWa8=",
+                            RolId = 2,
+                            Telefono = "0987654321",
+                            Username = "vendedor1"
                         });
                 });
 
