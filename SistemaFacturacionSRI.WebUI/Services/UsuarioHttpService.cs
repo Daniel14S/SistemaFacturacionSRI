@@ -215,5 +215,18 @@ public async Task<List<UsuarioDto>> ObtenerTodosAsync()
                 throw new Exception($"Error al buscar usuarios: {ex.Message}", ex);
             }
         }
+
+        // UsuarioHttpService.cs
+public async Task CambiarPasswordAsync(CambiarPasswordDto dto)
+{
+    var response = await _httpClient.PutAsJsonAsync($"api/usuarios/{dto.UsuarioId}/cambiar-password", dto);
+    
+    if (!response.IsSuccessStatusCode)
+    {
+        var error = await response.Content.ReadAsStringAsync();
+        throw new Exception($"Error al cambiar contraseña: {error}");
+    }
+}
+
     }
 }

@@ -354,5 +354,73 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                     new { message = "Error interno al cambiar el rol" });
             }
         }
+// WebUI/Controllers/UsuarioController.cs - AGREGAR AL FINAL
+
+// ================= CAMBIAR CONTRASEÑA (PROPIO USUARIO) =================
+
+/// <summary>
+/// Permite a un usuario cambiar su propia contraseña.
+/// </summary>
+// ================= CAMBIAR CONTRASEÑA (PROPIO USUARIO) =================
+
+/// <summary>
+/// Permite a un usuario cambiar su propia contraseña.
+/// </summary>
+[HttpPut("{id}/cambiar-password")]
+[ProducesResponseType(StatusCodes.Status204NoContent)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<ActionResult> CambiarPassword(int id, [FromBody] CambiarPasswordDto dto)
+{
+    try
+    {
+        if (dto == null)
+        {
+            return BadRequest(new { message = "Los datos son requeridos" });
+        }
+
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        dto.UsuarioId = id;
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new
+            {
+                message = "Datos inválidos",
+                errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+            });
+        }
+
+        await _usuarioService.CambiarPasswordAsync(dto);
+
+        return NoContent();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return BadRequest(new { message = ex.Message });
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return NotFound(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al cambiar contraseña del usuario {UsuarioId}", id);
+        return StatusCode(StatusCodes.Status500InternalServerError,
+            new { message = "Error interno al cambiar contraseña" });
+    }
+}
+
+
+
+
+
     }
 }

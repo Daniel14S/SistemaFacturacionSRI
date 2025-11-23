@@ -16,5 +16,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Auth
         /// </summary>
         public DateTime? ExpiresAt { get; set; }
         public string? Role { get; set; }
+        public bool EsPrimerIngreso { get; set; }
     }
 }

@@ -55,5 +55,12 @@ namespace SistemaFacturacionSRI.WebUI.Services
         /// Busca usuarios por nombre de usuario o email.
         /// </summary>
         Task<List<UsuarioDto>> BuscarAsync(string termino);
+
+        /// <summary>
+/// Cambia la contraseña de un usuario.
+/// PUT /api/usuarios/{id}/cambiar-password
+/// </summary>
+Task CambiarPasswordAsync(CambiarPasswordDto dto);
+
     }
 }

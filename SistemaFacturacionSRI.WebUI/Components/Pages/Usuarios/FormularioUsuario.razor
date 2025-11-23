@@ -59,32 +59,13 @@
 
                                 @if (!_esEdicion)
                                 {
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Contraseña *</label>
-                                        <div class="input-group">
-                                            <InputText @bind-Value="_modelo.Password" 
-                                                       type="@(_mostrarPassword ? "text" : "password")" 
-                                                       class="form-control" 
-                                                       placeholder="Mínimo 8 caracteres" />
-                                            <button class="btn btn-outline-secondary" 
-                                                    type="button" 
-                                                    @onclick="() => _mostrarPassword = !_mostrarPassword">
-                                                <i class="bi @(_mostrarPassword ? "bi-eye-slash" : "bi-eye")"></i>
-                                            </button>
+                                    <!-- ⭐ ALERTA EN LUGAR DE CAMPOS DE CONTRASEÑA -->
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            <strong>Contraseña Inicial:</strong> Se usará la cédula del usuario como contraseña temporal. 
+                                            El usuario deberá cambiarla en su primer inicio de sesión.
                                         </div>
-                                        <small class="form-text text-muted">
-                                            Debe contener mayúscula, minúscula, número y carácter especial
-                                        </small>
-                                        <ValidationMessage For="@(() => _modelo.Password)" class="text-danger" />
-                                    </div>
-
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Confirmar Contraseña *</label>
-                                        <InputText @bind-Value="_modelo.ConfirmarPassword" 
-                                                   type="@(_mostrarPassword ? "text" : "password")" 
-                                                   class="form-control" 
-                                                   placeholder="Repetir contraseña" />
-                                        <ValidationMessage For="@(() => _modelo.ConfirmarPassword)" class="text-danger" />
                                     </div>
                                 }
                             </div>
@@ -96,6 +77,25 @@
                                         <i class="bi bi-person me-2"></i>
                                         Datos Personales
                                     </h5>
+                                </div>
+
+                                <!-- ⭐ CÉDULA PRIMERO Y OBLIGATORIA -->
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Cédula Ecuatoriana * 
+                                        @if (!_esEdicion)
+                                        {
+                                            <span class="text-muted">(Será la contraseña inicial)</span>
+                                        }
+                                    </label>
+                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" />
+                                    @if (!_esEdicion)
+                                    {
+                                        <small class="form-text text-muted">
+                                            <i class="bi bi-shield-lock me-1"></i>
+                                            10 dígitos - Esta será la contraseña temporal que el usuario deberá cambiar en su primer acceso
+                                        </small>
+                                    }
+                                    <ValidationMessage For="@(() => _modelo.Cedula)" class="text-danger" />
                                 </div>
 
                                 <div class="col-md-6 mb-3">
@@ -123,15 +123,13 @@
                                 </div>
 
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Cédula (10 dígitos)</label>
-                                    <InputText @bind-Value="_modelo.Cedula" class="form-control" placeholder="1234567890" maxlength="10" />
-                                    <ValidationMessage For="@(() => _modelo.Cedula)" class="text-danger" />
-                                </div>
-
-                                <div class="col-md-6 mb-3">
                                     <label class="form-label">Teléfono</label>
                                     <InputText @bind-Value="_modelo.Telefono" class="form-control" placeholder="0999999999" />
                                     <ValidationMessage For="@(() => _modelo.Telefono)" class="text-danger" />
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <!-- Espacio vacío para alineación -->
                                 </div>
 
                                 <div class="col-12 mb-3">
@@ -165,7 +163,14 @@
                                     <div class="form-check form-switch mt-2">
                                         <InputCheckbox @bind-Value="_modelo.Estado" class="form-check-input" id="estadoSwitch" />
                                         <label class="form-check-label" for="estadoSwitch">
-                                            @(_modelo.Estado ? "Activo" : "Inactivo")
+                                            @if (_modelo.Estado)
+                                            {
+                                                <span class="badge bg-success">Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Inactivo</span>
+                                            }
                                         </label>
                                     </div>
                                 </div>
@@ -175,7 +180,7 @@
                             <div class="row">
                                 <div class="col-12">
                                     <div class="d-flex gap-2 justify-content-end">
-                                        <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                                        <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@_guardando">
                                             <i class="bi bi-x-circle me-1"></i>
                                             Cancelar
                                         </button>
@@ -183,12 +188,13 @@
                                             @if (_guardando)
                                             {
                                                 <span class="spinner-border spinner-border-sm me-1"></span>
+                                                <span>Guardando...</span>
                                             }
                                             else
                                             {
                                                 <i class="bi bi-save me-1"></i>
+                                                <span>@(_esEdicion ? "Actualizar" : "Crear")</span>
                                             }
-                                            @(_esEdicion ? "Actualizar" : "Crear")
                                         </button>
                                     </div>
                                 </div>
@@ -208,7 +214,6 @@
     private bool _esEdicion => Id.HasValue && Id.Value > 0;
     private bool _cargando = false;
     private bool _guardando = false;
-    private bool _mostrarPassword = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -237,9 +242,11 @@
             {
                 Username = usuario.Username,
                 Email = usuario.Email,
-                // Nota: No cargamos contraseña por seguridad
+                Cedula = "", // Por seguridad, no cargar la cédula en edición
                 Nombre1 = usuario.NombreCompleto?.Split(' ').FirstOrDefault() ?? "",
-                Apellido1 = usuario.NombreCompleto?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                Nombre2 = usuario.NombreCompleto?.Split(' ').Skip(1).FirstOrDefault(),
+                Apellido1 = usuario.NombreCompleto?.Split(' ').Skip(2).FirstOrDefault() ?? "",
+                Apellido2 = usuario.NombreCompleto?.Split(' ').Skip(3).FirstOrDefault(),
                 RolId = usuario.Rol == "Administrador" ? 1 : 2,
                 Estado = usuario.Estado
             };
@@ -283,7 +290,7 @@
             else
             {
                 await UsuarioService.CrearAsync(_modelo);
-                ToastService.ShowSuccess("Usuario creado exitosamente");
+                ToastService.ShowSuccess($"Usuario creado exitosamente. Contraseña inicial: {_modelo.Cedula}");
             }
 
             Navigation.NavigateTo("/usuarios");
