@@ -58,18 +58,61 @@
                     <!-- Identificación -->
                     <div class="col-md-6">
                         <label class="form-label">Identificación <span class="text-danger">*</span></label>
-                        <InputText class="form-control" 
-                                   @bind-Value="_modelo.Identificacion" 
+                        @if (_modelo.TipoIdentificacionId == 1)
+                        {
+                            <input type="text"
+                                   class="form-control" 
+                                   value="@IdentificacionInput"
+                                   @oninput="OnIdentificacionChange"
                                    placeholder="@_placeholderIdentificacion"
-                                   maxlength="@_maxIdentificacion"
-                                   inputmode="@GetIdentificacionInputMode()"
+                                   inputmode="numeric"
+                                   maxlength="10"
                                    disabled="@(ClienteId.HasValue)" />
+                        }
+                        else if (_modelo.TipoIdentificacionId == 2)
+                        {
+                            <input type="text"
+                                   class="form-control" 
+                                   value="@IdentificacionInput"
+                                   @oninput="OnIdentificacionChange"
+                                   placeholder="@_placeholderIdentificacion"
+                                   inputmode="numeric"
+                                   maxlength="13"
+                                   disabled="@(ClienteId.HasValue)" />
+                        }
+                        else if (_modelo.TipoIdentificacionId == 3)
+                        {
+                            <input type="text"
+                                   class="form-control" 
+                                   value="@IdentificacionInput"
+                                   @oninput="OnIdentificacionChange"
+                                   placeholder="@_placeholderIdentificacion"
+                                   inputmode="text"
+                                   maxlength="20"
+                                   disabled="@(ClienteId.HasValue)" />
+                        }
+                        else
+                        {
+                            <input type="text"
+                                   class="form-control" 
+                                   value="@IdentificacionInput"
+                                   @oninput="OnIdentificacionChange"
+                                   placeholder="@_placeholderIdentificacion"
+                                   disabled="true" />
+                        }
                         <ValidationMessage For="@(() => _modelo.Identificacion)" class="text-danger" />
                         @if (!string.IsNullOrEmpty(_errorIdentificacion))
                         {
                             <div class="text-danger small mt-1">
                                 <i class="bi bi-exclamation-circle me-1"></i>
                                 @_errorIdentificacion
+                            </div>
+                        }
+                        @if (_identificacionValida && !string.IsNullOrEmpty(_mensajeIdentificacionValida))
+                        {
+                            <div class="text-success small mt-1">
+                                <i class="bi bi-check-circle me-1"></i>
+                                @_mensajeIdentificacionValida
                             </div>
                         }
                     </div>
@@ -145,7 +188,7 @@
                     <i class="bi bi-x-circle me-1"></i> Cancelar
                 </button>
 
-                <button type="submit" class="btn btn-primary" disabled="@_guardando">
+                <button type="submit" class="btn btn-primary" disabled="@(_guardando || !EsFormularioValido())">
                     @if (_guardando)
                     {
                         <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -174,6 +217,48 @@
     private string _errorIdentificacion = string.Empty;
     private string _errorTelefono = string.Empty;
     private string _errorEmail = string.Empty;
+    private bool _identificacionValida = false;
+    private string _mensajeIdentificacionValida = string.Empty;
+
+    private string IdentificacionInput => _modelo.Identificacion ?? string.Empty;
+
+    private void OnIdentificacionChange(ChangeEventArgs e)
+    {
+        var valor = e.Value?.ToString() ?? string.Empty;
+        
+        // Limitar el valor ANTES de asignarlo
+        var valorLimitado = LimitarIdentificacion(valor);
+        
+        // Solo actualizar si cambió algo
+        if (_modelo.Identificacion != valorLimitado)
+        {
+            _modelo.Identificacion = valorLimitado;
+            ValidarIdentificacionEnTiempoReal();
+        }
+    }
+
+    private string LimitarIdentificacion(string valor)
+    {
+        if (string.IsNullOrEmpty(valor)) return string.Empty;
+
+        switch (_modelo.TipoIdentificacionId)
+        {
+            case 1: // Cédula - LIMITAR a 10 dígitos
+                valor = new string(valor.Where(char.IsDigit).ToArray());
+                return valor.Length > 10 ? valor.Substring(0, 10) : valor;
+
+            case 2: // RUC - LIMITAR a 13 dígitos
+                valor = new string(valor.Where(char.IsDigit).ToArray());
+                return valor.Length > 13 ? valor.Substring(0, 13) : valor;
+
+            case 3: // Pasaporte - LIMITAR a 20 caracteres
+                valor = new string(valor.Where(char.IsLetterOrDigit).ToArray()).ToUpper();
+                return valor.Length > 20 ? valor.Substring(0, 20) : valor;
+
+            default:
+                return valor;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -232,6 +317,10 @@
     {
         ActualizarPlaceholder();
         _errorIdentificacion = string.Empty;
+        _identificacionValida = false;
+        _mensajeIdentificacionValida = string.Empty;
+        _modelo.Identificacion = string.Empty; // Limpiar al cambiar tipo
+        StateHasChanged();
     }
 
     private void ActualizarPlaceholder()
@@ -387,4 +476,156 @@
         3 => "06",
         _ => null
     };
+
+    private void ValidarIdentificacionEnTiempoReal()
+    {
+        _errorIdentificacion = string.Empty;
+        _identificacionValida = false;
+        _mensajeIdentificacionValida = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_modelo.Identificacion))
+        {
+            return;
+        }
+
+        var id = _modelo.Identificacion.Trim();
+
+        switch (_modelo.TipoIdentificacionId)
+        {
+            case 1: // Cédula
+                if (id.Length < 10)
+                {
+                    _errorIdentificacion = $"La cédula debe tener 10 dígitos (tiene {id.Length})";
+                    return;
+                }
+                if (id.Length == 10)
+                {
+                    if (ValidarCedulaEcuatoriana(id))
+                    {
+                        _identificacionValida = true;
+                        _mensajeIdentificacionValida = "✓ Cédula ecuatoriana válida";
+                    }
+                    else
+                    {
+                        _errorIdentificacion = "La cédula no es válida";
+                    }
+                }
+                break;
+
+            case 2: // RUC
+                if (id.Length < 13)
+                {
+                    _errorIdentificacion = $"El RUC debe tener 13 dígitos (tiene {id.Length})";
+                    
+                    // Verificar que los últimos dígitos sean 001 mientras escribe
+                    if (id.Length >= 11)
+                    {
+                        var ultimos = id.Substring(10);
+                        if (ultimos.Length == 1 && ultimos != "0")
+                        {
+                            _errorIdentificacion += " - El dígito 11 debe ser 0";
+                        }
+                        else if (ultimos.Length == 2 && !ultimos.StartsWith("00"))
+                        {
+                            _errorIdentificacion += " - Los dígitos 11 y 12 deben ser 00";
+                        }
+                        else if (ultimos.Length == 3 && ultimos != "001")
+                        {
+                            _errorIdentificacion += " - Los últimos 3 dígitos deben ser 001";
+                        }
+                    }
+                    return;
+                }
+                if (id.Length == 13)
+                {
+                    if (!id.EndsWith("001"))
+                    {
+                        _errorIdentificacion = "El RUC debe terminar en 001";
+                    }
+                    else if (ValidarRucEcuatoriano(id))
+                    {
+                        _identificacionValida = true;
+                        _mensajeIdentificacionValida = "✓ RUC ecuatoriano válido";
+                    }
+                    else
+                    {
+                        _errorIdentificacion = "El RUC no es válido";
+                    }
+                }
+                break;
+
+            case 3: // Pasaporte
+                if (id.Length < 6)
+                {
+                    _errorIdentificacion = $"El pasaporte debe tener entre 6 y 20 caracteres (tiene {id.Length})";
+                    return;
+                }
+                if (id.Length >= 6 && id.Length <= 20)
+                {
+                    if (id.All(c => char.IsLetterOrDigit(c)))
+                    {
+                        _identificacionValida = true;
+                        _mensajeIdentificacionValida = "✓ Formato de pasaporte válido";
+                    }
+                    else
+                    {
+                        _errorIdentificacion = "El pasaporte solo debe contener letras y números";
+                    }
+                }
+                break;
+        }
+    }
+
+    private bool ValidarRucEcuatoriano(string ruc)
+    {
+        if (ruc.Length != 13 || !ruc.All(char.IsDigit))
+            return false;
+
+        if (!ruc.EndsWith("001"))
+            return false;
+
+        var provincia = int.Parse(ruc.Substring(0, 2));
+        if (provincia < 1 || provincia > 24)
+            return false;
+
+        var tercerDigito = int.Parse(ruc[2].ToString());
+        if (tercerDigito < 6 || tercerDigito > 9)
+            return false;
+
+        return ValidarCedulaEcuatoriana(ruc.Substring(0, 10));
+    }
+
+    private bool ValidarCedulaEcuatoriana(string cedula)
+    {
+        if (cedula.Length != 10 || !cedula.All(char.IsDigit))
+            return false;
+
+        var provincia = int.Parse(cedula.Substring(0, 2));
+        if (provincia < 1 || provincia > 24)
+            return false;
+
+        var coeficientes = new[] { 2, 1, 2, 1, 2, 1, 2, 1, 2 };
+        var suma = 0;
+
+        for (int i = 0; i < 9; i++)
+        {
+            var valor = int.Parse(cedula[i].ToString()) * coeficientes[i];
+            suma += valor > 9 ? valor - 9 : valor;
+        }
+
+        var digitoVerificador = (10 - (suma % 10)) % 10;
+        return digitoVerificador == int.Parse(cedula[9].ToString());
+    }
+
+    private bool EsFormularioValido()
+    {
+        if (_guardando) return false;
+        if (_modelo.TipoIdentificacionId == 0) return false;
+        if (string.IsNullOrWhiteSpace(_modelo.Identificacion)) return false;
+        if (!_identificacionValida) return false;
+        if (string.IsNullOrWhiteSpace(_modelo.Nombre1)) return false;
+        if (string.IsNullOrWhiteSpace(_modelo.Apellido1)) return false;
+        
+        return true;
+    }
 }
