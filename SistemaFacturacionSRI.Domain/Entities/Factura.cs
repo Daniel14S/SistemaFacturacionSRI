@@ -43,5 +43,6 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public Cliente? Cliente { get; set; }
         public Usuario? Usuario { get; set; }
         public ICollection<DetalleFactura> Detalles { get; set; } = new List<DetalleFactura>();
+        public ICollection<InfoAdicional> InformacionAdicional { get; set; } = new List<InfoAdicional>();
     }
 }
