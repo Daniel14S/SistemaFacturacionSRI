@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SistemaFacturacionSRI.Infrastructure.Data;
+using SistemaFacturacionSRI.Infrastructure.Contexts;  // ⭐ AGREGADO
 using SistemaFacturacionSRI.Application.Interfaces.Repositories;
 using SistemaFacturacionSRI.Application.Interfaces;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
@@ -33,6 +34,11 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
 // Base de datos (SQL Server)
+// ⭐ SistemaContext - Context principal generado por scaffold
+builder.Services.AddDbContext<SistemaContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ⭐ ApplicationDbContext - Si es el mismo, considera eliminarlo para evitar duplicados
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
