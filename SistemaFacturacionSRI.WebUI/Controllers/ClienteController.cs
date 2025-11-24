@@ -80,7 +80,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     /// Crea un nuevo cliente.
     /// </summary>
     [HttpPost]
-    [AdminAuthorize]
+    [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
     [ProducesResponseType(typeof(ClienteDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<ClienteDto>> CrearCliente([FromBody] CrearClienteDto dto)
@@ -129,7 +129,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 /// Actualiza un cliente existente.
                 /// </summary>
                 [HttpPut("{id}")]
-                [AdminAuthorize]
+                [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
                 [ProducesResponseType(typeof(ClienteDto), StatusCodes.Status200OK)]
                 [ProducesResponseType(StatusCodes.Status400BadRequest)]
                 [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -188,7 +188,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 /// Cambia el estado (activo/inactivo) de un cliente.
                 /// </summary>
                 [HttpPatch("{id}/estado")]
-                [AdminAuthorize]
+                [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
                 [ProducesResponseType(StatusCodes.Status204NoContent)]
                 [ProducesResponseType(StatusCodes.Status400BadRequest)]
                 [ProducesResponseType(StatusCodes.Status404NotFound)]
