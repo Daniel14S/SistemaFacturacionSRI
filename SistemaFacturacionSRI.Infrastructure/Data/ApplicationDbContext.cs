@@ -36,7 +36,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         public DbSet<Categoria> Categorias { get; set; }
         public DbSet<Lote> Lotes { get; set; }
         public DbSet<Factura> Facturas { get; set; }
-        public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
+        public DbSet<DetalleFactura> DetalleFacturas { get; set; }
+        public DbSet<InfoAdicional> InformacionAdicional { get; set; }
+        public DbSet<SecuenciaFactura> SecuenciasFactura { get; set; }
+        public DbSet<ConfiguracionEmpresa> ConfiguracionesEmpresa { get; set; }
    
 
         /// <summary>

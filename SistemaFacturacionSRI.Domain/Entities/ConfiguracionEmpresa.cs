@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 namespace SistemaFacturacionSRI.Domain.Entities;
 
 /// <summary>
@@ -115,3 +116,4 @@ public class ConfiguracionEmpresa : EntidadBase
     /// </summary>
     public string? InfoAdicionalDefecto { get; set; }
 }
+
