@@ -30,6 +30,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             builder.HasIndex(s => new { s.Establecimiento, s.PuntoEmision })
                 .IsUnique();
+
+            builder.HasData(new SecuenciaFactura
+            {
+                Id = 1,
+                Establecimiento = "001",
+                PuntoEmision = "001",
+                SecuenciaActual = 0,
+                Activo = true
+            });
         }
     }
 }
