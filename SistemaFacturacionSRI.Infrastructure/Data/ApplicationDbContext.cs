@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Infrastructure.Data.Configurations;
+using SistemaFacturacionSRI.Infrastructure.Data.Seeds;
 
 namespace SistemaFacturacionSRI.Infrastructure.Data
 {
@@ -67,6 +68,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
             modelBuilder.Entity<Cliente>()
                 .HasIndex(c => c.Identificacion)
                 .IsUnique();
+            
+            ConfiguracionEmpresaSeed.Seed(modelBuilder);
+
         }
 
         /// <summary>
