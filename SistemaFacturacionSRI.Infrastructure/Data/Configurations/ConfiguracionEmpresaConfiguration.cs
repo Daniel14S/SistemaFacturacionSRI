@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SistemaFacturacionSRI.Domain.Entities;
-<<<<<<< HEAD
 
 namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations;
 

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 namespace SistemaFacturacionSRI.Domain.Entities;
 
 /// <summary>

@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SistemaFacturacionSRI.Application\SistemaFacturacionSRI.Application.csproj" />
+    <ProjectReference Include="..\SistemaFacturacionSRI.Domain\SistemaFacturacionSRI.Domain.csproj" />
+    <ProjectReference Include="..\SistemaFacturacionSRI.Infrastructure\SistemaFacturacionSRI.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
