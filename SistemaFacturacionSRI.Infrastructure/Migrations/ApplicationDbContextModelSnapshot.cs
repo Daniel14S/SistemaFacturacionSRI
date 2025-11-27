@@ -946,6 +946,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SecuenciasFactura", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Establecimiento = "001",
+                            PuntoEmision = "001",
+                            SecuenciaActual = 0L
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.TipoIVACatalogo", b =>

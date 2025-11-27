@@ -19,6 +19,7 @@ using SistemaFacturacionSRI.WebUI.Middleware;
 using SistemaFacturacionSRI.WebUI.Authorization;
 using Blazored.LocalStorage;  
 using Microsoft.AspNetCore.Components.Authorization;
+using SistemaFacturacionSRI.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +65,9 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<ISecuenciaService, SecuenciaService>();
+builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
+builder.Services.AddScoped<IFacturaService, FacturaService>();
 
 
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
