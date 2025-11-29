@@ -1,6 +1,7 @@
 using SistemaFacturacionSRI.Application.DTOs.Common;
 using SistemaFacturacionSRI.Application.DTOs.Factura;
 using SistemaFacturacionSRI.Domain.Entities;
+using SistemaFacturacionSRI.Domain.Enums;
 
 namespace SistemaFacturacionSRI.Application.Interfaces.Services
 {
@@ -18,5 +19,30 @@ namespace SistemaFacturacionSRI.Application.Interfaces.Services
         /// Obtiene una factura completa (cliente, usuario, detalles e info adicional).
         /// </summary>
         Task<Factura?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Cambia el estado de una factura validando las transiciones permitidas.
+        /// También registra la fecha del cambio y, si aplica, la fecha de autorización.
+        /// </summary>
+        /// <param name="facturaId">Identificador de la factura.</param>
+        /// <param name="nuevoEstado">Estado al que se desea mover la factura.</param>
+        /// <param name="cancellationToken">Token de cancelación.</param>
+        /// <returns>Factura actualizada con el nuevo estado.</returns>
+        /// <exception cref="KeyNotFoundException">Si la factura no existe.</exception>
+        /// <exception cref="InvalidOperationException">Si la transición no está permitida.</exception>
+        Task<Factura> ActualizarEstadoAsync(int facturaId, EstadoFactura nuevoEstado, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Anula una factura previamente autorizada validando que el usuario tenga permisos.
+        /// </summary>
+        /// <param name="facturaId">Identificador de la factura a anular.</param>
+        /// <param name="usuarioId">Usuario que solicita la anulación (se valida que sea administrador).</param>
+        /// <param name="motivo">Motivo opcional para registrar en las observaciones.</param>
+        /// <param name="cancellationToken">Token de cancelación.</param>
+        /// <returns>Factura en estado ANULADA.</returns>
+        /// <exception cref="KeyNotFoundException">Si la factura o el usuario no existen.</exception>
+        /// <exception cref="InvalidOperationException">Si la factura no está autorizada.</exception>
+        /// <exception cref="UnauthorizedAccessException">Si el usuario no tiene permisos suficientes.</exception>
+        Task<Factura> AnularFacturaAsync(int facturaId, int usuarioId, string? motivo = null, CancellationToken cancellationToken = default);
     }
 }

@@ -3,6 +3,7 @@ using SistemaFacturacionSRI.Application.DTOs.Common;
 using SistemaFacturacionSRI.Application.DTOs.Factura;
 using SistemaFacturacionSRI.Application.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
+using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.Infrastructure.Data;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services
@@ -13,6 +14,20 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     public class FacturaService : IFacturaService
     {
         private readonly ApplicationDbContext _context;
+        private static readonly IReadOnlyDictionary<EstadoFactura, EstadoFactura[]> _transicionesPermitidas =
+            new Dictionary<EstadoFactura, EstadoFactura[]>
+            {
+                [EstadoFactura.BORRADOR] = new[] { EstadoFactura.GENERADA, EstadoFactura.ANULADA },
+                [EstadoFactura.GENERADA] = new[] { EstadoFactura.FIRMADA, EstadoFactura.ANULADA },
+                [EstadoFactura.FIRMADA] = new[] { EstadoFactura.ENVIADA, EstadoFactura.ANULADA },
+                [EstadoFactura.ENVIADA] = new[] { EstadoFactura.RECIBIDA, EstadoFactura.DEVUELTA, EstadoFactura.ANULADA },
+                [EstadoFactura.RECIBIDA] = new[] { EstadoFactura.AUTORIZADA, EstadoFactura.NO_AUTORIZADA, EstadoFactura.DEVUELTA },
+                [EstadoFactura.DEVUELTA] = new[] { EstadoFactura.ENVIADA, EstadoFactura.ANULADA },
+                [EstadoFactura.NO_AUTORIZADA] = new[] { EstadoFactura.GENERADA, EstadoFactura.ANULADA },
+                [EstadoFactura.AUTORIZADA] = Array.Empty<EstadoFactura>(),
+                [EstadoFactura.ANULADA] = Array.Empty<EstadoFactura>()
+            };
+        private const string RolAdministrador = "Administrador";
 
         public FacturaService(ApplicationDbContext context)
         {
@@ -114,6 +129,77 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 .FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
         }
 
+        public async Task<Factura> ActualizarEstadoAsync(int facturaId, EstadoFactura nuevoEstado, CancellationToken cancellationToken = default)
+        {
+            var factura = await _context.Facturas.FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
+            if (factura == null)
+            {
+                throw new KeyNotFoundException($"No existe una factura con Id {facturaId}.");
+            }
+
+            if (factura.Estado == nuevoEstado)
+            {
+                throw new InvalidOperationException("La factura ya se encuentra en el estado solicitado.");
+            }
+
+            if (!TransicionPermitida(factura.Estado, nuevoEstado))
+            {
+                throw new InvalidOperationException($"No es posible cambiar la factura {factura.NumeroFactura} de {factura.Estado} a {nuevoEstado}.");
+            }
+
+            factura.Estado = nuevoEstado;
+            factura.FechaModificacion = DateTime.UtcNow;
+
+            if (nuevoEstado == EstadoFactura.AUTORIZADA)
+            {
+                var fechaAutorizacion = DateTime.UtcNow;
+                factura.FechaAutorizacion = fechaAutorizacion;
+                factura.FechaHoraAutorizacion = fechaAutorizacion;
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return factura;
+        }
+
+        public async Task<Factura> AnularFacturaAsync(int facturaId, int usuarioId, string? motivo = null, CancellationToken cancellationToken = default)
+        {
+            var factura = await _context.Facturas.FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
+            if (factura == null)
+            {
+                throw new KeyNotFoundException($"No existe una factura con Id {facturaId}.");
+            }
+
+            if (factura.Estado != EstadoFactura.AUTORIZADA)
+            {
+                throw new InvalidOperationException("Solo se pueden anular facturas en estado AUTORIZADA.");
+            }
+
+            var usuario = await _context.Usuarios
+                .Include(u => u.Rol)
+                .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId, cancellationToken);
+
+            if (usuario == null)
+            {
+                throw new KeyNotFoundException($"No existe un usuario con Id {usuarioId}.");
+            }
+
+            if (!string.Equals(usuario.Rol?.NombreRol, RolAdministrador, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new UnauthorizedAccessException("Solo un administrador puede anular facturas autorizadas.");
+            }
+
+            factura.Estado = EstadoFactura.ANULADA;
+            factura.FechaModificacion = DateTime.UtcNow;
+
+            if (!string.IsNullOrWhiteSpace(motivo))
+            {
+                factura.Observaciones = RegistrarMotivoAnulacion(factura.Observaciones, motivo);
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+            return factura;
+        }
+
         private static IQueryable<Factura> AplicarOrdenamiento(IQueryable<Factura> query, string? orderBy, bool ascending)
         {
             return orderBy?.ToLower() switch
@@ -125,6 +211,24 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 "total" or "importetotal" => ascending ? query.OrderBy(f => f.ImporteTotal) : query.OrderByDescending(f => f.ImporteTotal),
                 _ => ascending ? query.OrderBy(f => f.FechaEmision) : query.OrderByDescending(f => f.FechaEmision)
             };
+        }
+
+        private static bool TransicionPermitida(EstadoFactura estadoActual, EstadoFactura nuevoEstado)
+        {
+            return _transicionesPermitidas.TryGetValue(estadoActual, out var permitidos) && permitidos.Contains(nuevoEstado);
+        }
+
+        private static string RegistrarMotivoAnulacion(string? observacionesActuales, string motivo)
+        {
+            var prefijo = $"ANULADA ({DateTime.UtcNow:yyyy-MM-dd HH:mm}): ";
+            var nuevoTexto = prefijo + motivo.Trim();
+
+            if (string.IsNullOrWhiteSpace(observacionesActuales))
+            {
+                return nuevoTexto;
+            }
+
+            return string.Join(Environment.NewLine, observacionesActuales.Trim(), nuevoTexto);
         }
     }
 }
