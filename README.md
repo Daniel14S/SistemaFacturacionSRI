@@ -380,6 +380,54 @@ dotnet ef migrations remove `
 
 ---
 
+# Esquemas XSD del SRI - Facturación Electrónica
+
+## 📚 Descripción
+
+Esta carpeta contiene los esquemas XSD oficiales del Servicio de Rentas Internas (SRI) de Ecuador para la validación de comprobantes electrónicos.
+
+## 📁 Archivos
+
+### factura_v1.1.0.xsd
+Esquema principal para facturas electrónicas versión 1.1.0
+
+**Elementos principales:**
+- `<factura>` - Elemento raíz
+- `<infoTributaria>` - Información del emisor
+- `<infoFactura>` - Información de la transacción
+- `<detalles>` - Productos/servicios
+- `<infoAdicional>` - Campos personalizados (opcional)
+
+### comun_v1.0.xsd
+Tipos de datos comunes compartidos entre diferentes comprobantes
+
+**Define:**
+- Tipos básicos (RUC, cédula, fechas, importes)
+- Enumeraciones (ambiente, tipo emisión, impuestos)
+- Restricciones (longitudes, patrones, formatos)
+
+## 🔍 Uso en el Sistema
+
+Los esquemas XSD se utilizan para:
+
+1. **Validación antes de firmar**: Verificar que el XML cumple con el estándar antes de aplicar la firma electrónica
+2. **Detección temprana de errores**: Identificar problemas de formato antes de enviar al SRI
+3. **Documentación**: Referencia de la estructura correcta de los comprobantes
+
+## ⚠️ Importante
+
+- Estos esquemas son proporcionados por el SRI y NO deben ser modificados
+- Cualquier actualización debe obtenerse del portal oficial del SRI
+- Versión actual: 1.1.0 (vigente desde 2015)
+
+## 🌐 Referencias
+
+- Portal SRI: https://www.sri.gob.ec/facturacion-electronica
+- Ficha Técnica: Disponible en el portal del SRI
+- Documentación Desarrolladores: https://www.sri.gob.ec/web/guest/documentacion-desarrolladores
+
+---
+
 ## 👥 Equipo
 
 | Integrante | Rol | Responsabilidades |
@@ -528,7 +576,7 @@ Carrera de Software
 
 ---
 
-**Última actualización:** 31 de Octubre de 2025  
+**Última actualización:** 28 de Noviembre de 2025  
 **Versión:** 1.0.0  
 **Estado del proyecto:** 🟢 En desarrollo activo (Sprint 1)
 
