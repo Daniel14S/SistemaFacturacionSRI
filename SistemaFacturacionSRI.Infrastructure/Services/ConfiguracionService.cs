@@ -21,7 +21,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             return await _context.ConfiguracionesEmpresa
                 .AsNoTracking()
-                .OrderBy(c => c.Establecimiento)
+                .OrderBy(c => c.CodigoEstablecimiento)
                 .ThenBy(c => c.PuntoEmision)
                 .ToListAsync(cancellationToken);
         }
@@ -40,7 +40,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
             return await _context.ConfiguracionesEmpresa
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Establecimiento == establecimiento && c.PuntoEmision == puntoEmision, cancellationToken);
+                .FirstOrDefaultAsync(c => c.CodigoEstablecimiento == establecimiento && c.PuntoEmision == puntoEmision, cancellationToken);
         }
 
         public async Task<ConfiguracionEmpresa> CrearAsync(ConfiguracionEmpresa configuracion, CancellationToken cancellationToken = default)
@@ -69,20 +69,20 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             Normalizar(configuracion);
             await ValidarUnicidadAsync(configuracion, cancellationToken, configuracion.Id);
 
-            existente.Ruc = configuracion.Ruc;
+            existente.RUC = configuracion.RUC;
             existente.RazonSocial = configuracion.RazonSocial;
             existente.NombreComercial = configuracion.NombreComercial;
             existente.DirMatriz = configuracion.DirMatriz;
             existente.DirEstablecimiento = configuracion.DirEstablecimiento;
-            existente.ContribuyenteEspecial = configuracion.ContribuyenteEspecial;
+            existente.AgenteRetencion = configuracion.AgenteRetencion;
             existente.ObligadoContabilidad = configuracion.ObligadoContabilidad;
-            existente.Establecimiento = configuracion.Establecimiento;
+            existente.CodigoEstablecimiento = configuracion.CodigoEstablecimiento;
             existente.PuntoEmision = configuracion.PuntoEmision;
             existente.AmbienteSRI = configuracion.AmbienteSRI;
             existente.TipoEmision = configuracion.TipoEmision;
-            existente.RutaCertificado = configuracion.RutaCertificado;
-            existente.ClaveCertificado = configuracion.ClaveCertificado;
-            existente.Logo = configuracion.Logo;
+            existente.RutaCertificadoDigital = configuracion.RutaCertificadoDigital;
+            existente.ClaveCertificadoDigital = configuracion.ClaveCertificadoDigital;
+            existente.LogoPath = configuracion.LogoPath;
 
             await _context.SaveChangesAsync(cancellationToken);
             return existente;
@@ -103,34 +103,42 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         private async Task ValidarUnicidadAsync(ConfiguracionEmpresa configuracion, CancellationToken cancellationToken, int? excluirId = null)
         {
             var rucDuplicado = await _context.ConfiguracionesEmpresa
-                .AnyAsync(c => c.Ruc == configuracion.Ruc && (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);
+                .AnyAsync(c => c.RUC == configuracion.RUC && (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);
 
             if (rucDuplicado)
             {
-                throw new InvalidOperationException($"Ya existe una configuración registrada con el RUC {configuracion.Ruc}");
+                throw new InvalidOperationException($"Ya existe una configuración registrada con el RUC {configuracion.RUC}");
             }
 
             var combinacionDuplicada = await _context.ConfiguracionesEmpresa
-                .AnyAsync(c => c.Establecimiento == configuracion.Establecimiento && c.PuntoEmision == configuracion.PuntoEmision && (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);
+                .AnyAsync(c => c.CodigoEstablecimiento == configuracion.CodigoEstablecimiento && c.PuntoEmision == configuracion.PuntoEmision && (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);
 
             if (combinacionDuplicada)
             {
-                throw new InvalidOperationException($"Ya existe una configuración para el establecimiento {configuracion.Establecimiento}-{configuracion.PuntoEmision}");
+                throw new InvalidOperationException($"Ya existe una configuración para el establecimiento {configuracion.CodigoEstablecimiento}-{configuracion.PuntoEmision}");
             }
         }
 
         private static void Normalizar(ConfiguracionEmpresa configuracion)
         {
-            configuracion.Ruc = configuracion.Ruc.Trim();
+            configuracion.RUC = configuracion.RUC.Trim();
             configuracion.RazonSocial = configuracion.RazonSocial.Trim();
-            configuracion.NombreComercial = configuracion.NombreComercial?.Trim();
+            configuracion.NombreComercial = configuracion.NombreComercial?.Trim() ?? string.Empty;
             configuracion.DirMatriz = configuracion.DirMatriz.Trim();
             configuracion.DirEstablecimiento = configuracion.DirEstablecimiento.Trim();
-            configuracion.ContribuyenteEspecial = configuracion.ContribuyenteEspecial?.Trim();
-            configuracion.Establecimiento = NormalizarCodigo(configuracion.Establecimiento);
+            configuracion.AgenteRetencion = configuracion.AgenteRetencion?.Trim();
+            configuracion.CodigoEstablecimiento = NormalizarCodigo(configuracion.CodigoEstablecimiento);
             configuracion.PuntoEmision = NormalizarCodigo(configuracion.PuntoEmision);
-            configuracion.RutaCertificado = configuracion.RutaCertificado.Trim();
-            configuracion.ClaveCertificado = configuracion.ClaveCertificado.Trim();
+            
+            if (!string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital))
+            {
+                configuracion.RutaCertificadoDigital = configuracion.RutaCertificadoDigital.Trim();
+            }
+            
+            if (!string.IsNullOrWhiteSpace(configuracion.ClaveCertificadoDigital))
+            {
+                configuracion.ClaveCertificadoDigital = configuracion.ClaveCertificadoDigital.Trim();
+            }
         }
 
         private static string NormalizarCodigo(string? codigo)
