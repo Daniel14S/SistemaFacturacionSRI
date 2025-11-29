@@ -485,83 +485,167 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Activo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasComment("Indica si el registro está activo");
+
+                    b.Property<string>("AgenteRetencion")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasComment("Resolución de agente de retención");
+
                     b.Property<string>("AmbienteSRI")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("PRUEBAS");
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasDefaultValue("1")
+                        .HasComment("1=Pruebas, 2=Producción");
 
-                    b.Property<string>("ClaveCertificado")
+                    b.Property<string>("ClaveCertificadoDigital")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Contraseña del certificado (encriptada)");
+
+                    b.Property<string>("CodigoEstablecimiento")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("ContribuyenteEspecial")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(3)
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength()
+                        .HasComment("Código del establecimiento (ej: 001)");
 
                     b.Property<string>("DirEstablecimiento")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("Dirección del establecimiento");
 
                     b.Property<string>("DirMatriz")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("Dirección de la matriz");
 
-                    b.Property<string>("Establecimiento")
+                    b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComment("Email de contacto");
 
-                    b.Property<byte[]>("Logo")
-                        .HasColumnType("VARBINARY(MAX)");
+                    b.Property<DateTime>("FechaCreacion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()")
+                        .HasComment("Fecha de creación del registro");
+
+                    b.Property<DateTime>("FechaModificacion")
+                        .HasColumnType("datetime2")
+                        .HasComment("Fecha de última modificación");
+
+                    b.Property<string>("InfoAdicionalDefecto")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasComment("Información adicional por defecto");
+
+                    b.Property<string>("LogoPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Ruta del logo para RIDE");
 
                     b.Property<string>("NombreComercial")
+                        .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("Nombre comercial de la empresa");
 
                     b.Property<bool>("ObligadoContabilidad")
-                        .HasColumnType("bit");
+                        .HasColumnType("bit")
+                        .HasComment("Indica si está obligado a llevar contabilidad");
 
                     b.Property<string>("PuntoEmision")
                         .IsRequired()
                         .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
+                        .HasColumnType("nchar(3)")
+                        .IsFixedLength()
+                        .HasComment("Punto de emisión (ej: 001)");
+
+                    b.Property<string>("RUC")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)")
+                        .HasComment("RUC de la empresa emisora (13 dígitos)");
 
                     b.Property<string>("RazonSocial")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("Razón social de la empresa");
 
-                    b.Property<string>("Ruc")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("nvarchar(13)");
-
-                    b.Property<string>("RutaCertificado")
-                        .IsRequired()
+                    b.Property<string>("RutaCertificadoDigital")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Ruta del archivo del certificado digital (.p12)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasComment("Teléfono de contacto");
 
                     b.Property<string>("TipoEmision")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NORMAL");
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)")
+                        .HasDefaultValue("1")
+                        .HasComment("1=Normal, 2=Indisponibilidad");
+
+                    b.Property<string>("UrlAutorizacionComprobantes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("URL WebService Autorización SRI");
+
+                    b.Property<string>("UrlRecepcionComprobantes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("URL WebService Recepción SRI");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Ruc")
-                        .IsUnique();
+                    b.HasIndex("RUC")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ConfiguracionEmpresa_RUC");
 
-                    b.HasIndex("Establecimiento", "PuntoEmision")
-                        .IsUnique();
+                    b.ToTable("ConfiguracionEmpresa", (string)null);
 
-                    b.ToTable("ConfiguracionesEmpresa", (string)null);
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            AgenteRetencion = "1",
+                            AmbienteSRI = "1",
+                            CodigoEstablecimiento = "001",
+                            DirEstablecimiento = "Av. Principal 123 y Secundaria, Local 001",
+                            DirMatriz = "Av. Principal 123 y Secundaria, Edificio Central",
+                            Email = "facturacion@empresademo.com",
+                            FechaCreacion = new DateTime(2025, 11, 29, 5, 42, 39, 348, DateTimeKind.Utc).AddTicks(9835),
+                            FechaModificacion = new DateTime(2025, 11, 29, 5, 42, 39, 348, DateTimeKind.Utc).AddTicks(9951),
+                            InfoAdicionalDefecto = "Gracias por su compra|Términos y condiciones: www.empresademo.com/terminos",
+                            NombreComercial = "DEMO FACTURACIÓN",
+                            ObligadoContabilidad = true,
+                            PuntoEmision = "001",
+                            RUC = "1234567890001",
+                            RazonSocial = "EMPRESA DEMO FACTURACIÓN ELECTRÓNICA S.A.",
+                            Telefono = "03-2345678",
+                            TipoEmision = "1",
+                            UrlAutorizacionComprobantes = "https://celportal.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl",
+                            UrlRecepcionComprobantes = "https://celportal.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl"
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.DetalleFactura", b =>

@@ -20,6 +20,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         {
         }
 
+
+         /// <summary>
+        /// Configura opciones adicionales del contexto.
+        /// </summary>
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.ConfigureWarnings(warnings =>
+                warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+        }
+
         // DbSets - Cada DbSet<T> representa una tabla en la base de datos
         
         /// <summary>
@@ -119,5 +129,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
 
             return await base.SaveChangesAsync(cancellationToken);
         }
+
     }
 }

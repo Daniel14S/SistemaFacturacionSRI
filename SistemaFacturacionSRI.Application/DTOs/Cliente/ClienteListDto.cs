@@ -1,6 +1,7 @@
 namespace SistemaFacturacionSRI.Application.DTOs.Cliente
 {
     /// <summary>
+    /// 
     /// DTO simplificado para listar clientes.
     /// </summary>
     public class ClienteListDto

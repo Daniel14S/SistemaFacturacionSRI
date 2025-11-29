@@ -61,7 +61,13 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
 builder.Services.AddSingleton<ITokenStorage, TokenStorage>();
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-builder.Services.AddScoped<IClienteService, ClienteService>();
+// 📁 Repositorios de Facturación (SPRINT 3) - DESPUÉS DE ClienteRepository
+//builder.Services.AddScoped<ISecuenciaRepository, SecuenciaRepository>();
+//builder.Services.AddScoped<IConfiguracionRepository, ConfiguracionRepository>();
+//builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
+//builder.Services.AddScoped<IDetalleFacturaRepository, DetalleFacturaRepository>();
+//builder.Services.AddScoped<IInfoAdicionalRepository, InfoAdicionalRepository>();
+
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorizationCore();
