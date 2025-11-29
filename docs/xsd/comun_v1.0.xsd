@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           elementFormDefault="qualified" 
+           attributeFormDefault="unqualified">
+  
+  <!-- ==================== TIPOS BÁSICOS ==================== -->
+  
+  <!-- Ambiente: 1=Pruebas, 2=Producción -->
+  <xs:simpleType name="ambiente">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Tipo de Emisión: 1=Normal, 2=Contingencia -->
+  <xs:simpleType name="tipoEmision">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Razón Social: máximo 300 caracteres -->
+  <xs:simpleType name="razonSocialType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="300"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Nombre Comercial: máximo 300 caracteres -->
+  <xs:simpleType name="nombreComercialType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="300"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- RUC: exactamente 13 dígitos -->
+  <xs:simpleType name="rucType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{13}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Clave de Acceso: exactamente 48 dígitos -->
+  <xs:simpleType name="claveAccesoType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{48}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Código de Documento: 2 dígitos (01=Factura) -->
+  <xs:simpleType name="codDocType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Establecimiento: 3 dígitos -->
+  <xs:simpleType name="establecimientoType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Punto de Emisión: 3 dígitos -->
+  <xs:simpleType name="puntoEmisionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{3}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Secuencial: 9 dígitos -->
+  <xs:simpleType name="secuencialType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{9}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Dirección: máximo 300 caracteres -->
+  <xs:simpleType name="direccionType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="300"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Fecha de Emisión: formato dd/MM/yyyy -->
+  <xs:simpleType name="fechaEmisionType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{2}/[0-9]{2}/[0-9]{4}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Contribuyente Especial: 3-5 dígitos -->
+  <xs:simpleType name="contribuyenteEspecialType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{3,5}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Obligado a llevar Contabilidad: SI o NO -->
+  <xs:simpleType name="obligadoContabilidadType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="SI"/>
+      <xs:enumeration value="NO"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Tipo de Identificación -->
+  <xs:simpleType name="tipoIdentificacionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="04"/> <!-- RUC -->
+      <xs:enumeration value="05"/> <!-- Cédula -->
+      <xs:enumeration value="06"/> <!-- Pasaporte -->
+      <xs:enumeration value="07"/> <!-- Consumidor Final -->
+      <xs:enumeration value="08"/> <!-- Identificación del Exterior -->
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Identificación: máximo 20 caracteres -->
+  <xs:simpleType name="identificacionType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="20"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Importe: decimal con hasta 2 decimales -->
+  <xs:simpleType name="importeType">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Moneda: siempre DOLAR -->
+  <xs:simpleType name="monedaType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="DOLAR"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Código de Impuesto -->
+  <xs:simpleType name="codigoImpuestoType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="2"/> <!-- IVA -->
+      <xs:enumeration value="3"/> <!-- ICE -->
+      <xs:enumeration value="5"/> <!-- IRBPNR -->
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Código de Porcentaje (Tarifa IVA) -->
+  <xs:simpleType name="codigoPorcentajeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>  <!-- 0% -->
+      <xs:enumeration value="2"/>  <!-- 12% -->
+      <xs:enumeration value="3"/>  <!-- 14% -->
+      <xs:enumeration value="4"/>  <!-- 15% -->
+      <xs:enumeration value="6"/>  <!-- No objeto de IVA -->
+      <xs:enumeration value="7"/>  <!-- Exento de IVA -->
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Tarifa: decimal del porcentaje -->
+  <xs:simpleType name="tarifaType">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Código de Producto: máximo 25 caracteres -->
+  <xs:simpleType name="codigoType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="25"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Descripción: máximo 300 caracteres -->
+  <xs:simpleType name="descripcionType">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="300"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Cantidad: decimal positivo -->
+  <xs:simpleType name="cantidadType">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="6"/>
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Precio: decimal positivo -->
+  <xs:simpleType name="precioType">
+    <xs:restriction base="xs:decimal">
+      <xs:fractionDigits value="6"/>
+      <xs:minInclusive value="0"/>
+    </xs:restriction>
+  </xs:simpleType>
+  
+  <!-- Forma de Pago -->
+  <xs:simpleType name="formaPagoType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="01"/> <!-- Sin utilización del sistema financiero -->
+      <xs:enumeration value="15"/> <!-- Compensación de deudas -->
+      <xs:enumeration value="16"/> <!-- Tarjeta de débito -->
+      <xs:enumeration value="17"/> <!-- Dinero electrónico -->
+      <xs:enumeration value="18"/> <!-- Tarjeta prepago -->
+      <xs:enumeration value="19"/> <!-- Tarjeta de crédito -->
+      <xs:enumeration value="20"/> <!-- Otros con utilización del sistema financiero -->
+      <xs:enumeration value="21"/> <!-- Endoso de títulos -->
+    </xs:restriction>
+  </xs:simpleType>
+  
+</xs:schema>

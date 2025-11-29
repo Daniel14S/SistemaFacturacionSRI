@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           elementFormDefault="qualified" 
+           attributeFormDefault="unqualified">
+  
+  <!-- Incluir tipos comunes -->
+  <xs:include schemaLocation="comun_v1.0.xsd"/>
+  
+  <!-- Elemento raíz: factura -->
+  <xs:element name="factura">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="infoTributaria" type="infoTributaria"/>
+        <xs:element name="infoFactura" type="infoFactura"/>
+        <xs:element name="detalles" type="detalles"/>
+        <xs:element name="infoAdicional" type="infoAdicional" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:string" use="required" fixed="comprobante"/>
+      <xs:attribute name="version" type="xs:string" use="required" fixed="1.1.0"/>
+    </xs:complexType>
+  </xs:element>
+  
+  <!-- Tipo: infoTributaria -->
+  <xs:complexType name="infoTributaria">
+    <xs:sequence>
+      <xs:element name="ambiente" type="ambiente"/>
+      <xs:element name="tipoEmision" type="tipoEmision"/>
+      <xs:element name="razonSocial" type="razonSocialType"/>
+      <xs:element name="nombreComercial" type="nombreComercialType"/>
+      <xs:element name="ruc" type="rucType"/>
+      <xs:element name="claveAcceso" type="claveAccesoType"/>
+      <xs:element name="codDoc" type="codDocType"/>
+      <xs:element name="estab" type="establecimientoType"/>
+      <xs:element name="ptoEmi" type="puntoEmisionType"/>
+      <xs:element name="secuencial" type="secuencialType"/>
+      <xs:element name="dirMatriz" type="direccionType"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: infoFactura -->
+  <xs:complexType name="infoFactura">
+    <xs:sequence>
+      <xs:element name="fechaEmision" type="fechaEmisionType"/>
+      <xs:element name="dirEstablecimiento" type="direccionType"/>
+      <xs:element name="contribuyenteEspecial" type="contribuyenteEspecialType" minOccurs="0"/>
+      <xs:element name="obligadoContabilidad" type="obligadoContabilidadType"/>
+      <xs:element name="tipoIdentificacionComprador" type="tipoIdentificacionType"/>
+      <xs:element name="razonSocialComprador" type="razonSocialType"/>
+      <xs:element name="identificacionComprador" type="identificacionType"/>
+      <xs:element name="direccionComprador" type="direccionType" minOccurs="0"/>
+      <xs:element name="totalSinImpuestos" type="importeType"/>
+      <xs:element name="totalDescuento" type="importeType"/>
+      <xs:element name="totalConImpuestos" type="totalConImpuestos"/>
+      <xs:element name="propina" type="importeType"/>
+      <xs:element name="importeTotal" type="importeType"/>
+      <xs:element name="moneda" type="monedaType"/>
+      <xs:element name="pagos" type="pagos" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: totalConImpuestos -->
+  <xs:complexType name="totalConImpuestos">
+    <xs:sequence>
+      <xs:element name="totalImpuesto" type="totalImpuesto" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: totalImpuesto -->
+  <xs:complexType name="totalImpuesto">
+    <xs:sequence>
+      <xs:element name="codigo" type="codigoImpuestoType"/>
+      <xs:element name="codigoPorcentaje" type="codigoPorcentajeType"/>
+      <xs:element name="baseImponible" type="importeType"/>
+      <xs:element name="valor" type="importeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: detalles -->
+  <xs:complexType name="detalles">
+    <xs:sequence>
+      <xs:element name="detalle" type="detalle" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: detalle -->
+  <xs:complexType name="detalle">
+    <xs:sequence>
+      <xs:element name="codigoPrincipal" type="codigoType"/>
+      <xs:element name="codigoAuxiliar" type="codigoType" minOccurs="0"/>
+      <xs:element name="descripcion" type="descripcionType"/>
+      <xs:element name="cantidad" type="cantidadType"/>
+      <xs:element name="precioUnitario" type="precioType"/>
+      <xs:element name="descuento" type="importeType"/>
+      <xs:element name="precioTotalSinImpuesto" type="importeType"/>
+      <xs:element name="detallesAdicionales" type="detallesAdicionales" minOccurs="0"/>
+      <xs:element name="impuestos" type="impuestos"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: impuestos -->
+  <xs:complexType name="impuestos">
+    <xs:sequence>
+      <xs:element name="impuesto" type="impuesto" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: impuesto -->
+  <xs:complexType name="impuesto">
+    <xs:sequence>
+      <xs:element name="codigo" type="codigoImpuestoType"/>
+      <xs:element name="codigoPorcentaje" type="codigoPorcentajeType"/>
+      <xs:element name="tarifa" type="tarifaType"/>
+      <xs:element name="baseImponible" type="importeType"/>
+      <xs:element name="valor" type="importeType"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: detallesAdicionales -->
+  <xs:complexType name="detallesAdicionales">
+    <xs:sequence>
+      <xs:element name="detAdicional" type="detAdicional" maxOccurs="3"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: detAdicional -->
+  <xs:complexType name="detAdicional">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="nombre" type="xs:string" use="required"/>
+        <xs:attribute name="valor" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  
+  <!-- Tipo: infoAdicional -->
+  <xs:complexType name="infoAdicional">
+    <xs:sequence>
+      <xs:element name="campoAdicional" type="campoAdicional" maxOccurs="15"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: campoAdicional -->
+  <xs:complexType name="campoAdicional">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="nombre" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  
+  <!-- Tipo: pagos -->
+  <xs:complexType name="pagos">
+    <xs:sequence>
+      <xs:element name="pago" type="pago" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <!-- Tipo: pago -->
+  <xs:complexType name="pago">
+    <xs:sequence>
+      <xs:element name="formaPago" type="formaPagoType"/>
+      <xs:element name="total" type="importeType"/>
+      <xs:element name="plazo" type="xs:string" minOccurs="0"/>
+      <xs:element name="unidadTiempo" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+</xs:schema>
