@@ -83,8 +83,24 @@ public async Task<Lote?> ObtenerPorIdAsync(int loteId)
 
 public async Task ActualizarAsync(Lote lote)
 {
+    // Desacoplar cualquier entidad con el mismo ID que esté siendo tracked
+    var existingEntity = _context.Lotes.Local
+        .FirstOrDefault(l => l.LoteId == lote.LoteId);
+    
+    if (existingEntity != null)
+    {
+        _context.Entry(existingEntity).State = EntityState.Detached;
+    }
+    
     _context.Lotes.Update(lote);
     await _context.SaveChangesAsync();
+    
+    // Cargar las relaciones después de guardar
+    await _context.Entry(lote).Reference(l => l.Producto).LoadAsync();
+    if (lote.Producto != null)
+    {
+        await _context.Entry(lote.Producto).Reference(p => p.Categoria).LoadAsync();
+    }
 }
 
 public async Task EliminarAsync(int loteId)
