@@ -421,3 +421,8 @@ FodyWeavers.xsd
 
 # EF Core migrations (keep local, do not commit)
 SistemaFacturacionSRI.Infrastructure/Migrations/
+
+# Certificate files
+*.p12
+*.pfx
+
