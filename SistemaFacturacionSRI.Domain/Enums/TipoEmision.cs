@@ -1,11 +1,18 @@
 namespace SistemaFacturacionSRI.Domain.Enums
 {
     /// <summary>
-    /// Define el modo en el que se emite una factura ante el SRI.
+    /// Tipo de emisión del comprobante electrónico
     /// </summary>
     public enum TipoEmision
     {
-        NORMAL,
-        CONTINGENCIA
+        /// <summary>
+        /// Emisión normal (online)
+        /// </summary>
+        NORMAL = 1,
+
+        /// <summary>
+        /// Emisión por contingencia (offline)
+        /// </summary>
+        CONTINGENCIA = 2
     }
 }
