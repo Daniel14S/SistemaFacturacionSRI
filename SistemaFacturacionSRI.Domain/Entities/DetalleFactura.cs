@@ -15,7 +15,7 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public decimal PrecioUnitario { get; set; }
         public decimal Descuento { get; set; }
         public decimal PrecioTotalSinImpuesto { get; set; }
-        public string CodigoPorcentajeIVA { get; set; } = string.Empty;
+        public int CodigoPorcentajeIVA { get; set; }
         public decimal Tarifa { get; set; }
         public decimal BaseImponible { get; set; }
         public decimal Valor { get; set; }

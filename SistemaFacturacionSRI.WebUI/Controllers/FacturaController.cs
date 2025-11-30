@@ -85,6 +85,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         {
             try
             {
+                await Task.CompletedTask;
+                
                 if (dto == null)
                 {
                     return BadRequest(new { message = "Los datos de la factura son requeridos" });

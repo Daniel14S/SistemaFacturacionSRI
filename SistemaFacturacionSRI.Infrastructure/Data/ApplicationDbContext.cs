@@ -72,6 +72,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
                 .IsUnique();
             
             ConfiguracionEmpresaSeed.Seed(modelBuilder);
+            SecuenciaFacturaSeed.Seed(modelBuilder);
         }
 
         /// <summary>

@@ -40,9 +40,6 @@ public class CrearFacturaDto
     public List<InfoAdicionalDto>? InfoAdicional { get; set; }
 }
 
-/// <summary>
-/// DTO para crear un detalle de factura
-/// </summary>
 public class CrearDetalleFacturaDto
 {
     /// <summary>
@@ -51,27 +48,35 @@ public class CrearDetalleFacturaDto
     [Required(ErrorMessage = "Debe seleccionar un producto")]
     [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar un producto válido")]
     public int ProductoId { get; set; }
-    
+
     /// <summary>
     /// Cantidad del producto
     /// </summary>
     [Required(ErrorMessage = "La cantidad es obligatoria")]
     [Range(0.01, 999999.99, ErrorMessage = "La cantidad debe ser mayor a 0")]
     public decimal Cantidad { get; set; }
-    
+
     /// <summary>
     /// Precio unitario (se toma del producto, pero puede ser modificado)
     /// </summary>
     [Required(ErrorMessage = "El precio unitario es obligatorio")]
     [Range(0.01, 999999.99, ErrorMessage = "El precio debe ser mayor a 0")]
     public decimal PrecioUnitario { get; set; }
-    
+
     /// <summary>
     /// Descuento aplicado a este detalle
     /// </summary>
     [Range(0, 999999.99, ErrorMessage = "El descuento no puede ser negativo")]
     public decimal Descuento { get; set; } = 0;
-    
+
+    // ✅ AGREGA ESTE CAMPO QUE FALTA:
+    /// <summary>
+    /// Código del porcentaje de IVA aplicable (0, 2, 3, 6, 7)
+    /// 0 = 0%, 2 = 12%, 3 = 14%, 6 = No objeto, 7 = Exento
+    /// </summary>
+    [Required(ErrorMessage = "Debe especificar el código de IVA")]
+    public int CodigoPorcentajeIVA { get; set; } = 2; // Por defecto 12%
+
     /// <summary>
     /// Información adicional del detalle (opcional)
     /// </summary>

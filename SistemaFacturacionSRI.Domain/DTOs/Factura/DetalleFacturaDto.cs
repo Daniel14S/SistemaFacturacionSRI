@@ -1,7 +1,7 @@
 ﻿namespace SistemaFacturacionSRI.Domain.DTOs.Factura;
 
 /// <summary>
-/// DTO para mostrar detalles de una factura
+/// DTO para mostrar detalles de una factura (OUTPUT)
 /// T-014: SPRINT 3 - DÍA 2
 /// </summary>
 public class DetalleFacturaDto
@@ -48,26 +48,37 @@ public class DetalleFacturaDto
     public decimal Descuento { get; set; }
     
     /// <summary>
-    /// Subtotal sin IVA (PrecioUnitario * Cantidad - Descuento)
+    /// Precio total sin impuestos (Cantidad * PrecioUnitario)
     /// </summary>
-    public decimal Subtotal { get; set; }
+    public decimal PrecioTotalSinImpuesto { get; set; }
+    
+    /// <summary>
+    /// Base imponible (PrecioTotalSinImpuesto - Descuento)
+    /// </summary>
+    public decimal BaseImponible { get; set; }
     
     // ==================== IMPUESTOS ====================
     
     /// <summary>
-    /// Tarifa de IVA aplicada (0, 12, 15)
+    /// Código del porcentaje de IVA (0, 2, 3, 6, 7)
+    /// Necesario para el XML del SRI
     /// </summary>
-    public int TarifaIVA { get; set; }
+    public int CodigoPorcentajeIVA { get; set; }
+    
+    /// <summary>
+    /// Tarifa de IVA aplicada en decimal (0.00, 0.12, 0.15)
+    /// </summary>
+    public decimal Tarifa { get; set; }
     
     /// <summary>
     /// Valor del IVA calculado
     /// </summary>
-    public decimal ValorIVA { get; set; }
+    public decimal Valor { get; set; }
     
     /// <summary>
-    /// Total con IVA incluido (Subtotal + ValorIVA)
+    /// Total del detalle (BaseImponible + Valor)
     /// </summary>
-    public decimal Total { get; set; }
+    public decimal ValorTotal { get; set; }
     
     // ==================== INFORMACIÓN ADICIONAL ====================
     

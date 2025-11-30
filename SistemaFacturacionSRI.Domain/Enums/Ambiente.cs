@@ -1,11 +1,18 @@
 namespace SistemaFacturacionSRI.Domain.Enums
 {
     /// <summary>
-    /// Representa el ambiente del SRI en el que se procesan las facturas.
+    /// Ambiente de emisión del comprobante
     /// </summary>
     public enum Ambiente
     {
-        PRUEBAS,
-        PRODUCCION
+        /// <summary>
+        /// Ambiente de pruebas del SRI (celcer)
+        /// </summary>
+        PRUEBAS = 1,
+
+        /// <summary>
+        /// Ambiente de producción del SRI (cel)
+        /// </summary>
+        PRODUCCION = 2
     }
 }

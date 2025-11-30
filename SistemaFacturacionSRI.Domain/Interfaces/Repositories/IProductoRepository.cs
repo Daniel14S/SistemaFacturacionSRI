@@ -38,5 +38,11 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Repositories
         /// Útil para vistas que necesitan filtrar por Activo/Inactivo en la capa superior.
         /// </summary>
         Task<IEnumerable<Producto>> ObtenerTodosIncluyendoInactivosAsync();
+
+        /// <summary>
+        /// Obtiene múltiples productos por sus IDs
+        /// Necesario para validar productos en facturas
+        /// </summary>
+        Task<List<Producto>> ObtenerPorIdsAsync(List<int> ids);
     }
 }
