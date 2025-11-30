@@ -43,9 +43,9 @@ public static class ConfiguracionEmpresaSeed
                 // Información adicional por defecto
                 InfoAdicionalDefecto = "Gracias por su compra|Términos y condiciones: www.empresademo.com/terminos",
                 
-                // Auditoría
-                FechaCreacion = DateTime.UtcNow,
-                FechaModificacion = DateTime.UtcNow
+                // ✅ CORREGIDO: Usar fecha estática en lugar de DateTime.UtcNow
+                FechaCreacion = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                FechaModificacion = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             }
         );
     }
