@@ -1,9 +1,9 @@
 @page "/productos/nuevo"
 @page "/productos/editar/{IdProducto:int}"
 @rendermode InteractiveServer
-@using SistemaFacturacionSRI.Application.DTOs.Producto
-@using SistemaFacturacionSRI.Application.Interfaces.Services
-@using SistemaFacturacionSRI.Application.DTOs.Categoria
+@using SistemaFacturacionSRI.Domain.DTOs.Producto
+@using SistemaFacturacionSRI.Domain.Interfaces.Services
+@using SistemaFacturacionSRI.Domain.DTOs.Categoria
 @using SistemaFacturacionSRI.WebUI.Services
 @inject IProductoService ProductoService
 @inject NavigationManager Navigation

@@ -1,7 +1,7 @@
-using SistemaFacturacionSRI.Application.DTOs.Cliente;
-using SistemaFacturacionSRI.Application.DTOs.Common;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Cliente;
+using SistemaFacturacionSRI.Domain.DTOs.Common;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Validators;
 using SistemaFacturacionSRI.Domain.Entities;
 

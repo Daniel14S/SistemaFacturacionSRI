@@ -1,5 +1,5 @@
-using AutoMapper;
-using SistemaFacturacionSRI.Application.DTOs.Lote;
+﻿using AutoMapper;
+using SistemaFacturacionSRI.Domain.DTOs.Lote;
 using SistemaFacturacionSRI.Domain.Entities;
 
 namespace SistemaFacturacionSRI.Application.Mappings

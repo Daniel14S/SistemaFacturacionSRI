@@ -1,6 +1,6 @@
-using SistemaFacturacionSRI.Application.DTOs.Auth;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Auth;
 
-namespace SistemaFacturacionSRI.Application.Interfaces
+namespace SistemaFacturacionSRI.Domain.Interfaces
 {
     /// <summary>
     /// Interfaz para el servicio de autenticación

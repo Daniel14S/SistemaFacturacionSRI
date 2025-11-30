@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.Application.DTOs.Common;
-using SistemaFacturacionSRI.Application.DTOs.Factura;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+﻿using Microsoft.EntityFrameworkCore;
+using SistemaFacturacionSRI.Domain.DTOs.Common;
+using SistemaFacturacionSRI.Domain.DTOs.Factura;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.Infrastructure.Data;

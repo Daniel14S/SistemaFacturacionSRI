@@ -20,6 +20,8 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public decimal BaseImponible { get; set; }
         public decimal Valor { get; set; }
         public decimal ValorTotal { get; set; }
+        public int TarifaIVA { get; set; } // 0, 12, 15
+        public decimal ValorIVA { get; set; }
 
         public Factura? Factura { get; set; }
         public Producto? Producto { get; set; }

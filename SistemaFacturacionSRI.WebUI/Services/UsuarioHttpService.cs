@@ -1,6 +1,6 @@
-using SistemaFacturacionSRI.Application.DTOs.Auth;
-using SistemaFacturacionSRI.Application.DTOs.Usuario;
-using SistemaFacturacionSRI.Application.DTOs.Common; 
+﻿using SistemaFacturacionSRI.Domain.DTOs.Auth;
+using SistemaFacturacionSRI.Domain.DTOs.Usuario;
+using SistemaFacturacionSRI.Domain.DTOs.Common; 
 using System.Net.Http.Json;
 
 namespace SistemaFacturacionSRI.WebUI.Services

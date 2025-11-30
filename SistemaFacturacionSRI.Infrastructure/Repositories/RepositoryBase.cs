@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using System.Linq.Expressions;

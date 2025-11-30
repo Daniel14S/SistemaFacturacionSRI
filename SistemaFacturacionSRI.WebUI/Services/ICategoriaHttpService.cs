@@ -1,4 +1,4 @@
-using SistemaFacturacionSRI.Application.DTOs.Categoria;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Categoria;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {

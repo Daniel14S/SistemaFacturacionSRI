@@ -1,4 +1,4 @@
-using SistemaFacturacionSRI.Application.DTOs.Auth;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Auth;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {

@@ -1,4 +1,4 @@
-using SistemaFacturacionSRI.Application.DTOs.Lote;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Lote;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

@@ -1,7 +1,7 @@
-using AutoMapper;
-using SistemaFacturacionSRI.Application.DTOs.Lote;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+﻿using AutoMapper;
+using SistemaFacturacionSRI.Domain.DTOs.Lote;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using System;
 using System.Collections.Generic;

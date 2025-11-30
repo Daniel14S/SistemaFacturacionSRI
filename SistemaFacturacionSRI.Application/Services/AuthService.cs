@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using SistemaFacturacionSRI.Application.DTOs.Auth;
-using SistemaFacturacionSRI.Application.Interfaces;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Security;
+using SistemaFacturacionSRI.Domain.DTOs.Auth;
+using SistemaFacturacionSRI.Domain.Interfaces;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Security;
 using SistemaFacturacionSRI.Application.Security;
 using SistemaFacturacionSRI.Domain.Entities;
 

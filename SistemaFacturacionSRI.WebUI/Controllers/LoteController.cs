@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SistemaFacturacionSRI.Application.DTOs.Lote;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.Domain.DTOs.Lote;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.WebUI.Authorization;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers

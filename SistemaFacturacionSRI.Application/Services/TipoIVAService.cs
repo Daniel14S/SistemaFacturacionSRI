@@ -1,7 +1,7 @@
-using AutoMapper;
-using SistemaFacturacionSRI.Application.DTOs.TipoIVA;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+﻿using AutoMapper;
+using SistemaFacturacionSRI.Domain.DTOs.TipoIVA;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 
 namespace SistemaFacturacionSRI.Application.Services
 {

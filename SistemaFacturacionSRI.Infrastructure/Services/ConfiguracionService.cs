@@ -1,7 +1,7 @@
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.Application.DTOs.Configuracion;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.Domain.DTOs.Configuracion;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Infrastructure.Data;
 
@@ -23,7 +23,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<ConfiguracionEmpresaDto> ObtenerConfiguracionAsync()
         {
-            var configuracion = await _context.ConfiguracionesEmpresa
+            var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
@@ -40,7 +40,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-            var configuracion = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync();
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
             
             if (configuracion == null)
             {
@@ -71,7 +71,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(claveCertificado))
                 throw new ArgumentException("La clave del certificado es obligatoria", nameof(claveCertificado));
 
-            var configuracion = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync();
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
             
             if (configuracion == null)
             {
@@ -114,7 +114,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(rutaLogo))
                 throw new ArgumentException("La ruta del logo es obligatoria", nameof(rutaLogo));
 
-            var configuracion = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync();
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
             
             if (configuracion == null)
             {
@@ -134,7 +134,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<bool> ValidarCertificadoDigitalAsync()
         {
-            var configuracion = await _context.ConfiguracionesEmpresa
+            var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
@@ -166,7 +166,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<InfoCertificadoDto?> ObtenerInfoCertificadoAsync()
         {
-            var configuracion = await _context.ConfiguracionesEmpresa
+            var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
@@ -218,7 +218,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 throw new ArgumentException("El ambiente debe ser '1' (Pruebas) o '2' (Producción)", nameof(nuevoAmbiente));
             }
 
-            var configuracion = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync();
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
             
             if (configuracion == null)
             {
@@ -246,7 +246,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<(bool EstaCompleta, List<string> CamposFaltantes)> ValidarConfiguracionCompletaAsync()
         {
-            var configuracion = await _context.ConfiguracionesEmpresa
+            var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
@@ -299,7 +299,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<IEnumerable<ConfiguracionEmpresa>> ObtenerTodasAsync(CancellationToken cancellationToken = default)
         {
-            return await _context.ConfiguracionesEmpresa
+            return await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .OrderBy(c => c.CodigoEstablecimiento)
                 .ThenBy(c => c.PuntoEmision)
@@ -308,7 +308,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<ConfiguracionEmpresa?> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.ConfiguracionesEmpresa
+            return await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
         }
@@ -318,7 +318,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             establecimiento = NormalizarCodigo(establecimiento);
             puntoEmision = NormalizarCodigo(puntoEmision);
 
-            return await _context.ConfiguracionesEmpresa
+            return await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.CodigoEstablecimiento == establecimiento && c.PuntoEmision == puntoEmision, cancellationToken);
         }
@@ -330,7 +330,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             Normalizar(configuracion);
             await ValidarUnicidadAsync(configuracion, cancellationToken);
 
-            await _context.ConfiguracionesEmpresa.AddAsync(configuracion, cancellationToken);
+            await _context.ConfiguracionEmpresa.AddAsync(configuracion, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
             return configuracion;
@@ -340,7 +340,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             if (configuracion == null) throw new ArgumentNullException(nameof(configuracion));
 
-            var existente = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync(c => c.Id == configuracion.Id, cancellationToken);
+            var existente = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync(c => c.Id == configuracion.Id, cancellationToken);
             if (existente is null)
             {
                 throw new KeyNotFoundException($"No existe una configuración con Id {configuracion.Id}");
@@ -370,13 +370,13 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task EliminarAsync(int id, CancellationToken cancellationToken = default)
         {
-            var configuracion = await _context.ConfiguracionesEmpresa.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
             if (configuracion == null)
             {
                 return;
             }
 
-            _context.ConfiguracionesEmpresa.Remove(configuracion);
+            _context.ConfiguracionEmpresa.Remove(configuracion);
             await _context.SaveChangesAsync(cancellationToken);
         }
 
@@ -404,7 +404,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 UrlAutorizacionComprobantes = "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl"
             };
 
-            await _context.ConfiguracionesEmpresa.AddAsync(configuracion);
+            await _context.ConfiguracionEmpresa.AddAsync(configuracion);
             await _context.SaveChangesAsync();
 
             return configuracion;
@@ -464,7 +464,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         private async Task ValidarUnicidadAsync(ConfiguracionEmpresa configuracion, CancellationToken cancellationToken, int? excluirId = null)
         {
-            var rucDuplicado = await _context.ConfiguracionesEmpresa
+            var rucDuplicado = await _context.ConfiguracionEmpresa
                 .AnyAsync(c => c.RUC == configuracion.RUC && (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);
 
             if (rucDuplicado)
@@ -472,7 +472,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 throw new InvalidOperationException($"Ya existe una configuración registrada con el RUC {configuracion.RUC}");
             }
 
-            var combinacionDuplicada = await _context.ConfiguracionesEmpresa
+            var combinacionDuplicada = await _context.ConfiguracionEmpresa
                 .AnyAsync(c => c.CodigoEstablecimiento == configuracion.CodigoEstablecimiento && 
                              c.PuntoEmision == configuracion.PuntoEmision && 
                              (!excluirId.HasValue || c.Id != excluirId.Value), cancellationToken);

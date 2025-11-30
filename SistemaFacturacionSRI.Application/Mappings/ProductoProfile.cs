@@ -1,7 +1,7 @@
-using AutoMapper;
-using SistemaFacturacionSRI.Application.DTOs.Producto;
-using SistemaFacturacionSRI.Application.DTOs.Categoria;
-using SistemaFacturacionSRI.Application.DTOs.TipoIVA;
+﻿using AutoMapper;
+using SistemaFacturacionSRI.Domain.DTOs.Producto;
+using SistemaFacturacionSRI.Domain.DTOs.Categoria;
+using SistemaFacturacionSRI.Domain.DTOs.TipoIVA;
 using SistemaFacturacionSRI.Domain.Entities;
 
 namespace SistemaFacturacionSRI.Application.Mappings

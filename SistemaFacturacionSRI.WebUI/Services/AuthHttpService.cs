@@ -1,6 +1,6 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
-using SistemaFacturacionSRI.Application.DTOs.Auth;
+using SistemaFacturacionSRI.Domain.DTOs.Auth;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {

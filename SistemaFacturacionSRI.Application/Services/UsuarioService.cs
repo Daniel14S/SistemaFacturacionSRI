@@ -1,9 +1,9 @@
-using SistemaFacturacionSRI.Application.DTOs.Auth;
-using SistemaFacturacionSRI.Application.DTOs.Common;
-using SistemaFacturacionSRI.Application.DTOs.Usuario;
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Security;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Auth;
+using SistemaFacturacionSRI.Domain.DTOs.Common;
+using SistemaFacturacionSRI.Domain.DTOs.Usuario;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Security;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
 

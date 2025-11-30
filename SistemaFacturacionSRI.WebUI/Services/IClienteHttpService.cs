@@ -1,5 +1,5 @@
-using SistemaFacturacionSRI.Application.DTOs.Cliente;
-using SistemaFacturacionSRI.Application.DTOs.Common;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Cliente;
+using SistemaFacturacionSRI.Domain.DTOs.Common;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
