@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Infrastructure.Data;
 

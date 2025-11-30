@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
-using SistemaFacturacionSRI.Application.Interfaces.Security;
+using SistemaFacturacionSRI.Domain.Interfaces.Security;
 
 namespace SistemaFacturacionSRI.Application.Security
 {

@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\SistemaFacturacionSRI.Application\SistemaFacturacionSRI.Application.csproj" />
     <ProjectReference Include="..\SistemaFacturacionSRI.Domain\SistemaFacturacionSRI.Domain.csproj" />
   </ItemGroup>
 

@@ -1,4 +1,4 @@
-using SistemaFacturacionSRI.Application.DTOs.Producto;
+﻿using SistemaFacturacionSRI.Domain.DTOs.Producto;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

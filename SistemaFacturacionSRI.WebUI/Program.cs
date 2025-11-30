@@ -5,13 +5,13 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Infrastructure.Contexts;  // ⭐ AGREGADO
-using SistemaFacturacionSRI.Application.Interfaces.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
-using SistemaFacturacionSRI.Application.Interfaces.Services;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Application.Services;
 using SistemaFacturacionSRI.Application.Mappings;
-using SistemaFacturacionSRI.Application.Interfaces.Security;
+using SistemaFacturacionSRI.Domain.Interfaces.Security;
 using SistemaFacturacionSRI.Application.Security;
 using SistemaFacturacionSRI.WebUI.Services;
 using SistemaFacturacionSRI.WebUI.Components;

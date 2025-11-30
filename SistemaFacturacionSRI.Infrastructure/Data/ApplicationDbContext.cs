@@ -27,7 +27,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         /// SPRINT 1: Solo Productos está activo
         /// </summary>
         public DbSet<Producto> Productos { get; set; }
-
         
         public DbSet<Rol> Roles { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
@@ -40,8 +39,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         public DbSet<DetalleFactura> DetalleFacturas { get; set; }
         public DbSet<InfoAdicional> InformacionAdicional { get; set; }
         public DbSet<SecuenciaFactura> SecuenciasFactura { get; set; }
-        public DbSet<ConfiguracionEmpresa> ConfiguracionesEmpresa { get; set; }
-   
+        
+        /// <summary>
+        /// Tabla de configuración de la empresa emisora
+        /// </summary>
+        public DbSet<ConfiguracionEmpresa> ConfiguracionEmpresa { get; set; }
 
         /// <summary>
         /// Configura el modelo de la base de datos.
@@ -70,7 +72,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
                 .IsUnique();
             
             ConfiguracionEmpresaSeed.Seed(modelBuilder);
-
         }
 
         /// <summary>

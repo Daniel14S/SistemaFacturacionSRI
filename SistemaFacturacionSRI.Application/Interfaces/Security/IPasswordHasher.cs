@@ -1,6 +1,6 @@
 using System;
 
-namespace SistemaFacturacionSRI.Application.Interfaces.Security
+namespace SistemaFacturacionSRI.Domain.Interfaces.Security
 {
     /// <summary>
     /// Contrato para operaciones de hashing de contraseñas basado en BCrypt.

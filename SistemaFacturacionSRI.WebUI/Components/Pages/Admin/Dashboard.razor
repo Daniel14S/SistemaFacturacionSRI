@@ -2,7 +2,7 @@
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = "Administrador")]
 @using SistemaFacturacionSRI.WebUI.Services
-@using SistemaFacturacionSRI.Application.DTOs.Common
+@using SistemaFacturacionSRI.Domain.DTOs.Common
 @using Microsoft.AspNetCore.Authorization
 @inject IProductoHttpService ProductoService
 @inject IUsuarioHttpService UsuarioService
@@ -239,7 +239,7 @@
         try
         {
             cargandoClientes = true;
-            var filtro = new SistemaFacturacionSRI.Application.DTOs.Cliente.FiltroClienteDto
+            var filtro = new SistemaFacturacionSRI.Domain.DTOs.Cliente.FiltroClienteDto
             {
                 PageNumber = 1,
                 PageSize = 1000

@@ -1,5 +1,5 @@
-using System.Net.Http.Json;
-using SistemaFacturacionSRI.Application.DTOs.Categoria;
+﻿using System.Net.Http.Json;
+using SistemaFacturacionSRI.Domain.DTOs.Categoria;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {

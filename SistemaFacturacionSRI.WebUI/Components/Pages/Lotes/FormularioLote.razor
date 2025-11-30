@@ -2,12 +2,12 @@
 @page "/lotes/editar/{IdLote:int}"
 @rendermode InteractiveServer
 
-@using SistemaFacturacionSRI.Application.DTOs.Lote
-@using SistemaFacturacionSRI.Application.DTOs.Producto
+@using SistemaFacturacionSRI.Domain.DTOs.Lote
+@using SistemaFacturacionSRI.Domain.DTOs.Producto
 @using SistemaFacturacionSRI.WebUI.Services
 @using System.ComponentModel.DataAnnotations
 @using System.Linq
-@using SistemaFacturacionSRI.Application.Interfaces.Services
+@using SistemaFacturacionSRI.Domain.Interfaces.Services
 @inject ILoteService LoteService
 @inject IProductoHttpService ProductoHttpService
 @inject NavigationManager Navigation

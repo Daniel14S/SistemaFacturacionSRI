@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using SistemaFacturacionSRI.Application.DTOs.Auth;
-using SistemaFacturacionSRI.Application.Interfaces;
+using SistemaFacturacionSRI.Domain.DTOs.Auth;
+using SistemaFacturacionSRI.Domain.Interfaces;
 
 namespace SistemaFacturacionSRI.WebUI.Services
 {
