@@ -666,10 +666,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("CodigoPorcentajeIVA")
-                        .IsRequired()
+                    b.Property<int>("CodigoPorcentajeIVA")
                         .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasColumnType("int");
 
                     b.Property<string>("CodigoPrincipal")
                         .IsRequired()

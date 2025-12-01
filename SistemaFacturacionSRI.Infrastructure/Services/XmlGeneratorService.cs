@@ -55,6 +55,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             try
             {
+                ArgumentNullException.ThrowIfNull(factura);
+                var claveAcceso = factura.ClaveAcceso ?? string.Empty;
                 // TODO: Implementar generación completa del XML
                 // Por ahora retornamos un XML básico de ejemplo
                 var xml = new XDocument(
@@ -67,7 +69,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                             new XElement("tipoEmision", "1"),
                             new XElement("razonSocial", "EMPRESA PRUEBA"),
                             new XElement("ruc", "1234567890001"),
-                            new XElement("claveAcceso", factura.ClaveAcceso),
+                            new XElement("claveAcceso", claveAcceso),
                             new XElement("codDoc", "01"),
                             new XElement("estab", "001"),
                             new XElement("ptoEmi", "001"),
