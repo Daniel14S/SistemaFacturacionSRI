@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Models.XML;
+using SistemaFacturacionSRI.Domain.DTOs.Factura;
 using SistemaFacturacionSRI.Infrastructure.Data;
 
 namespace SistemaFacturacionSRI.Application.Services;
@@ -110,15 +111,12 @@ public class XmlGeneratorService : IXmlGeneratorService
             DirEstablecimiento = configuracion.DirEstablecimiento,
             ObligadoContabilidad = configuracion.ObligadoContabilidad ? "SI" : "NO",
             TipoIdentificacionComprador = factura.Cliente!.TipoIdentificacion!.CodigoSRI,
-            // CORRECCIÓN: Usar NombreCompleto() en lugar de RazonSocial
             RazonSocialComprador = factura.Cliente.NombreCompleto(),
             IdentificacionComprador = factura.Cliente.Identificacion,
             DireccionComprador = factura.Cliente.Direccion,
             TotalSinImpuestos = factura.Subtotal0 + factura.Subtotal12 + factura.Subtotal15,
-            // CORRECCIÓN: Usar Descuento en lugar de TotalDescuento
             TotalDescuento = factura.Descuento,
             Propina = factura.Propina,
-            // CORRECCIÓN: Usar ImporteTotal en lugar de Total
             ImporteTotal = factura.ImporteTotal,
             Moneda = "DOLAR"
         };
@@ -143,7 +141,6 @@ public class XmlGeneratorService : IXmlGeneratorService
                 Cantidad = detalle.Cantidad,
                 PrecioUnitario = detalle.PrecioUnitario,
                 Descuento = detalle.Descuento,
-                // CORRECCIÓN: Usar PrecioTotalSinImpuesto en lugar de Subtotal
                 PrecioTotalSinImpuesto = detalle.PrecioTotalSinImpuesto
             };
 
@@ -153,16 +150,11 @@ public class XmlGeneratorService : IXmlGeneratorService
                 Codigo = "2", // 2 = IVA
                 CodigoPorcentaje = ObtenerCodigoPorcentaje(detalle.TarifaIVA),
                 Tarifa = detalle.TarifaIVA,
-                // CORRECCIÓN: Usar PrecioTotalSinImpuesto en lugar de Subtotal
                 BaseImponible = detalle.PrecioTotalSinImpuesto,
                 Valor = detalle.ValorIVA
             };
 
             detalleXml.Impuestos.Add(impuesto);
-
-            // CORRECCIÓN: DetalleFactura no tiene InformacionAdicional
-            // Si necesitas información adicional, deberías agregarla desde otra fuente
-            // o agregar esta propiedad a la entidad DetalleFactura
 
             facturaXml.Detalles.Add(detalleXml);
         }
@@ -192,7 +184,7 @@ public class XmlGeneratorService : IXmlGeneratorService
                 infoAdicional.AgregarCampo("Observaciones", factura.Observaciones);
             }
 
-            // CORRECCIÓN: Construir nombre completo del usuario
+            // Construir nombre completo del usuario
             if (factura.Usuario != null)
             {
                 var nombreVendedor = $"{factura.Usuario.Nombre1} {factura.Usuario.Nombre2} {factura.Usuario.Apellido1} {factura.Usuario.Apellido2}".Trim();
@@ -220,7 +212,6 @@ public class XmlGeneratorService : IXmlGeneratorService
         foreach (var grupo in detallesPorTarifa)
         {
             var tarifa = grupo.Key;
-            // CORRECCIÓN: Usar PrecioTotalSinImpuesto en lugar de Subtotal
             var baseImponible = grupo.Sum(d => d.PrecioTotalSinImpuesto);
             var valor = grupo.Sum(d => d.ValorIVA);
 
@@ -367,7 +358,7 @@ public class XmlGeneratorService : IXmlGeneratorService
             throw new InvalidOperationException($"No se encontró la factura con ID {facturaId}");
         }
 
-        // CORRECCIÓN: Verificar que ClaveAcceso no sea null
+        // Verificar que ClaveAcceso no sea null
         if (string.IsNullOrWhiteSpace(factura.ClaveAcceso))
         {
             throw new InvalidOperationException($"La factura con ID {facturaId} no tiene clave de acceso generada");
@@ -381,5 +372,71 @@ public class XmlGeneratorService : IXmlGeneratorService
         await _context.SaveChangesAsync();
 
         return (xmlContent, rutaArchivo);
+    }
+
+    // ==================== MÉTODOS ADICIONALES REQUERIDOS POR LA INTERFAZ ====================
+
+    /// <summary>
+    /// Genera XML desde un DTO (sobrecarga sin Async en el nombre)
+    /// </summary>
+    public string GenerarXmlFactura(FacturaDto factura)
+    {
+        // Implementación síncrona llamando al método async
+        return GenerarXmlFacturaAsync(factura.Id).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Valida XML contra esquema XSD (versión con ResultadoValidacion)
+    /// </summary>
+    public async Task<ResultadoValidacion> ValidarXmlContraEsquema(string xmlContent, string? xsdPath = null)
+    {
+        var (esValido, errores) = await ValidarXmlContraEsquemaAsync(xmlContent);
+        
+        if (esValido)
+        {
+            return ResultadoValidacion.Exitoso();
+        }
+        
+        // Convertir la lista de strings a lista de ErrorValidacion
+        var erroresValidacion = errores.Select(error => new ErrorValidacion
+        {
+            Linea = 0, // No tenemos información de línea en este punto
+            Posicion = 0, // No tenemos información de posición
+            Mensaje = error,
+            Severidad = "Error"
+        }).ToList();
+        
+        return ResultadoValidacion.ConErrores(erroresValidacion);
+    }
+
+    /// <summary>
+    /// Guarda XML en archivo (sobrecarga compatible con la interfaz)
+    /// </summary>
+    public async Task<string> GuardarXmlEnArchivo(string xmlContent, string claveAcceso)
+    {
+        return await GuardarXmlEnArchivoAsync(xmlContent, claveAcceso);
+    }
+
+    /// <summary>
+    /// Genera y valida XML desde un DTO
+    /// </summary>
+    public async Task<string> GenerarYValidarXml(FacturaDto factura)
+    {
+        // Generar XML
+        var xmlContent = await GenerarXmlFacturaAsync(factura.Id);
+        
+        // Validar XML
+        var resultado = await ValidarXmlContraEsquema(xmlContent);
+        
+        if (!resultado.EsValido)
+        {
+            var erroresDetallados = string.Join(Environment.NewLine, 
+                resultado.Errores.Select(e => e.ToString()));
+            
+            throw new InvalidOperationException(
+                $"El XML generado no es válido según el esquema XSD:{Environment.NewLine}{erroresDetallados}");
+        }
+        
+        return xmlContent;
     }
 }
