@@ -51,7 +51,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(f => f.SubtotalExentoIVA).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.SubtotalConDescuento).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.Descuento).HasColumnType("DECIMAL(18,2)");
-            builder.Property(f => f.IVA12).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.IVA15).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.Propina).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.ImporteTotal).HasColumnType("DECIMAL(18,2)");

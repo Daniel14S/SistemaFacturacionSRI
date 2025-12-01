@@ -770,9 +770,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal>("IVA12")
-                        .HasColumnType("DECIMAL(18,2)");
-
                     b.Property<decimal>("IVA15")
                         .HasColumnType("DECIMAL(18,2)");
 

@@ -173,7 +173,6 @@ namespace SistemaFacturacionSRI.Application.Services
             factura.SubtotalExentoIVA = 0;
             factura.SubtotalConDescuento = subtotales.Values.Sum();
             factura.Descuento = descuentoTotal;
-            factura.IVA12 = subtotales[TipoIVA.IVA_12] * 0.12m;
             factura.IVA15 = subtotales[TipoIVA.IVA_15] * 0.15m;
             factura.ImporteTotal = factura.SubtotalConDescuento + ivaTotal + factura.Propina;
 

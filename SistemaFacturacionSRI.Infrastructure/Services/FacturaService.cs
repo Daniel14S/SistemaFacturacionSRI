@@ -212,7 +212,6 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
     factura.SubtotalExentoIVA = 0;
     factura.SubtotalConDescuento = subtotales.Values.Sum();
     factura.Descuento = descuentoTotal;
-    factura.IVA12 = subtotales[TipoIVA.IVA_12] * 0.12m;
     factura.IVA15 = subtotales[TipoIVA.IVA_15] * 0.15m;
     factura.ImporteTotal = factura.SubtotalConDescuento + ivaTotal + factura.Propina;
 
@@ -481,7 +480,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 EstadoDescripcion = ObtenerDescripcionEstado(factura.Estado),
                 SubtotalTotal = factura.SubtotalConDescuento,
                 TotalDescuento = factura.Descuento,
-                TotalIVA = factura.IVA12 + factura.IVA15,
+                TotalIVA = CalcularTotalIVA(factura),
                 Total = factura.ImporteTotal,
                 Detalles = factura.Detalles?.Select(d => new DetalleFacturaDto
                 {
@@ -503,6 +502,13 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                     Valor = i.Valor
                 }).ToList() ?? new List<InfoAdicionalDto>()
             };
+        }
+
+        private static decimal CalcularTotalIVA(Factura factura)
+        {
+            var iva12 = factura.Subtotal12 * 0.12m;
+            var iva15 = factura.Subtotal15 * 0.15m;
+            return iva12 + iva15;
         }
 
         private static string ObtenerDescripcionEstado(EstadoFactura estado)
