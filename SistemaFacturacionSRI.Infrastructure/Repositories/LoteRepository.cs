@@ -91,6 +91,12 @@ public async Task ActualizarAsync(Lote lote)
     {
         _context.Entry(existingEntity).State = EntityState.Detached;
     }
+
+    // Evita adjuntar una referencia de Producto ya cargada que pueda duplicar el tracking
+    if (lote.Producto != null)
+    {
+        lote.Producto = null;
+    }
     
     _context.Lotes.Update(lote);
     await _context.SaveChangesAsync();

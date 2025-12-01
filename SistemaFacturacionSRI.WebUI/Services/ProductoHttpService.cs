@@ -124,13 +124,14 @@ namespace SistemaFacturacionSRI.WebUI.Services
 
         /// <summary>
         /// Reactiva un producto previamente inactivo.
-        /// PUT /api/producto/{id}/reactivar
+        /// PATCH /api/producto/{id}/reactivar
         /// </summary>
         public async Task ReactivarAsync(int id)
         {
             try
             {
-                var response = await _httpClient.PutAsync($"{API_BASE_URL}/{id}/reactivar", null);
+                var request = new HttpRequestMessage(HttpMethod.Patch, $"{API_BASE_URL}/{id}/reactivar");
+                var response = await _httpClient.SendAsync(request);
 
                 if (!response.IsSuccessStatusCode)
                 {
