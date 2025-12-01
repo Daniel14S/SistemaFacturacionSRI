@@ -177,8 +177,8 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
         decimal baseImponible = precioTotalSinImpuesto - descuentoLinea;
 
         var tipoIVA = (TipoIVA)detalleDto.CodigoPorcentajeIVA;
-        decimal tarifaIVA = ObtenerTarifaIVA(tipoIVA);
-        decimal valorIVA = baseImponible * tarifaIVA;
+        decimal tarifa = ObtenerTarifa(tipoIVA);
+        decimal valorIVA = baseImponible * tarifa;
         decimal valorTotal = baseImponible + valorIVA;
 
         var detalleFactura = new DetalleFactura
@@ -191,7 +191,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
             Descuento = descuentoLinea,
             PrecioTotalSinImpuesto = precioTotalSinImpuesto,
             CodigoPorcentajeIVA = detalleDto.CodigoPorcentajeIVA,
-            Tarifa = tarifaIVA,
+            Tarifa = tarifa,
             BaseImponible = baseImponible,
             Valor = valorIVA,
             ValorTotal = valorTotal
@@ -228,7 +228,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
         .Include(f => f.Cliente)
         .Include(f => f.Usuario)
         .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
-        .Include(f => f.InformacionAdicional)
+        .Include(f => f.InfoAdicional)
         .FirstOrDefaultAsync(f => f.Id == factura.Id, cancellationToken);
 
     // 10. Mapear a DTO manualmente
@@ -251,7 +251,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 .Include(f => f.Cliente)
                 .Include(f => f.Usuario)
                 .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
-                .Include(f => f.InformacionAdicional)
+                .Include(f => f.InfoAdicional)
                 .AsQueryable();
 
             if (filtro.ClienteId.HasValue)
@@ -332,7 +332,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 .Include(f => f.Cliente)
                 .Include(f => f.Usuario)
                 .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
-                .Include(f => f.InformacionAdicional)
+                .Include(f => f.InfoAdicional)
                 .FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
         }
 
@@ -413,7 +413,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
         // ==================== MÉTODOS AUXILIARES ====================
 
-        private static decimal ObtenerTarifaIVA(TipoIVA tipo)
+        private static decimal ObtenerTarifa(TipoIVA tipo)
         {
             return tipo switch
             {
@@ -485,7 +485,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 Total = factura.ImporteTotal,
                 Detalles = factura.Detalles?.Select(d => new DetalleFacturaDto
                 {
-                    ProductoId = d.ProductoId,
+                    ProductoId = d.ProductoId ?? 0,
                     CodigoPrincipal = d.CodigoPrincipal,
                     Descripcion = d.Descripcion,
                     Cantidad = d.Cantidad,
@@ -497,7 +497,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                     Valor = d.Valor,
                     ValorTotal = d.ValorTotal
                 }).ToList() ?? new List<DetalleFacturaDto>(),
-                InfoAdicional = factura.InformacionAdicional?.Select(i => new InfoAdicionalDto
+                InfoAdicional = factura.InfoAdicional?.Select(i => new InfoAdicionalDto
                 {
                     Nombre = i.Nombre,
                     Valor = i.Valor

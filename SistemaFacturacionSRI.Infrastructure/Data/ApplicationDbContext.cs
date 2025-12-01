@@ -37,7 +37,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         public DbSet<Lote> Lotes { get; set; }
         public DbSet<Factura> Facturas { get; set; }
         public DbSet<DetalleFactura> DetalleFacturas { get; set; }
-        public DbSet<InfoAdicional> InformacionAdicional { get; set; }
+        public DbSet<InfoAdicional> InfoAdicional { get; set; }
         public DbSet<SecuenciaFactura> SecuenciasFactura { get; set; }
         
         /// <summary>
@@ -70,6 +70,126 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
             modelBuilder.Entity<Cliente>()
                 .HasIndex(c => c.Identificacion)
                 .IsUnique();
+
+            modelBuilder.Entity<Factura>(entity =>
+            {
+                entity.ToTable("Facturas");
+                entity.HasKey(f => f.Id);
+                
+                // Índices
+                entity.HasIndex(f => f.ClaveAcceso)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Facturas_ClaveAcceso");
+                
+                entity.HasIndex(f => f.NumeroFactura)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Facturas_NumeroFactura");
+                
+                entity.HasIndex(f => f.FechaEmision)
+                    .HasDatabaseName("IX_Facturas_FechaEmision");
+                
+                entity.HasIndex(f => f.Estado)
+                    .HasDatabaseName("IX_Facturas_Estado");
+                
+                // Relación con Cliente
+                entity.HasOne(f => f.Cliente)
+                    .WithMany()
+                    .HasForeignKey(f => f.ClienteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Relación con Usuario
+                entity.HasOne(f => f.Usuario)
+                    .WithMany()
+                    .HasForeignKey(f => f.UsuarioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // Relación con DetalleFactura (UNO A MUCHOS)
+                entity.HasMany(f => f.Detalles)
+                    .WithOne(d => d.Factura)
+                    .HasForeignKey(d => d.FacturaId)
+                    .OnDelete(DeleteBehavior.Cascade);  // Si eliminas factura, elimina detalles
+                
+                // Relación con InfoAdicional
+                entity.HasMany(f => f.InfoAdicional)
+                    .WithOne(i => i.Factura)
+                    .HasForeignKey(i => i.FacturaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Precisión para decimales
+                entity.Property(f => f.Subtotal0).HasPrecision(18, 2);
+                entity.Property(f => f.Subtotal12).HasPrecision(18, 2);
+                entity.Property(f => f.Subtotal15).HasPrecision(18, 2);
+                entity.Property(f => f.SubtotalNoObjetoIVA).HasPrecision(18, 2);
+                entity.Property(f => f.SubtotalExentoIVA).HasPrecision(18, 2);
+                entity.Property(f => f.SubtotalConDescuento).HasPrecision(18, 2);
+                entity.Property(f => f.Descuento).HasPrecision(18, 2);
+                entity.Property(f => f.IVA12).HasPrecision(18, 2);
+                entity.Property(f => f.IVA15).HasPrecision(18, 2);
+                entity.Property(f => f.Propina).HasPrecision(18, 2);
+                entity.Property(f => f.ImporteTotal).HasPrecision(18, 2);
+                
+                // Campos requeridos
+                entity.Property(f => f.NumeroFactura).IsRequired().HasMaxLength(17);
+                entity.Property(f => f.ClaveAcceso).IsRequired().HasMaxLength(49);
+                entity.Property(f => f.Ambiente).IsRequired().HasMaxLength(20);
+                entity.Property(f => f.TipoEmision).IsRequired().HasMaxLength(20);
+                entity.Property(f => f.Estado).IsRequired().HasMaxLength(20);
+            });
+
+            modelBuilder.Entity<DetalleFactura>(entity =>
+            {
+                entity.ToTable("FacturaDetalles");
+                entity.HasKey(d => d.Id);
+                
+                // Índice compuesto
+                entity.HasIndex(d => new { d.FacturaId, d.ProductoId })
+                    .HasDatabaseName("IX_FacturaDetalles_FacturaId_ProductoId");
+                
+                // Relación con Factura (YA CONFIGURADA ARRIBA, PERO SE PUEDE ESPECIFICAR AQUÍ TAMBIÉN)
+                entity.HasOne(d => d.Factura)
+                    .WithMany(f => f.Detalles)
+                    .HasForeignKey(d => d.FacturaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                // Relación con Producto (opcional)
+                entity.HasOne(d => d.Producto)
+                    .WithMany()
+                    .HasForeignKey(d => d.ProductoId)
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired(false);
+                
+                // Precisión para decimales
+                entity.Property(d => d.Cantidad).HasPrecision(18, 2);
+                entity.Property(d => d.PrecioUnitario).HasPrecision(18, 2);
+                entity.Property(d => d.Descuento).HasPrecision(18, 2);
+                entity.Property(d => d.PrecioTotalSinImpuesto).HasPrecision(18, 2);
+                entity.Property(d => d.Tarifa).HasPrecision(5, 2);
+                entity.Property(d => d.BaseImponible).HasPrecision(18, 2);
+                entity.Property(d => d.Valor).HasPrecision(18, 2);
+                entity.Property(d => d.ValorTotal).HasPrecision(18, 2);
+                
+                // Campos requeridos
+                entity.Property(d => d.CodigoPrincipal).IsRequired().HasMaxLength(50);
+                entity.Property(d => d.Descripcion).IsRequired().HasMaxLength(300);
+                entity.Property(d => d.CodigoAuxiliar).HasMaxLength(50);
+            });
+            
+            modelBuilder.Entity<InfoAdicional>(entity =>
+            {
+                entity.ToTable("InfoAdicional");
+                entity.HasKey(i => i.Id);
+                
+                entity.HasIndex(i => new { i.FacturaId, i.Nombre })
+                    .HasDatabaseName("IX_InfoAdicional_FacturaId_Nombre");
+                
+                entity.HasOne(i => i.Factura)
+                    .WithMany(f => f.InfoAdicional)
+                    .HasForeignKey(i => i.FacturaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.Property(i => i.Nombre).IsRequired().HasMaxLength(100);
+                entity.Property(i => i.Valor).IsRequired().HasMaxLength(500);
+            });
             
             ConfiguracionEmpresaSeed.Seed(modelBuilder);
             SecuenciaFacturaSeed.Seed(modelBuilder);

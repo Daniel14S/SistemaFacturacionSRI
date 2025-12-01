@@ -1,3 +1,4 @@
+// SistemaFacturacionSRI.Infrastructure/Data/Configurations/InfoAdicionalConfiguration.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SistemaFacturacionSRI.Domain.Entities;
@@ -11,21 +12,17 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.ToTable("InfoAdicional");
             builder.HasKey(i => i.Id);
 
-            builder.Property(i => i.Nombre)
-                .IsRequired()
-                .HasMaxLength(100);
+            builder.HasIndex(i => new { i.FacturaId, i.Nombre })
+                .HasDatabaseName("IX_InfoAdicional_FacturaId_Nombre");
 
-            builder.Property(i => i.Valor)
-                .IsRequired()
-                .HasMaxLength(500);
-
-            builder.HasIndex(i => i.FacturaId);
-
+            // CORREGIDO: Cambiar InformacionAdicional por InfoAdicional
             builder.HasOne(i => i.Factura)
-                .WithMany(f => f.InformacionAdicional)
+                .WithMany(f => f.InfoAdicional)
                 .HasForeignKey(i => i.FacturaId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_InfoAdicional_Factura");
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(i => i.Nombre).IsRequired().HasMaxLength(100);
+            builder.Property(i => i.Valor).IsRequired().HasMaxLength(500);
         }
     }
 }

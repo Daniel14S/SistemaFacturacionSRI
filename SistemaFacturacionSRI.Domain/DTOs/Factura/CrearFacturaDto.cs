@@ -85,5 +85,5 @@ public class CrearDetalleFacturaDto
     /// Información adicional del detalle (opcional)
     /// </summary>
     [MaxLength(500, ErrorMessage = "La información adicional no puede exceder 500 caracteres")]
-    public string? InformacionAdicional { get; set; }
+    public string? InfoAdicional { get; set; }
 }

@@ -137,8 +137,8 @@ namespace SistemaFacturacionSRI.Application.Services
                 
                 // ⚠️ CORRECCIÓN: CodigoPorcentajeIVA ahora es int, no necesita cast inicial
                 var tipoIVA = (TipoIVA)detalleDto.CodigoPorcentajeIVA;
-                decimal tarifaIVA = ObtenerTarifaIVA(tipoIVA);
-                decimal valorIVA = baseImponible * tarifaIVA;
+                decimal tarifa = ObtenerTarifa(tipoIVA);
+                decimal valorIVA = baseImponible * tarifa;
                 decimal valorTotal = baseImponible + valorIVA;
 
                 var detalle = new DetalleFactura
@@ -151,7 +151,7 @@ namespace SistemaFacturacionSRI.Application.Services
                     Descuento = descuentoLinea,
                     PrecioTotalSinImpuesto = precioTotalSinImpuesto,
                     CodigoPorcentajeIVA = detalleDto.CodigoPorcentajeIVA,
-                    Tarifa = tarifaIVA,
+                    Tarifa = tarifa,
                     BaseImponible = baseImponible,
                     Valor = valorIVA,
                     ValorTotal = valorTotal
@@ -301,7 +301,7 @@ namespace SistemaFacturacionSRI.Application.Services
 
         // ==================== MÉTODOS AUXILIARES ====================
 
-        private decimal ObtenerTarifaIVA(TipoIVA tipo)
+        private decimal ObtenerTarifa(TipoIVA tipo)
         {
             return tipo switch
             {

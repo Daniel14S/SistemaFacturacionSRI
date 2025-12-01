@@ -150,14 +150,13 @@ public class XmlGeneratorService : IXmlGeneratorService
                 PrecioTotalSinImpuesto = detalle.PrecioTotalSinImpuesto
             };
 
-            // Agregar impuesto (IVA)
             var impuesto = new ImpuestoDetalle
             {
                 Codigo = "2", // 2 = IVA
-                CodigoPorcentaje = ObtenerCodigoPorcentaje(detalle.TarifaIVA),
-                Tarifa = detalle.TarifaIVA,
+                CodigoPorcentaje = detalle.CodigoPorcentajeIVA.ToString(), // ✅ Convertir a string
+                Tarifa = detalle.Tarifa,
                 BaseImponible = detalle.PrecioTotalSinImpuesto,
-                Valor = detalle.ValorIVA
+                Valor = detalle.Valor
             };
 
             detalleXml.Impuestos.Add(impuesto);
@@ -206,46 +205,48 @@ public class XmlGeneratorService : IXmlGeneratorService
     /// <summary>
     /// T-044: Genera la sección TotalConImpuestos agrupando por tarifa
     /// </summary>
-    private List<TotalImpuesto> GenerarTotalConImpuestos(Domain.Entities.Factura factura)
-    {
-        var totalesImpuestos = new List<TotalImpuesto>();
-
-        // Agrupar detalles por tarifa de IVA
-        var detallesPorTarifa = factura.Detalles
-            .GroupBy(d => d.TarifaIVA)
-            .OrderBy(g => g.Key); // Ordenar por tarifa (0%, 12%, 15%)
-
-        foreach (var grupo in detallesPorTarifa)
+        private List<TotalImpuesto> GenerarTotalConImpuestos(Domain.Entities.Factura factura)
         {
-            var tarifa = grupo.Key;
-            var baseImponible = grupo.Sum(d => d.PrecioTotalSinImpuesto);
-            var valor = grupo.Sum(d => d.ValorIVA);
+            var totalesImpuestos = new List<TotalImpuesto>();
 
-            var totalImpuesto = new TotalImpuesto
+            // Agrupar por CodigoPorcentajeIVA
+            var detallesPorCodigo = factura.Detalles
+                .GroupBy(d => d.CodigoPorcentajeIVA)
+                .OrderBy(g => g.Key);
+
+            foreach (var grupo in detallesPorCodigo)
             {
-                Codigo = "2", // 2 = IVA
-                CodigoPorcentaje = ObtenerCodigoPorcentaje(tarifa),
-                BaseImponible = baseImponible,
-                Valor = valor
-            };
+                var codigoPorcentaje = grupo.Key;
+                var baseImponible = grupo.Sum(d => d.PrecioTotalSinImpuesto);
+                var valor = grupo.Sum(d => d.Valor);
 
-            totalesImpuestos.Add(totalImpuesto);
+                var totalImpuesto = new TotalImpuesto
+                {
+                    Codigo = "2", // 2 = IVA
+                    CodigoPorcentaje = codigoPorcentaje.ToString(), // ✅ Convertir a string
+                    BaseImponible = baseImponible,
+                    Valor = valor
+                };
+
+                totalesImpuestos.Add(totalImpuesto);
+            }
+
+            return totalesImpuestos;
         }
-
-        return totalesImpuestos;
-    }
 
     /// <summary>
     /// Obtiene el código de porcentaje según la tarifa de IVA
+    /// NOTA: Este método ya no es necesario porque CodigoPorcentajeIVA ya está en DetalleFactura
+    /// Se mantiene por compatibilidad pero puedes eliminarlo si no se usa en otro lugar
     /// </summary>
-    private string ObtenerCodigoPorcentaje(int tarifa)
+    private string ObtenerCodigoPorcentaje(decimal tarifa)
     {
         return tarifa switch
         {
-            0 => "0",   // 0%
-            12 => "2",  // 12%
-            14 => "3",  // 14%
-            15 => "4",  // 15%
+            0m => "0",   // 0%
+            12m => "2",  // 12%
+            14m => "3",  // 14%
+            15m => "4",  // 15%
             _ => throw new InvalidOperationException($"Tarifa de IVA no soportada: {tarifa}")
         };
     }

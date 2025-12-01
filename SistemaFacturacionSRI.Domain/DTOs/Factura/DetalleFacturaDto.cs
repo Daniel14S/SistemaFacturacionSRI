@@ -85,5 +85,5 @@ public class DetalleFacturaDto
     /// <summary>
     /// Información adicional del detalle
     /// </summary>
-    public string? InformacionAdicional { get; set; }
+    public string? InfoAdicional { get; set; }
 }
