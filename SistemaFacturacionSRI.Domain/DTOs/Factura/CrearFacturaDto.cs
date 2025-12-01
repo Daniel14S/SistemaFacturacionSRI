@@ -69,13 +69,17 @@ public class CrearDetalleFacturaDto
     [Range(0, 999999.99, ErrorMessage = "El descuento no puede ser negativo")]
     public decimal Descuento { get; set; } = 0;
 
-    // ✅ AGREGA ESTE CAMPO QUE FALTA:
     /// <summary>
-    /// Código del porcentaje de IVA aplicable (0, 2, 3, 6, 7)
-    /// 0 = 0%, 2 = 12%, 3 = 14%, 6 = No objeto, 7 = Exento
+    /// Código del porcentaje de IVA aplicable según enum TipoIVA
+    /// 0 = 0% (IVA_0), 12 = 12% (IVA_12), 15 = 15% (IVA_15)
     /// </summary>
     [Required(ErrorMessage = "Debe especificar el código de IVA")]
-    public int CodigoPorcentajeIVA { get; set; } = 2; // Por defecto 12%
+    public int CodigoPorcentajeIVA { get; set; } = 15; // ✅ Por defecto 12%
+
+    /// <summary>
+    /// ID del lote específico a usar (opcional, si no se especifica se usa FIFO)
+    /// </summary>
+    public int? LoteId { get; set; }
 
     /// <summary>
     /// Información adicional del detalle (opcional)

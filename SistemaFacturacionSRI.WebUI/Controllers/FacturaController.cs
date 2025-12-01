@@ -71,91 +71,143 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
         // ==================== ENDPOINTS ====================
 
-        /// <summary>
-        /// T-027: POST /api/factura
-        /// Crea una nueva factura en estado BORRADOR
-        /// PERMISOS: Administrador ✅ | Vendedor ✅
-        /// </summary>
-        [HttpPost]
-        [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
-        [ProducesResponseType(typeof(FacturaDto), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFacturaDto dto)
+       /// <summary>
+/// T-027: POST /api/factura
+/// Crea una nueva factura en estado BORRADOR
+/// PERMISOS: Administrador ✅ | Vendedor ✅
+/// IMPLEMENTA: T-020 de Pedro (Lógica completa de creación)
+/// </summary>
+[HttpPost]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(typeof(FacturaDto), StatusCodes.Status201Created)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFacturaDto dto)
+{
+    try
+    {
+        // 1. Validación inicial de modelo
+        if (dto == null)
         {
-            try
-            {
-                await Task.CompletedTask;
-                
-                if (dto == null)
-                {
-                    return BadRequest(new { message = "Los datos de la factura son requeridos" });
-                }
-
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new
-                    {
-                        message = "Datos inválidos",
-                        errors = ModelState.Values
-                            .SelectMany(v => v.Errors)
-                            .Select(e => e.ErrorMessage)
-                    });
-                }
-
-                // Obtener usuario autenticado
-                int usuarioId = ObtenerUsuarioId();
-
-                // TODO: Llamar al servicio de creación de factura
-                // var factura = await _facturaService.CrearFacturaAsync(dto, usuarioId);
-                
-                // TEMPORAL: Respuesta simulada hasta que Pedro implemente FacturaService
-                _logger.LogInformation(
-                    "Solicitud de creación de factura recibida. Usuario: {UsuarioId}, Cliente: {ClienteId}, Detalles: {CantidadDetalles}",
-                    usuarioId, dto.ClienteId, dto.Detalles.Count);
-
-                return StatusCode(StatusCodes.Status501NotImplemented, new
-                {
-                    message = "Endpoint en desarrollo. Esperando implementación de FacturaService (T-020 - Pedro)",
-                    datosRecibidos = new
-                    {
-                        usuarioId,
-                        dto.ClienteId,
-                        cantidadProductos = dto.Detalles.Count
-                    }
-                });
-
-                // CÓDIGO FINAL (descomentar cuando Pedro termine T-020):
-                /*
-                return CreatedAtAction(
-                    nameof(ObtenerFacturaPorId),
-                    new { id = factura.Id },
-                    factura
-                );
-                */
-            }
-            catch (ArgumentException ex)
-            {
-                _logger.LogWarning(ex, "Error de validación al crear factura");
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear factura");
-                return StatusCode(StatusCodes.Status500InternalServerError, new
-                {
-                    message = "Error interno del servidor"
-                });
-            }
+            return BadRequest(new { message = "Los datos de la factura son requeridos" });
         }
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new
+            {
+                message = "Datos inválidos",
+                errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+            });
+        }
+
+        // 2. Validaciones adicionales de negocio
+        if (dto.Detalles == null || !dto.Detalles.Any())
+        {
+            return BadRequest(new 
+            { 
+                message = "La factura debe tener al menos un producto" 
+            });
+        }
+
+        // Validar cantidades positivas
+        var detallesInvalidos = dto.Detalles
+            .Where(d => d.Cantidad <= 0 || d.PrecioUnitario <= 0)
+            .ToList();
+
+        if (detallesInvalidos.Any())
+        {
+            return BadRequest(new
+            {
+                message = "Todos los productos deben tener cantidad y precio mayor a cero",
+                detallesInvalidos = detallesInvalidos.Select(d => new
+                {
+                    d.ProductoId,
+                    d.Cantidad,
+                    d.PrecioUnitario
+                })
+            });
+        }
+
+        // 3. Obtener usuario autenticado
+        int usuarioId = ObtenerUsuarioId();
+
+        _logger.LogInformation(
+            "Iniciando creación de factura. Usuario: {UsuarioId}, Cliente: {ClienteId}, Productos: {CantidadProductos}",
+            usuarioId, dto.ClienteId, dto.Detalles.Count);
+
+        // 4. Llamar al servicio de creación (T-020 de Pedro)
+        var factura = await _facturaService.CrearFacturaAsync(dto, usuarioId);
+
+        _logger.LogInformation(
+            "Factura creada exitosamente. ID: {FacturaId}, Número: {NumeroFactura}, Total: {Total}",
+            factura.Id, factura.NumeroFactura, factura.Total);
+
+        // 5. Retornar resultado 201 Created con Location header
+        return CreatedAtAction(
+            nameof(ObtenerFacturaPorId),
+            new { id = factura.Id },
+            new
+            {
+                message = "Factura creada exitosamente",
+                factura = factura,
+                enlaces = new
+                {
+                    verDetalle = $"/api/factura/{factura.Id}",
+                    descargarXml = $"/api/factura/{factura.Id}/xml",
+                    enviarSri = $"/api/factura/{factura.Id}/enviar-sri"
+                }
+            }
+        );
+    }
+    catch (ArgumentException ex)
+    {
+        _logger.LogWarning(ex, "Error de validación al crear factura");
+        return BadRequest(new 
+        { 
+            message = ex.Message,
+            tipo = "ValidationError"
+        });
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Errores de negocio (cliente inactivo, producto sin stock, etc.)
+        _logger.LogWarning(ex, "Error de negocio al crear factura");
+        return BadRequest(new 
+        { 
+            message = ex.Message,
+            tipo = "BusinessRuleError"
+        });
+    }
+    catch (KeyNotFoundException ex)
+    {
+        // Cliente o producto no encontrado
+        _logger.LogWarning(ex, "Recurso no encontrado al crear factura");
+        return NotFound(new 
+        { 
+            message = ex.Message,
+            tipo = "NotFoundError"
+        });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Acceso no autorizado al crear factura");
+        return Unauthorized(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error interno al crear factura. Usuario: {UsuarioId}, Cliente: {ClienteId}", 
+            ObtenerUsuarioId(), dto.ClienteId);
+        
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno del servidor al crear la factura",
+            tipo = "InternalError"
+        });
+    }
+}
 
         /// <summary>
         /// T-028: GET /api/factura
@@ -375,5 +427,130 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 });
             }
         }
+
+
+        // ==================== AGREGAR ESTE MÉTODO AL FINAL DE FacturaController.cs ====================
+// Ubicación: SistemaFacturacionSRI.WebUI/Controllers/FacturaController.cs
+// Agregar ANTES de la última llave de cierre }
+
+/// <summary>
+/// T-048: GET /api/factura/{id}/xml
+/// Descarga el archivo XML original de una factura
+/// PERMISOS: Administrador ✅ (cualquier factura) | Vendedor ✅ (solo sus facturas)
+/// </summary>
+[HttpGet("{id}/xml")]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> DescargarXml(int id)
+{
+    try
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        // 1. Obtener la factura
+        var factura = await _facturaService.ObtenerPorIdAsync(id);
+
+        if (factura == null)
+        {
+            return NotFound(new 
+            { 
+                message = $"Factura con ID {id} no encontrada" 
+            });
+        }
+
+        // 2. Validar permisos: Vendedor solo puede descargar sus propias facturas
+        if (!EsAdministrador())
+        {
+            int usuarioId = ObtenerUsuarioId();
+            
+            if (factura.UsuarioId != usuarioId)
+            {
+                _logger.LogWarning(
+                    "Usuario {UsuarioId} intentó descargar XML de factura {FacturaId} de otro usuario",
+                    usuarioId, id);
+                
+                return Forbid();
+            }
+        }
+
+        // 3. Verificar que el XML existe
+        if (string.IsNullOrWhiteSpace(factura.XmlPath))
+        {
+            return NotFound(new 
+            { 
+                message = "El archivo XML aún no ha sido generado para esta factura",
+                facturaId = id,
+                estado = factura.Estado.ToString()
+            });
+        }
+
+        // 4. Construir la ruta completa del archivo
+        // XmlPath ya incluye "comprobantes/xml/[ClaveAcceso].xml"
+        var rutaCompleta = Path.Combine(
+            Directory.GetCurrentDirectory(), 
+            "wwwroot", 
+            factura.XmlPath.TrimStart('/', '\\')
+        );
+
+        // 5. Verificar que el archivo físico existe
+        if (!System.IO.File.Exists(rutaCompleta))
+        {
+            _logger.LogError(
+                "Archivo XML no encontrado en disco. Factura: {FacturaId}, Ruta: {Ruta}",
+                id, rutaCompleta);
+
+            return NotFound(new 
+            { 
+                message = "El archivo XML no fue encontrado en el servidor",
+                facturaId = id,
+                rutaEsperada = factura.XmlPath
+            });
+        }
+
+        // 6. Leer el archivo XML
+        byte[] xmlBytes = await System.IO.File.ReadAllBytesAsync(rutaCompleta);
+
+        // 7. Generar nombre del archivo para descarga
+        string nombreArchivo = string.IsNullOrWhiteSpace(factura.ClaveAcceso)
+            ? $"factura_{factura.NumeroFactura}.xml"
+            : $"{factura.ClaveAcceso}.xml";
+
+        // Limpiar caracteres especiales del nombre de archivo
+        nombreArchivo = nombreArchivo.Replace("-", "");
+
+        _logger.LogInformation(
+            "Usuario {UsuarioId} descargó XML de factura {FacturaId} ({NumeroFactura})",
+            ObtenerUsuarioId(), id, factura.NumeroFactura);
+
+        // 8. Retornar el archivo XML con headers apropiados
+        return File(
+            xmlBytes,
+            "application/xml",
+            nombreArchivo
+        );
     }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Acceso no autorizado al descargar XML de factura {FacturaId}", id);
+        return Forbid();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al descargar XML de factura {FacturaId}", id);
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno al descargar el archivo XML"
+        });
+    }
+}
+
+    }
+
+    
 }

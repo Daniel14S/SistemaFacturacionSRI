@@ -9,11 +9,13 @@ using SistemaFacturacionSRI.Infrastructure.Data;
 namespace SistemaFacturacionSRI.Infrastructure.Services
 {
     /// <summary>
-    /// Consultas de facturas con filtros y relaciones cargadas.
+    /// Servicio completo de facturas con creación, consultas y cambios de estado.
     /// </summary>
     public class FacturaService : IFacturaService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ISecuenciaService _secuenciaService;
+        
         private static readonly IReadOnlyDictionary<EstadoFactura, EstadoFactura[]> _transicionesPermitidas =
             new Dictionary<EstadoFactura, EstadoFactura[]>
             {
@@ -29,10 +31,213 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             };
         private const string RolAdministrador = "Administrador";
 
-        public FacturaService(ApplicationDbContext context)
+        public FacturaService(ApplicationDbContext context, ISecuenciaService secuenciaService)
         {
             _context = context;
+            _secuenciaService = secuenciaService;
         }
+
+        // ==================== CREAR FACTURA ====================
+
+        /// <summary>
+        /// T-20: Crea una nueva factura con todas las validaciones de negocio
+        /// </summary>
+        /// 
+public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuarioId, CancellationToken cancellationToken = default)
+{
+    if (dto == null)
+    {
+        throw new ArgumentNullException(nameof(dto));
+    }
+
+    // 1. Validar cliente existe y está activo
+    var cliente = await _context.Clientes
+        .AsNoTracking()
+        .FirstOrDefaultAsync(c => c.ClienteId == dto.ClienteId, cancellationToken);
+
+    if (cliente == null)
+    {
+        throw new KeyNotFoundException($"El cliente con ID {dto.ClienteId} no existe");
+    }
+
+    if (!cliente.Estado)
+    {
+        throw new InvalidOperationException($"El cliente {cliente.NombreCompleto()} está inactivo");
+    }
+
+    // 2. Validar que hay al menos un detalle
+    if (dto.Detalles == null || !dto.Detalles.Any())
+    {
+        throw new InvalidOperationException("La factura debe tener al menos un detalle");
+    }
+
+    // 3. Validar productos existen, están activos y tienen stock EN EL LOTE
+    var productosIds = dto.Detalles.Select(d => d.ProductoId).Distinct().ToList();
+    var productos = await _context.Productos
+        .AsNoTracking()
+        .Include(p => p.Lotes)  // ✅ CRÍTICO: Incluir lotes
+        .Where(p => productosIds.Contains(p.Id))
+        .ToListAsync(cancellationToken);
+
+    if (productos.Count != productosIds.Count)
+    {
+        throw new KeyNotFoundException("Uno o más productos no existen");
+    }
+
+    foreach (var detalle in dto.Detalles)
+    {
+        var producto = productos.First(p => p.Id == detalle.ProductoId);
+
+        if (!producto.Activo)
+        {
+            throw new InvalidOperationException($"El producto {producto.Nombre} está inactivo");
+        }
+
+        if (detalle.Cantidad <= 0)
+        {
+            throw new InvalidOperationException($"La cantidad del producto {producto.Nombre} debe ser mayor a cero");
+        }
+
+        if (detalle.PrecioUnitario <= 0)
+        {
+            throw new InvalidOperationException($"El precio del producto {producto.Nombre} debe ser mayor a cero");
+        }
+
+        // ✅ VALIDACIÓN CORRECTA: Stock por lote
+        if (detalle.LoteId.HasValue)
+        {
+            var lote = producto.Lotes.FirstOrDefault(l => l.LoteId == detalle.LoteId.Value);
+
+            if (lote == null)
+            {
+                throw new KeyNotFoundException(
+                    $"El lote con ID {detalle.LoteId.Value} no existe para el producto {producto.Nombre}");
+            }
+
+            if (lote.CantidadDisponible < detalle.Cantidad)
+            {
+                throw new InvalidOperationException(
+                    $"Stock insuficiente para {producto.Nombre}. " +
+                    $"Disponible: {lote.CantidadDisponible}, Solicitado: {detalle.Cantidad}");
+            }
+        }
+        else
+        {
+            // Si no se especifica lote, validar stock total
+            var stockTotal = producto.Lotes.Sum(l => l.CantidadDisponible);
+            
+            if (stockTotal < detalle.Cantidad)
+            {
+                throw new InvalidOperationException(
+                    $"Stock insuficiente para {producto.Nombre}. " +
+                    $"Disponible: {stockTotal}, Solicitado: {detalle.Cantidad}");
+            }
+        }
+
+        if (!Enum.IsDefined(typeof(TipoIVA), detalle.CodigoPorcentajeIVA))
+        {
+            throw new InvalidOperationException($"Tarifa IVA inválida para producto {producto.Nombre}");
+        }
+    } // ✅ CIERRA el foreach
+
+    // 4. Obtener siguiente número de factura
+    var numeroFactura = await _secuenciaService.ObtenerSiguienteNumeroAsync();
+
+    // 5. Crear entidad Factura
+    var factura = new Factura
+    {
+        NumeroFactura = numeroFactura,
+        ClienteId = dto.ClienteId,
+        UsuarioId = usuarioId,
+        FechaEmision = DateTime.UtcNow,
+        Ambiente = Ambiente.PRUEBAS,
+        TipoEmision = TipoEmision.NORMAL,
+        Estado = EstadoFactura.BORRADOR,
+        Observaciones = dto.Observaciones
+    };
+
+    // 6. Crear detalles y calcular totales
+    var detalles = new List<DetalleFactura>();
+    var subtotales = new Dictionary<TipoIVA, decimal>
+    {
+        { TipoIVA.IVA_0, 0 },
+        { TipoIVA.IVA_12, 0 },
+        { TipoIVA.IVA_15, 0 }
+    };
+
+    decimal descuentoTotal = 0;
+    decimal ivaTotal = 0;
+
+    foreach (var detalleDto in dto.Detalles)
+    {
+        var productoDetalle = productos.First(p => p.Id == detalleDto.ProductoId);
+
+        decimal precioTotalSinImpuesto = detalleDto.Cantidad * detalleDto.PrecioUnitario;
+        decimal descuentoLinea = detalleDto.Descuento;
+        decimal baseImponible = precioTotalSinImpuesto - descuentoLinea;
+
+        var tipoIVA = (TipoIVA)detalleDto.CodigoPorcentajeIVA;
+        decimal tarifaIVA = ObtenerTarifaIVA(tipoIVA);
+        decimal valorIVA = baseImponible * tarifaIVA;
+        decimal valorTotal = baseImponible + valorIVA;
+
+        var detalleFactura = new DetalleFactura
+        {
+            ProductoId = productoDetalle.Id,
+            CodigoPrincipal = productoDetalle.Codigo,
+            Descripcion = productoDetalle.Nombre,
+            Cantidad = detalleDto.Cantidad,
+            PrecioUnitario = detalleDto.PrecioUnitario,
+            Descuento = descuentoLinea,
+            PrecioTotalSinImpuesto = precioTotalSinImpuesto,
+            CodigoPorcentajeIVA = detalleDto.CodigoPorcentajeIVA,
+            Tarifa = tarifaIVA,
+            BaseImponible = baseImponible,
+            Valor = valorIVA,
+            ValorTotal = valorTotal
+        };
+
+        detalles.Add(detalleFactura);
+
+        subtotales[tipoIVA] += baseImponible;
+        descuentoTotal += descuentoLinea;
+        ivaTotal += valorIVA;
+    }
+
+    // 7. Asignar totales a la factura
+    factura.Subtotal0 = subtotales[TipoIVA.IVA_0];
+    factura.Subtotal12 = subtotales[TipoIVA.IVA_12];
+    factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
+    factura.SubtotalNoObjetoIVA = 0;
+    factura.SubtotalExentoIVA = 0;
+    factura.SubtotalConDescuento = subtotales.Values.Sum();
+    factura.Descuento = descuentoTotal;
+    factura.IVA12 = subtotales[TipoIVA.IVA_12] * 0.12m;
+    factura.IVA15 = subtotales[TipoIVA.IVA_15] * 0.15m;
+    factura.ImporteTotal = factura.SubtotalConDescuento + ivaTotal + factura.Propina;
+
+    factura.Detalles = detalles;
+
+    // 8. Guardar en base de datos
+    _context.Facturas.Add(factura);
+    await _context.SaveChangesAsync(cancellationToken);
+
+    // 9. Recargar con relaciones para el DTO
+    var facturaCompleta = await _context.Facturas
+        .AsNoTracking()
+        .Include(f => f.Cliente)
+        .Include(f => f.Usuario)
+        .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
+        .Include(f => f.InformacionAdicional)
+        .FirstOrDefaultAsync(f => f.Id == factura.Id, cancellationToken);
+
+    // 10. Mapear a DTO manualmente
+    return MapearAFacturaDto(facturaCompleta!);
+} // ✅ CIERRA el método
+
+
+
+        // ==================== LISTAR FACTURAS ====================
 
         public async Task<PagedResultDto<Factura>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
@@ -118,6 +323,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             };
         }
 
+        // ==================== OBTENER POR ID ====================
+
         public async Task<Factura?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default)
         {
             return await _context.Facturas
@@ -128,6 +335,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 .Include(f => f.InformacionAdicional)
                 .FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
         }
+
+        // ==================== ACTUALIZAR ESTADO ====================
 
         public async Task<Factura> ActualizarEstadoAsync(int facturaId, EstadoFactura nuevoEstado, CancellationToken cancellationToken = default)
         {
@@ -160,6 +369,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             await _context.SaveChangesAsync(cancellationToken);
             return factura;
         }
+
+        // ==================== ANULAR FACTURA ====================
 
         public async Task<Factura> AnularFacturaAsync(int facturaId, int usuarioId, string? motivo = null, CancellationToken cancellationToken = default)
         {
@@ -200,6 +411,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             return factura;
         }
 
+        // ==================== MÉTODOS AUXILIARES ====================
+
+        private static decimal ObtenerTarifaIVA(TipoIVA tipo)
+        {
+            return tipo switch
+            {
+                TipoIVA.IVA_0 => 0m,
+                TipoIVA.IVA_12 => 0.12m,
+                TipoIVA.IVA_15 => 0.15m,
+                _ => throw new ArgumentException($"Tipo IVA no válido: {tipo}")
+            };
+        }
+
         private static IQueryable<Factura> AplicarOrdenamiento(IQueryable<Factura> query, string? orderBy, bool ascending)
         {
             return orderBy?.ToLower() switch
@@ -229,6 +453,73 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             }
 
             return string.Join(Environment.NewLine, observacionesActuales.Trim(), nuevoTexto);
+        }
+
+        /// <summary>
+        /// Mapea manualmente una Factura a FacturaDto
+        /// </summary>
+        private static FacturaDto MapearAFacturaDto(Factura factura)
+        {
+            return new FacturaDto
+            {
+                Id = factura.Id,
+                NumeroFactura = factura.NumeroFactura,
+                ClaveAcceso = factura.ClaveAcceso ?? string.Empty,
+                FechaEmision = factura.FechaEmision,
+                Cliente = factura.Cliente != null ? new ClienteFacturaDto
+                {
+                    Identificacion = factura.Cliente.Identificacion,
+                    RazonSocial = factura.Cliente.NombreCompleto(),
+                    Direccion = factura.Cliente.Direccion,
+                    Email = factura.Cliente.Email,
+                    Telefono = factura.Cliente.Telefono
+                } : null!,
+                UsuarioNombre = factura.Usuario != null 
+                    ? string.Join(" ", new[] { factura.Usuario.Nombre1, factura.Usuario.Nombre2, factura.Usuario.Apellido1, factura.Usuario.Apellido2 }.Where(n => !string.IsNullOrWhiteSpace(n)))
+                    : string.Empty,
+                Estado = factura.Estado.ToString(),
+                EstadoDescripcion = ObtenerDescripcionEstado(factura.Estado),
+                SubtotalTotal = factura.SubtotalConDescuento,
+                TotalDescuento = factura.Descuento,
+                TotalIVA = factura.IVA12 + factura.IVA15,
+                Total = factura.ImporteTotal,
+                Detalles = factura.Detalles?.Select(d => new DetalleFacturaDto
+                {
+                    ProductoId = d.ProductoId,
+                    CodigoPrincipal = d.CodigoPrincipal,
+                    Descripcion = d.Descripcion,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Descuento = d.Descuento,
+                    PrecioTotalSinImpuesto = d.PrecioTotalSinImpuesto,
+                    BaseImponible = d.BaseImponible,
+                    Tarifa = d.Tarifa,
+                    Valor = d.Valor,
+                    ValorTotal = d.ValorTotal
+                }).ToList() ?? new List<DetalleFacturaDto>(),
+                InfoAdicional = factura.InformacionAdicional?.Select(i => new InfoAdicionalDto
+                {
+                    Nombre = i.Nombre,
+                    Valor = i.Valor
+                }).ToList() ?? new List<InfoAdicionalDto>()
+            };
+        }
+
+        private static string ObtenerDescripcionEstado(EstadoFactura estado)
+        {
+            return estado switch
+            {
+                EstadoFactura.BORRADOR => "Borrador",
+                EstadoFactura.GENERADA => "XML Generado",
+                EstadoFactura.FIRMADA => "Firmada Electrónicamente",
+                EstadoFactura.ENVIADA => "Enviada al SRI",
+                EstadoFactura.RECIBIDA => "Recibida por SRI",
+                EstadoFactura.AUTORIZADA => "Autorizada",
+                EstadoFactura.NO_AUTORIZADA => "No Autorizada",
+                EstadoFactura.DEVUELTA => "Devuelta (Reenviar)",
+                EstadoFactura.ANULADA => "Anulada",
+                _ => estado.ToString()
+            };
         }
     }
 }
