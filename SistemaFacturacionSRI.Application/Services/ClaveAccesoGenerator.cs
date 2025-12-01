@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace SistemaFacturacionSRI.Application.Services;
 
 /// <summary>
@@ -218,6 +220,18 @@ public class ClaveAccesoGenerator
         
         // Validar que solo contenga números
         if (!EsSoloNumeros(claveAcceso))
+        {
+            return false;
+        }
+
+        // Validar que los primeros 8 dígitos representen una fecha válida (DDMMAAAA)
+        var fechaSegmento = claveAcceso.Substring(0, 8);
+        if (!DateTime.TryParseExact(
+                fechaSegmento,
+                "ddMMyyyy",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out _))
         {
             return false;
         }

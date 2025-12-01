@@ -144,6 +144,12 @@ namespace SistemaFacturacionSRI.Application.Services
             if (dto.FechaExpiracion.HasValue && dto.FechaExpiracion.Value.Date < lote.FechaCompra.Date)
                 throw new InvalidOperationException("La fecha de expiración no puede ser anterior a la fecha de compra.");
 
+            if (dto.CantidadDisponible > lote.CantidadInicial)
+            {
+                throw new InvalidOperationException(
+                    $"La cantidad disponible ({dto.CantidadDisponible}) no puede ser mayor a la cantidad inicial del lote ({lote.CantidadInicial}).");
+            }
+
             var otrosLotes = await _loteRepository.ObtenerLotesPorProductoAsync(lote.ProductoId);
             var hayVariacionPVP = otrosLotes.Any(l => l.LoteId != dto.LoteId && l.PVP != dto.PVP);
 

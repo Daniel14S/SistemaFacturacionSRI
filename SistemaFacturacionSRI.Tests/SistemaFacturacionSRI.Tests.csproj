@@ -26,4 +26,15 @@
     <ProjectReference Include="..\SistemaFacturacionSRI.Infrastructure\SistemaFacturacionSRI.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\docs\xsd\factura_v1.1.0.xsd">
+      <Link>Resources\XSD\factura_v1.1.0.xsd</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\docs\xsd\comun_v1.0.xsd">
+      <Link>Resources\XSD\comun_v1.0.xsd</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

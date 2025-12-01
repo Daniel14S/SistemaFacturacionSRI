@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.IO;
+using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -29,15 +30,20 @@ public class XmlGeneratorService : IXmlGeneratorService
         _context = context;
         _xmlValidator = xmlValidator;
         _logger = logger;
-       
+
+        var webRootPath = ResolverRutaWwwroot();
+
         // Ruta donde se guardarán los XMLs
-        _rutaXml = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "comprobantes", "xml");
-       
+        _rutaXml = Path.Combine(webRootPath, "comprobantes", "xml");
+
         // Crear directorio si no existe
         if (!Directory.Exists(_rutaXml))
         {
             Directory.CreateDirectory(_rutaXml);
+            _logger.LogInformation("Directorio para XML creado en {Ruta}", _rutaXml);
         }
+
+        _logger.LogDebug("Ruta de almacenamiento XML configurada en {Ruta}", _rutaXml);
     }
 
     /// <summary>
@@ -332,8 +338,9 @@ public class XmlGeneratorService : IXmlGeneratorService
 
             _logger.LogInformation("XML guardado en: {Ruta}", rutaCompleta);
 
-            // Retornar la ruta relativa para guardar en BD
-            return Path.Combine("comprobantes", "xml", nombreArchivo);
+            // Retornar ruta relativa normalizada para exponerla vía HTTP o almacenar en BD
+            var rutaRelativa = Path.Combine("comprobantes", "xml", nombreArchivo);
+            return rutaRelativa.Replace(Path.DirectorySeparatorChar, '/');
         }
         catch (Exception ex)
         {
@@ -372,6 +379,38 @@ public class XmlGeneratorService : IXmlGeneratorService
         await _context.SaveChangesAsync();
 
         return (xmlContent, rutaArchivo);
+    }
+
+    /// <summary>
+    /// Busca la carpeta wwwroot real incluso cuando el proceso se ejecuta desde proyectos distintos.
+    /// </summary>
+    private string ResolverRutaWwwroot()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var directorioActual = new DirectoryInfo(baseDir);
+
+        while (directorioActual != null)
+        {
+            var candidatoLocal = Path.Combine(directorioActual.FullName, "wwwroot");
+            if (Directory.Exists(candidatoLocal))
+            {
+                return candidatoLocal;
+            }
+
+            var candidatoWebUi = Path.Combine(directorioActual.FullName, "SistemaFacturacionSRI.WebUI", "wwwroot");
+            if (Directory.Exists(candidatoWebUi))
+            {
+                return candidatoWebUi;
+            }
+
+            directorioActual = directorioActual.Parent;
+        }
+
+        var fallback = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        _logger.LogWarning(
+            "No se encontró una carpeta wwwroot existente. Se utilizará {Ruta} como ubicación predeterminada", fallback);
+        Directory.CreateDirectory(fallback);
+        return fallback;
     }
 
     // ==================== MÉTODOS ADICIONALES REQUERIDOS POR LA INTERFAZ ====================

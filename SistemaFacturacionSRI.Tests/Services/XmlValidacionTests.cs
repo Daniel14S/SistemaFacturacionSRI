@@ -2,6 +2,7 @@
 using Xunit;
 using SistemaFacturacionSRI.Infrastructure.Services;
 using SistemaFacturacionSRI.Domain.DTOs.Factura;
+using ClaveAccesoGenerator = SistemaFacturacionSRI.Application.Services.ClaveAccesoGenerator;
 
 namespace Tests.Services
 {
@@ -18,7 +19,17 @@ namespace Tests.Services
         public async Task ValidarXml_ConXmlBasicoValido_DebeRetornarExitoso()
         {
             // Arrange
-            var xmlValido = @"<?xml version=""1.0"" encoding=""UTF-8""?>
+            var generador = new ClaveAccesoGenerator();
+            var claveAcceso = generador.GenerarClaveAcceso(
+                new DateTime(2025, 11, 30),
+                "01",
+                "1234567890001",
+                "1",
+                "001",
+                "001",
+                "000000001");
+
+            var xmlValido = $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <factura id=""comprobante"" version=""1.1.0"">
     <infoTributaria>
         <ambiente>1</ambiente>
@@ -26,7 +37,7 @@ namespace Tests.Services
         <razonSocial>EMPRESA DE PRUEBA S.A.</razonSocial>
         <nombreComercial>EMPRESA PRUEBA</nombreComercial>
         <ruc>1234567890001</ruc>
-        <claveAcceso>1234567890123456789012345678901234567890123456</claveAcceso>
+        <claveAcceso>{claveAcceso}</claveAcceso>
         <codDoc>01</codDoc>
         <estab>001</estab>
         <ptoEmi>001</ptoEmi>
@@ -226,11 +237,21 @@ namespace Tests.Services
 
         private FacturaDto CrearFacturaDePrueba()
         {
+            var generador = new ClaveAccesoGenerator();
+            var claveAcceso = generador.GenerarClaveAcceso(
+                DateTime.Now,
+                "01",
+                "1234567890001",
+                "1",
+                "001",
+                "001",
+                "000000001");
+
             return new FacturaDto
             {
                 Id = 1,
                 NumeroFactura = "001-001-000000001",
-                ClaveAcceso = "3011202501123456789000110010010000000011234567818",
+                ClaveAcceso = claveAcceso,
                 FechaEmision = DateTime.Now,
                 Estado = "PENDIENTE",
                 EstadoDescripcion = "Pendiente de envío",
