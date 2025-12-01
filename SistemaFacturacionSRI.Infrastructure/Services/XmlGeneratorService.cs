@@ -1,4 +1,5 @@
 // SistemaFacturacionSRI.Infrastructure/Services/XmlGeneratorService.cs
+using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
@@ -56,36 +57,201 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             try
             {
                 ArgumentNullException.ThrowIfNull(factura);
-                var claveAcceso = factura.ClaveAcceso ?? string.Empty;
-                // TODO: Implementar generación completa del XML
-                // Por ahora retornamos un XML básico de ejemplo
+                if (factura.Detalles == null || !factura.Detalles.Any())
+                {
+                    throw new InvalidOperationException("La factura debe tener al menos un detalle para generar el XML.");
+                }
+
+                var (establecimiento, puntoEmision, secuencial) = ObtenerDatosEmision(factura.NumeroFactura);
+                var cliente = factura.Cliente ?? new ClienteFacturaDto
+                {
+                    TipoIdentificacion = "07",
+                    Identificacion = "9999999999",
+                    RazonSocial = "CONSUMIDOR FINAL",
+                    Direccion = "NO DEFINIDA"
+                };
+
+                var fechaEmision = factura.FechaEmision == default
+                    ? DateTime.Now
+                    : factura.FechaEmision;
+
+                var totalSinImpuestos = factura.Detalles.Sum(d => d.PrecioTotalSinImpuesto);
+                var totalDescuento = factura.Detalles.Sum(d => d.Descuento);
+                var totalFactura = factura.Total > 0 ? factura.Total : totalSinImpuestos - totalDescuento + factura.TotalIVA;
+
                 var xml = new XDocument(
                     new XDeclaration("1.0", "UTF-8", null),
                     new XElement("factura",
                         new XAttribute("id", "comprobante"),
                         new XAttribute("version", "1.1.0"),
-                        new XElement("infoTributaria",
-                            new XElement("ambiente", "1"),
-                            new XElement("tipoEmision", "1"),
-                            new XElement("razonSocial", "EMPRESA PRUEBA"),
-                            new XElement("ruc", "1234567890001"),
-                            new XElement("claveAcceso", claveAcceso),
-                            new XElement("codDoc", "01"),
-                            new XElement("estab", "001"),
-                            new XElement("ptoEmi", "001"),
-                            new XElement("secuencial", "000000001"),
-                            new XElement("dirMatriz", "DIRECCION MATRIZ")
-                        )
+                        ConstruirInfoTributaria(factura.ClaveAcceso, establecimiento, puntoEmision, secuencial),
+                        ConstruirInfoFactura(fechaEmision, cliente, totalSinImpuestos, totalDescuento, totalFactura, factura.Detalles),
+                        ConstruirDetalles(factura.Detalles),
+                        ConstruirInfoAdicional(factura.InfoAdicional)
                     )
                 );
 
-                return xml.Declaration.ToString() + Environment.NewLine + xml.ToString();
+                return xml.Declaration + Environment.NewLine + xml.ToString(SaveOptions.DisableFormatting);
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Error al generar XML: {ex.Message}", ex);
             }
         }
+
+        private static XElement ConstruirInfoTributaria(string? claveAcceso, string estab, string ptoEmi, string secuencial)
+        {
+            var clave = string.IsNullOrWhiteSpace(claveAcceso)
+                ? new string('0', 48)
+                : claveAcceso;
+
+            return new XElement("infoTributaria",
+                new XElement("ambiente", "1"),
+                new XElement("tipoEmision", "1"),
+                new XElement("razonSocial", "EMPRESA DE PRUEBA S.A."),
+                new XElement("nombreComercial", "EMPRESA DE PRUEBA"),
+                new XElement("ruc", "1234567890001"),
+                new XElement("claveAcceso", clave),
+                new XElement("codDoc", "01"),
+                new XElement("estab", estab),
+                new XElement("ptoEmi", ptoEmi),
+                new XElement("secuencial", secuencial),
+                new XElement("dirMatriz", "AV. PRINCIPAL 123")
+            );
+        }
+
+        private static XElement ConstruirInfoFactura(
+            DateTime fechaEmision,
+            ClienteFacturaDto cliente,
+            decimal totalSinImpuestos,
+            decimal totalDescuento,
+            decimal totalFactura,
+            IEnumerable<DetalleFacturaDto> detalles)
+        {
+            var totalesImpuestos = ConstruirTotalesImpuestos(detalles);
+
+            return new XElement("infoFactura",
+                new XElement("fechaEmision", fechaEmision.ToString("dd/MM/yyyy")),
+                new XElement("dirEstablecimiento", "AV. PRINCIPAL 123"),
+                new XElement("contribuyenteEspecial", "000"),
+                new XElement("obligadoContabilidad", "SI"),
+                new XElement("tipoIdentificacionComprador", cliente.TipoIdentificacion),
+                new XElement("razonSocialComprador", cliente.RazonSocial),
+                new XElement("identificacionComprador", cliente.Identificacion),
+                new XElement("direccionComprador", cliente.Direccion ?? "NO DEFINIDA"),
+                new XElement("totalSinImpuestos", FormatearDecimal(totalSinImpuestos)),
+                new XElement("totalDescuento", FormatearDecimal(totalDescuento)),
+                new XElement("totalConImpuestos",
+                    totalesImpuestos
+                ),
+                new XElement("propina", FormatearDecimal(0)),
+                new XElement("importeTotal", FormatearDecimal(totalFactura)),
+                new XElement("moneda", "DOLAR"),
+                new XElement("pagos",
+                    new XElement("pago",
+                        new XElement("formaPago", "01"),
+                        new XElement("total", FormatearDecimal(totalFactura))
+                    )
+                )
+            );
+        }
+
+        private static IEnumerable<XElement> ConstruirTotalesImpuestos(IEnumerable<DetalleFacturaDto> detalles)
+        {
+            var grupos = detalles
+                .GroupBy(d => d.CodigoPorcentajeIVA)
+                .Select(g => new
+                {
+                    CodigoPorcentaje = g.Key,
+                    Base = g.Sum(x => x.BaseImponible),
+                    Valor = g.Sum(x => x.Valor)
+                })
+                .ToList();
+
+            if (!grupos.Any())
+            {
+                yield return new XElement("totalImpuesto",
+                    new XElement("codigo", 2),
+                    new XElement("codigoPorcentaje", 0),
+                    new XElement("baseImponible", FormatearDecimal(0)),
+                    new XElement("valor", FormatearDecimal(0))
+                );
+            }
+
+            foreach (var impuesto in grupos)
+            {
+                yield return new XElement("totalImpuesto",
+                    new XElement("codigo", 2),
+                    new XElement("codigoPorcentaje", impuesto.CodigoPorcentaje),
+                    new XElement("baseImponible", FormatearDecimal(impuesto.Base)),
+                    new XElement("valor", FormatearDecimal(impuesto.Valor))
+                );
+            }
+        }
+
+        private static XElement ConstruirDetalles(IEnumerable<DetalleFacturaDto> detalles)
+        {
+            return new XElement("detalles",
+                detalles.Select(detalle =>
+                    new XElement("detalle",
+                        new XElement("codigoPrincipal", detalle.CodigoPrincipal),
+                        detalle.CodigoAuxiliar != null
+                            ? new XElement("codigoAuxiliar", detalle.CodigoAuxiliar)
+                            : null,
+                        new XElement("descripcion", detalle.Descripcion),
+                        new XElement("cantidad", FormatearCantidad(detalle.Cantidad)),
+                        new XElement("precioUnitario", FormatearDecimal(detalle.PrecioUnitario)),
+                        new XElement("descuento", FormatearDecimal(detalle.Descuento)),
+                        new XElement("precioTotalSinImpuesto", FormatearDecimal(detalle.PrecioTotalSinImpuesto)),
+                        new XElement("impuestos",
+                            new XElement("impuesto",
+                                new XElement("codigo", 2),
+                                new XElement("codigoPorcentaje", detalle.CodigoPorcentajeIVA),
+                                new XElement("tarifa", FormatearDecimal(detalle.Tarifa * 100)),
+                                new XElement("baseImponible", FormatearDecimal(detalle.BaseImponible)),
+                                new XElement("valor", FormatearDecimal(detalle.Valor))
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
+        private static XElement? ConstruirInfoAdicional(List<InfoAdicionalDto>? infoAdicional)
+        {
+            if (infoAdicional == null || !infoAdicional.Any())
+            {
+                return null;
+            }
+
+            return new XElement("infoAdicional",
+                infoAdicional.Select(campo =>
+                    new XElement("campoAdicional",
+                        new XAttribute("nombre", campo.Nombre),
+                        campo.Valor))
+            );
+        }
+
+        private static (string Establecimiento, string PuntoEmision, string Secuencial) ObtenerDatosEmision(string numeroFactura)
+        {
+            if (!string.IsNullOrWhiteSpace(numeroFactura))
+            {
+                var partes = numeroFactura.Split('-', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                if (partes.Length == 3)
+                {
+                    return (
+                        partes[0].PadLeft(3, '0'),
+                        partes[1].PadLeft(3, '0'),
+                        partes[2].PadLeft(9, '0'));
+                }
+            }
+
+            return ("001", "001", "000000001");
+        }
+
+        private static string FormatearDecimal(decimal valor) => valor.ToString("0.00", CultureInfo.InvariantCulture);
+
+        private static string FormatearCantidad(decimal valor) => valor.ToString("0.00", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Valida un XML contra el esquema XSD del SRI
@@ -115,7 +281,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                     });
                 }
 
-                var schemas = new XmlSchemaSet();
+                var resolver = new XmlUrlResolver();
+                var schemas = new XmlSchemaSet
+                {
+                    XmlResolver = resolver
+                };
                 schemas.Add("", xsdPath);
 
                 var settings = new XmlReaderSettings
@@ -126,7 +296,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                         XmlSchemaValidationFlags.ReportValidationWarnings |
                         XmlSchemaValidationFlags.ProcessSchemaLocation |
                         XmlSchemaValidationFlags.ProcessInlineSchema,
-                    Async = true
+                    Async = true,
+                    XmlResolver = resolver
                 };
 
                 settings.ValidationEventHandler += (sender, args) =>

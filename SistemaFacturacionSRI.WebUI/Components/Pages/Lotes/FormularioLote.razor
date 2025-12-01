@@ -97,9 +97,9 @@
                         <ValidationMessage For="@(() => modelo.PVP)" />
                     </div>
 
-                    <!-- Cantidad Inicial -->
+                    <!-- Cantidad -->
                     <div class="col-md-4">
-                        <label class="form-label">Cantidad Inicial <span class="text-danger">*</span></label>
+                        <label class="form-label">@(IdLote.HasValue ? "Cantidad Disponible" : "Cantidad Inicial") <span class="text-danger">*</span></label>
                         <InputNumber class="form-control" @bind-Value="modelo.CantidadInicial" />
                         <ValidationMessage For="@(() => modelo.CantidadInicial)" />
                     </div>
@@ -154,6 +154,11 @@
                     PVP = loteDto.PVP,
                     CantidadInicial = loteDto.CantidadInicial
                 };
+                if (IdLote.HasValue)
+                {
+                    // En edición mostramos la cantidad disponible actual
+                    modelo.CantidadInicial = loteDto.CantidadDisponible;
+                }
                 var producto = await ProductoHttpService.ObtenerPorIdAsync(loteDto.ProductoId);
                 if(producto != null)
                 {
