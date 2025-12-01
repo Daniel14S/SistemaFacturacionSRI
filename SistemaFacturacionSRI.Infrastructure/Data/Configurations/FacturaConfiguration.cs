@@ -87,6 +87,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
 
             // Campos opcionales
             builder.Property(f => f.NumeroAutorizacion).HasMaxLength(50);
+                .HasDefaultValue(EstadoFactura.BORRADOR);
+
+            builder.Property(f => f.Subtotal0).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.Subtotal12).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.Subtotal15).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.SubtotalNoObjetoIVA).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.SubtotalExentoIVA).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.SubtotalConDescuento).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.Descuento).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.IVA15).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.Propina).HasColumnType("DECIMAL(18,2)");
+            builder.Property(f => f.ImporteTotal).HasColumnType("DECIMAL(18,2)");
+
+            builder.Property(f => f.NumeroAutorizacion)
+                .HasMaxLength(100);
+
             builder.Property(f => f.XmlPath).HasMaxLength(500);
             builder.Property(f => f.XmlFirmadoPath).HasMaxLength(500);
             builder.Property(f => f.PdfPath).HasMaxLength(500);
