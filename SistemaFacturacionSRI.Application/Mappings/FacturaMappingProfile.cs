@@ -44,7 +44,7 @@ namespace SistemaFacturacionSRI.Application.Mappings
                 .ForMember(dest => dest.Detalles, 
                     opt => opt.MapFrom(src => src.Detalles))
                 .ForMember(dest => dest.InfoAdicional, 
-                    opt => opt.MapFrom(src => src.InformacionAdicional));
+                    opt => opt.MapFrom(src => src.InfoAdicional));
 
             // Cliente → ClienteFacturaDto
             CreateMap<Cliente, ClienteFacturaDto>()
