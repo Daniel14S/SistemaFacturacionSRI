@@ -36,7 +36,7 @@ namespace SistemaFacturacionSRI.Application.Mappings
                 .ForMember(dest => dest.TotalDescuento, 
                     opt => opt.MapFrom(src => src.Descuento))
                 .ForMember(dest => dest.TotalIVA, 
-                    opt => opt.MapFrom(src => src.IVA12 + src.IVA15))
+                    opt => opt.MapFrom(src => (src.Subtotal12 * 0.12m) + (src.Subtotal15 * 0.15m)))
                 .ForMember(dest => dest.Total, 
                     opt => opt.MapFrom(src => src.ImporteTotal))
                 
