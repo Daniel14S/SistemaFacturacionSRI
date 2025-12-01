@@ -88,5 +88,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Repositories
                 .Include(p => p.Lotes)
                 .ToListAsync();
         }
+
+        public async Task<List<Producto>> ObtenerPorIdsAsync(List<int> ids)
+        {
+            return await _dbSet
+                .Include(p => p.Categoria)
+                .Include(p => p.Lotes)
+                .Where(p => ids.Contains(p.Id) && p.Activo)
+                .ToListAsync();
+        }
+
     }
 }
