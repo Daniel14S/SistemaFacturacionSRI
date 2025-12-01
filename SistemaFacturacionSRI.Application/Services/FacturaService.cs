@@ -192,11 +192,21 @@ namespace SistemaFacturacionSRI.Application.Services
         /// </summary>
         public async Task<PagedResultDto<Factura>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
-            var resultado = await _facturaRepository.ListarConFiltrosAsync(filtro);
-            var facturas = resultado.Item1;
-            var total = resultado.Item2;
+            var resultado = await _facturaRepository.ListarConFiltrosAsync(
+                clienteId: filtro.ClienteId,
+                usuarioId: filtro.UsuarioId,
+                estado: filtro.Estado,
+                fechaDesde: filtro.FechaDesde,
+                fechaHasta: filtro.FechaHasta,
+                numeroFactura: filtro.NumeroFactura,
+                pagina: filtro.PageNumber,
+                tamanoPagina: filtro.PageSize
+            );
             
-           return new PagedResultDto<Factura>
+            var facturas = resultado.facturas;
+            var total = resultado.total;
+            
+            return new PagedResultDto<Factura>
             {
                 Items = facturas,
                 TotalItems = total, 
