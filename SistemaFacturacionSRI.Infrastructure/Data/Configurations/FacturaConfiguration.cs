@@ -66,7 +66,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(f => f.Estado)
                 .HasConversion<string>()
                 .HasMaxLength(20)
-                .IsRequired();
+                .IsRequired()
+                .HasDefaultValue(EstadoFactura.BORRADOR);
 
             // Precisión para decimales
             builder.Property(f => f.Subtotal0).HasPrecision(18, 2);
@@ -86,9 +87,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(f => f.ClaveAcceso).IsRequired().HasMaxLength(49);
 
             // Campos opcionales
-            builder.Property(f => f.NumeroAutorizacion).HasMaxLength(50);
-                .HasDefaultValue(EstadoFactura.BORRADOR);
-
             builder.Property(f => f.Subtotal0).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.Subtotal12).HasColumnType("DECIMAL(18,2)");
             builder.Property(f => f.Subtotal15).HasColumnType("DECIMAL(18,2)");
