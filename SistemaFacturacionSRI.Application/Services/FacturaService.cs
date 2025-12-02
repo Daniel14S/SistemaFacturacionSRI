@@ -119,7 +119,6 @@ namespace SistemaFacturacionSRI.Application.Services
             var subtotales = new Dictionary<TipoIVA, decimal>
             {
                 { TipoIVA.IVA_0, 0 },
-                { TipoIVA.IVA_12, 0 },
                 { TipoIVA.IVA_15, 0 }
             };
 
@@ -167,7 +166,6 @@ namespace SistemaFacturacionSRI.Application.Services
 
             // Asignar subtotales
             factura.Subtotal0 = subtotales[TipoIVA.IVA_0];
-            factura.Subtotal12 = subtotales[TipoIVA.IVA_12];
             factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
             factura.SubtotalNoObjetoIVA = 0;
             factura.SubtotalExentoIVA = 0;
@@ -189,7 +187,7 @@ namespace SistemaFacturacionSRI.Application.Services
         /// <summary>
         /// Lista facturas con filtros y paginación
         /// </summary>
-        public async Task<PagedResultDto<Factura>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
+        public async Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
             var resultado = await _facturaRepository.ListarConFiltrosAsync(
                 clienteId: filtro.ClienteId,
@@ -205,9 +203,11 @@ namespace SistemaFacturacionSRI.Application.Services
             var facturas = resultado.facturas;
             var total = resultado.total;
             
-            return new PagedResultDto<Factura>
+            var facturasDto = _mapper.Map<List<FacturaDto>>(facturas);
+
+            return new PagedResultDto<FacturaDto>
             {
-                Items = facturas,
+                Items = facturasDto,
                 TotalItems = total, 
                 PageNumber = filtro.PageNumber, 
                 PageSize = filtro.PageSize 
@@ -217,9 +217,10 @@ namespace SistemaFacturacionSRI.Application.Services
         /// <summary>
         /// Obtiene una factura por ID con detalles completos
         /// </summary>
-        public async Task<Factura?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default)
+        public async Task<FacturaDto?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default)
         {
-            return await _facturaRepository.ObtenerConDetallesCompletosAsync(facturaId);
+            var factura = await _facturaRepository.ObtenerConDetallesCompletosAsync(facturaId);
+            return factura == null ? null : _mapper.Map<FacturaDto>(factura);
         }
 
         /// <summary>
@@ -305,7 +306,6 @@ namespace SistemaFacturacionSRI.Application.Services
             return tipo switch
             {
                 TipoIVA.IVA_0 => 0m,
-                TipoIVA.IVA_12 => 0.12m,
                 TipoIVA.IVA_15 => 0.15m,
                 _ => throw new ArgumentException($"Tipo IVA no válido: {tipo}")
             };

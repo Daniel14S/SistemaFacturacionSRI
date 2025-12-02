@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Infrastructure.Contexts;  // ⭐ AGREGADO
 using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
@@ -200,7 +201,12 @@ builder.Services.AddHttpClient<IClienteHttpService, ClienteHttpService>(client =
 .AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Controladores (para los endpoints API)
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 
 // AutoMapper (para mapear DTOs ↔ entidades)
 builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);

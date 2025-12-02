@@ -657,9 +657,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("BaseImponible")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("Cantidad")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,4)");
 
                     b.Property<string>("CodigoAuxiliar")
@@ -677,37 +679,43 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<int>("FacturaId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("PrecioTotalSinImpuesto")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("PrecioUnitario")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
-                    b.Property<int>("ProductoId")
+                    b.Property<int?>("ProductoId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Tarifa")
+                        .HasPrecision(5, 2)
                         .HasColumnType("DECIMAL(5,2)");
 
-                    b.Property<int>("TarifaIVA")
-                        .HasColumnType("int");
-
                     b.Property<decimal>("Valor")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
-                    b.Property<decimal>("ValorIVA")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<decimal>("ValorTotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.HasKey("Id");
@@ -716,7 +724,48 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.HasIndex("ProductoId");
 
+                    b.HasIndex("FacturaId", "ProductoId")
+                        .HasDatabaseName("IX_FacturaDetalles_FacturaId_ProductoId");
+
                     b.ToTable("FacturaDetalles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 2001,
+                            BaseImponible = 100m,
+                            Cantidad = 2m,
+                            CodigoAuxiliar = "SKU-001",
+                            CodigoPorcentajeIVA = 15,
+                            CodigoPrincipal = "PRD-001",
+                            Descripcion = "Producto demo rechazado",
+                            Descuento = 0m,
+                            FacturaId = 1001,
+                            FechaCreacion = new DateTime(2024, 11, 15, 10, 0, 0, 0, DateTimeKind.Utc),
+                            PrecioTotalSinImpuesto = 100m,
+                            PrecioUnitario = 50m,
+                            Tarifa = 15m,
+                            Valor = 15m,
+                            ValorTotal = 115m
+                        },
+                        new
+                        {
+                            Id = 2002,
+                            BaseImponible = 85m,
+                            Cantidad = 3m,
+                            CodigoAuxiliar = "SKU-002",
+                            CodigoPorcentajeIVA = 15,
+                            CodigoPrincipal = "PRD-002",
+                            Descripcion = "Producto demo devuelto",
+                            Descuento = 5m,
+                            FacturaId = 1002,
+                            FechaCreacion = new DateTime(2024, 11, 18, 14, 30, 0, 0, DateTimeKind.Utc),
+                            PrecioTotalSinImpuesto = 90m,
+                            PrecioUnitario = 30m,
+                            Tarifa = 15m,
+                            Valor = 12.75m,
+                            ValorTotal = 97.75m
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Factura", b =>
@@ -729,12 +778,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.Property<string>("Ambiente")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("PRUEBAS");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("ClaveAcceso")
+                        .IsRequired()
                         .HasMaxLength(49)
                         .HasColumnType("nvarchar(49)");
 
@@ -742,6 +790,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<string>("Estado")
@@ -755,14 +804,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaEmision")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaHoraAutorizacion")
                         .HasColumnType("datetime2");
@@ -771,14 +816,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("IVA15")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("ImporteTotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<string>("MensajesSRI")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NumeroAutorizacion")
                         .HasMaxLength(100)
@@ -786,44 +832,44 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.Property<string>("NumeroFactura")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(17)
+                        .HasColumnType("nvarchar(17)");
 
                     b.Property<string>("Observaciones")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PdfPath")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal>("Propina")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("Subtotal0")
-                        .HasColumnType("DECIMAL(18,2)");
-
-                    b.Property<decimal>("Subtotal12")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("Subtotal15")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("SubtotalConDescuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("SubtotalExentoIVA")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<decimal>("SubtotalNoObjetoIVA")
+                        .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
 
                     b.Property<string>("TipoEmision")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NORMAL");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("UsuarioId")
                         .HasColumnType("int");
@@ -840,16 +886,73 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.HasIndex("ClaveAcceso")
                         .IsUnique()
-                        .HasFilter("([ClaveAcceso] IS NOT NULL)");
+                        .HasDatabaseName("IX_Facturas_ClaveAcceso");
 
                     b.HasIndex("ClienteId");
 
+                    b.HasIndex("Estado")
+                        .HasDatabaseName("IX_Facturas_Estado");
+
+                    b.HasIndex("FechaEmision")
+                        .HasDatabaseName("IX_Facturas_FechaEmision");
+
                     b.HasIndex("NumeroFactura")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Facturas_NumeroFactura");
 
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("Facturas", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1001,
+                            Ambiente = "PRUEBAS",
+                            ClaveAcceso = "1234567890123456789012345678901234567890123456789",
+                            ClienteId = 1,
+                            Descuento = 0m,
+                            Estado = "NO_AUTORIZADA",
+                            FechaCreacion = new DateTime(2024, 11, 15, 10, 0, 0, 0, DateTimeKind.Utc),
+                            FechaEmision = new DateTime(2024, 11, 15, 10, 0, 0, 0, DateTimeKind.Utc),
+                            IVA15 = 15m,
+                            ImporteTotal = 115m,
+                            MensajesSRI = "ERROR 70: Clave de acceso inválida",
+                            NumeroFactura = "001-001-000000101",
+                            Observaciones = "Factura de prueba rechazada por el SRI",
+                            Propina = 0m,
+                            Subtotal0 = 0m,
+                            Subtotal15 = 100m,
+                            SubtotalConDescuento = 100m,
+                            SubtotalExentoIVA = 0m,
+                            SubtotalNoObjetoIVA = 0m,
+                            TipoEmision = "NORMAL",
+                            UsuarioId = 1
+                        },
+                        new
+                        {
+                            Id = 1002,
+                            Ambiente = "PRUEBAS",
+                            ClaveAcceso = "9876543210987654321098765432109876543210987654321",
+                            ClienteId = 2,
+                            Descuento = 5m,
+                            Estado = "DEVUELTA",
+                            FechaCreacion = new DateTime(2024, 11, 18, 14, 30, 0, 0, DateTimeKind.Utc),
+                            FechaEmision = new DateTime(2024, 11, 18, 14, 30, 0, 0, DateTimeKind.Utc),
+                            IVA15 = 12.75m,
+                            ImporteTotal = 97.75m,
+                            MensajesSRI = "DEVUELTA: Falta detalle de impuestos",
+                            NumeroFactura = "001-001-000000102",
+                            Observaciones = "Factura de prueba devuelta para corrección",
+                            Propina = 0m,
+                            Subtotal0 = 0m,
+                            Subtotal15 = 90m,
+                            SubtotalConDescuento = 85m,
+                            SubtotalExentoIVA = 0m,
+                            SubtotalNoObjetoIVA = 0m,
+                            TipoEmision = "NORMAL",
+                            UsuarioId = 2
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.InfoAdicional", b =>
@@ -875,9 +978,26 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FacturaId");
+                    b.HasIndex("FacturaId", "Nombre")
+                        .HasDatabaseName("IX_InfoAdicional_FacturaId_Nombre");
 
                     b.ToTable("InfoAdicional", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 3001,
+                            FacturaId = 1001,
+                            Nombre = "motivo",
+                            Valor = "Clave de acceso observada"
+                        },
+                        new
+                        {
+                            Id = 3002,
+                            FacturaId = 1002,
+                            Nombre = "motivo",
+                            Valor = "Documento devuelto para corrección"
+                        });
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Lote", b =>
@@ -1271,13 +1391,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasForeignKey("FacturaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("FK_Factura_Detalles");
+                        .HasConstraintName("FK_DetalleFactura_Factura");
 
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Producto", "Producto")
                         .WithMany()
                         .HasForeignKey("ProductoId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
                         .HasConstraintName("FK_DetalleFactura_Producto");
 
                     b.Navigation("Factura");
@@ -1291,15 +1410,13 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ClienteId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Factura_Cliente");
+                        .IsRequired();
 
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Factura_Usuario");
+                        .IsRequired();
 
                     b.Navigation("Cliente");
 
@@ -1309,11 +1426,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.InfoAdicional", b =>
                 {
                     b.HasOne("SistemaFacturacionSRI.Domain.Entities.Factura", "Factura")
-                        .WithMany("InformacionAdicional")
+                        .WithMany("InfoAdicional")
                         .HasForeignKey("FacturaId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_InfoAdicional_Factura");
+                        .IsRequired();
 
                     b.Navigation("Factura");
                 });
@@ -1361,7 +1477,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                 {
                     b.Navigation("Detalles");
 
-                    b.Navigation("InformacionAdicional");
+                    b.Navigation("InfoAdicional");
                 });
 
             modelBuilder.Entity("SistemaFacturacionSRI.Domain.Entities.Producto", b =>

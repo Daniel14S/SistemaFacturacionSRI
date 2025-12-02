@@ -31,7 +31,7 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         /// <param name="filtro">Criterios de filtrado y paginación</param>
         /// <param name="cancellationToken">Token de cancelación</param>
         /// <returns>Resultado paginado con las facturas que cumplen los criterios</returns>
-        Task<PagedResultDto<Factura>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default);
+        Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// T-022: Obtiene una factura completa por ID.
@@ -40,7 +40,7 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         /// <param name="facturaId">Identificador de la factura</param>
         /// <param name="cancellationToken">Token de cancelación</param>
         /// <returns>Factura completa o null si no existe</returns>
-        Task<Factura?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default);
+        Task<FacturaDto?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// T-023: Cambia el estado de una factura validando las transiciones permitidas.

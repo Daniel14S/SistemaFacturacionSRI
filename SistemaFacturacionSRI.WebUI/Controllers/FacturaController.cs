@@ -395,9 +395,17 @@ public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFactura
                     return Forbid();
                 }
 
+                if (!Enum.TryParse(factura.Estado, true, out EstadoFactura estadoActual))
+                {
+                    return BadRequest(new
+                    {
+                        message = $"El estado actual de la factura no es válido: {factura.Estado}"
+                    });
+                }
+
                 // Solo se pueden reenviar facturas DEVUELTA o NO_AUTORIZADA
-                if (factura.Estado != EstadoFactura.DEVUELTA && 
-                    factura.Estado != EstadoFactura.NO_AUTORIZADA)
+                if (estadoActual != EstadoFactura.DEVUELTA && 
+                    estadoActual != EstadoFactura.NO_AUTORIZADA)
                 {
                     return BadRequest(new
                     {
@@ -414,7 +422,7 @@ public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFactura
                 {
                     message = "Factura marcada para reenvío al SRI. Consulte el estado en unos minutos.",
                     facturaId = id,
-                    estadoActual = factura.Estado.ToString(),
+                    estadoActual = factura.Estado,
                     nota = "Funcionalidad de reenvío pendiente de implementación (T-082 - Pedro)"
                 });
             }
@@ -486,7 +494,7 @@ public async Task<IActionResult> DescargarXml(int id)
             { 
                 message = "El archivo XML aún no ha sido generado para esta factura",
                 facturaId = id,
-                estado = factura.Estado.ToString()
+                estado = factura.Estado
             });
         }
 

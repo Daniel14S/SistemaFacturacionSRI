@@ -158,12 +158,11 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
     // 6. Crear detalles y calcular totales
     var detalles = new List<DetalleFactura>();
-    var subtotales = new Dictionary<TipoIVA, decimal>
-    {
-        { TipoIVA.IVA_0, 0 },
-        { TipoIVA.IVA_12, 0 },
-        { TipoIVA.IVA_15, 0 }
-    };
+        var subtotales = new Dictionary<TipoIVA, decimal>
+        {
+            { TipoIVA.IVA_0, 0 },
+            { TipoIVA.IVA_15, 0 }
+        };
 
     decimal descuentoTotal = 0;
     decimal ivaTotal = 0;
@@ -206,8 +205,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
     // 7. Asignar totales a la factura
     factura.Subtotal0 = subtotales[TipoIVA.IVA_0];
-    factura.Subtotal12 = subtotales[TipoIVA.IVA_12];
-    factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
+        factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
     factura.SubtotalNoObjetoIVA = 0;
     factura.SubtotalExentoIVA = 0;
     factura.SubtotalConDescuento = subtotales.Values.Sum();
@@ -238,7 +236,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
         // ==================== LISTAR FACTURAS ====================
 
-        public async Task<PagedResultDto<Factura>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
+        public async Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
             if (filtro == null)
             {
@@ -247,10 +245,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
             var query = _context.Facturas
                 .AsNoTracking()
-                .Include(f => f.Cliente)
-                .Include(f => f.Usuario)
-                .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
-                .Include(f => f.InfoAdicional)
+                .AsSplitQuery()
                 .AsQueryable();
 
             if (filtro.ClienteId.HasValue)
@@ -308,12 +303,16 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
             query = AplicarOrdenamiento(query, filtro.OrderBy, filtro.OrderAscending);
 
-            var items = await query
+            var pagedQuery = query
                 .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Take(pageSize);
+
+            var items = await ProyectarFacturaDto(pagedQuery)
                 .ToListAsync(cancellationToken);
 
-            return new PagedResultDto<Factura>
+            CompletarDescripcionEstado(items);
+
+            return new PagedResultDto<FacturaDto>
             {
                 Items = items,
                 TotalItems = totalItems,
@@ -324,15 +323,21 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
         // ==================== OBTENER POR ID ====================
 
-        public async Task<Factura?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default)
+        public async Task<FacturaDto?> ObtenerPorIdAsync(int facturaId, CancellationToken cancellationToken = default)
         {
-            return await _context.Facturas
-                .AsNoTracking()
-                .Include(f => f.Cliente)
-                .Include(f => f.Usuario)
-                .Include(f => f.Detalles)!.ThenInclude(d => d.Producto)
-                .Include(f => f.InfoAdicional)
-                .FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
+            var dto = await ProyectarFacturaDto(
+                    _context.Facturas
+                        .AsNoTracking()
+                        .AsSplitQuery()
+                        .Where(f => f.Id == facturaId))
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (dto != null)
+            {
+                CompletarDescripcionEstado(new[] { dto });
+            }
+
+            return dto;
         }
 
         // ==================== ACTUALIZAR ESTADO ====================
@@ -417,7 +422,6 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
             return tipo switch
             {
                 TipoIVA.IVA_0 => 0m,
-                TipoIVA.IVA_12 => 0.12m,
                 TipoIVA.IVA_15 => 0.15m,
                 _ => throw new ArgumentException($"Tipo IVA no válido: {tipo}")
             };
@@ -454,6 +458,95 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
             return string.Join(Environment.NewLine, observacionesActuales.Trim(), nuevoTexto);
         }
 
+        private static IQueryable<FacturaDto> ProyectarFacturaDto(IQueryable<Factura> query)
+        {
+            return query.Select(f => new FacturaDto
+            {
+                Id = f.Id,
+                NumeroFactura = f.NumeroFactura,
+                ClaveAcceso = f.ClaveAcceso ?? string.Empty,
+                FechaEmision = f.FechaEmision,
+                Estado = f.Estado.ToString(),
+                EstadoDescripcion = string.Empty,
+                ClienteId = f.ClienteId,
+                Cliente = f.Cliente == null
+                    ? null
+                    : new ClienteFacturaDto
+                    {
+                        Id = f.Cliente.ClienteId,
+                        TipoIdentificacion = f.Cliente.TipoIdentificacion != null
+                            ? f.Cliente.TipoIdentificacion.CodigoSRI
+                            : string.Empty,
+                        Identificacion = f.Cliente.Identificacion,
+                        RazonSocial = (f.Cliente.Nombre1 + " " + (f.Cliente.Nombre2 ?? string.Empty) + " " + f.Cliente.Apellido1 + " " + (f.Cliente.Apellido2 ?? string.Empty)).Trim(),
+                        NombreComercial = null,
+                        Direccion = f.Cliente.Direccion,
+                        Telefono = f.Cliente.Telefono,
+                        Email = f.Cliente.Email
+                    },
+                UsuarioId = f.UsuarioId,
+                UsuarioNombre = f.Usuario != null
+                    ? (f.Usuario.Nombre1 + " " + (f.Usuario.Nombre2 ?? string.Empty) + " " + f.Usuario.Apellido1 + " " + (f.Usuario.Apellido2 ?? string.Empty)).Trim()
+                    : string.Empty,
+                Detalles = f.Detalles.Select(d => new DetalleFacturaDto
+                {
+                    Id = d.Id,
+                    ProductoId = d.ProductoId ?? 0,
+                    CodigoPrincipal = d.CodigoPrincipal,
+                    CodigoAuxiliar = d.CodigoAuxiliar,
+                    Descripcion = d.Descripcion,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Descuento = d.Descuento,
+                    PrecioTotalSinImpuesto = d.PrecioTotalSinImpuesto,
+                    BaseImponible = d.BaseImponible,
+                    CodigoPorcentajeIVA = d.CodigoPorcentajeIVA,
+                    Tarifa = d.Tarifa,
+                    Valor = d.Valor,
+                    ValorTotal = d.ValorTotal,
+                    InfoAdicional = null
+                }).ToList(),
+                Subtotal0 = f.Subtotal0,
+                Subtotal15 = f.Subtotal15,
+                SubtotalTotal = f.SubtotalConDescuento,
+                TotalDescuento = f.Descuento,
+                TotalIVA = f.IVA15,
+                Total = f.ImporteTotal,
+                Observaciones = f.Observaciones,
+                InfoAdicional = f.InfoAdicional.Select(i => new InfoAdicionalDto
+                {
+                    Nombre = i.Nombre,
+                    Valor = i.Valor
+                }).ToList(),
+                XmlPath = f.XmlPath,
+                XmlFirmadoPath = f.XmlFirmadoPath,
+                PdfPath = f.PdfPath,
+                NumeroAutorizacion = f.NumeroAutorizacion,
+                FechaAutorizacion = f.FechaAutorizacion ?? f.FechaHoraAutorizacion,
+                MensajesSRI = f.MensajesSRI,
+                FechaCreacion = f.FechaCreacion,
+                FechaModificacion = f.FechaModificacion
+            });
+        }
+
+        private static void CompletarDescripcionEstado(IEnumerable<FacturaDto> facturas)
+        {
+            foreach (var dto in facturas)
+            {
+                if (dto == null || string.IsNullOrWhiteSpace(dto.Estado))
+                {
+                    continue;
+                }
+
+                if (!Enum.TryParse(dto.Estado, true, out EstadoFactura estado))
+                {
+                    continue;
+                }
+
+                dto.EstadoDescripcion = ObtenerDescripcionEstado(estado);
+            }
+        }
+
         /// <summary>
         /// Mapea manualmente una Factura a FacturaDto
         /// </summary>
@@ -462,53 +555,71 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
             return new FacturaDto
             {
                 Id = factura.Id,
+                ClienteId = factura.ClienteId,
                 NumeroFactura = factura.NumeroFactura,
                 ClaveAcceso = factura.ClaveAcceso ?? string.Empty,
                 FechaEmision = factura.FechaEmision,
+                Estado = factura.Estado.ToString(),
                 Cliente = factura.Cliente != null ? new ClienteFacturaDto
                 {
+                    Id = factura.Cliente.ClienteId,
+                    TipoIdentificacion = factura.Cliente.TipoIdentificacion?.CodigoSRI ?? string.Empty,
                     Identificacion = factura.Cliente.Identificacion,
                     RazonSocial = factura.Cliente.NombreCompleto(),
+                    NombreComercial = null,
                     Direccion = factura.Cliente.Direccion,
                     Email = factura.Cliente.Email,
                     Telefono = factura.Cliente.Telefono
-                } : null!,
+                } : null,
+                UsuarioId = factura.UsuarioId,
                 UsuarioNombre = factura.Usuario != null 
                     ? string.Join(" ", new[] { factura.Usuario.Nombre1, factura.Usuario.Nombre2, factura.Usuario.Apellido1, factura.Usuario.Apellido2 }.Where(n => !string.IsNullOrWhiteSpace(n)))
                     : string.Empty,
-                Estado = factura.Estado.ToString(),
                 EstadoDescripcion = ObtenerDescripcionEstado(factura.Estado),
+                Subtotal0 = factura.Subtotal0,
+                Subtotal15 = factura.Subtotal15,
                 SubtotalTotal = factura.SubtotalConDescuento,
                 TotalDescuento = factura.Descuento,
                 TotalIVA = CalcularTotalIVA(factura),
                 Total = factura.ImporteTotal,
                 Detalles = factura.Detalles?.Select(d => new DetalleFacturaDto
                 {
+                    Id = d.Id,
                     ProductoId = d.ProductoId ?? 0,
                     CodigoPrincipal = d.CodigoPrincipal,
+                    CodigoAuxiliar = d.CodigoAuxiliar,
                     Descripcion = d.Descripcion,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
                     Descuento = d.Descuento,
                     PrecioTotalSinImpuesto = d.PrecioTotalSinImpuesto,
                     BaseImponible = d.BaseImponible,
+                    CodigoPorcentajeIVA = d.CodigoPorcentajeIVA,
                     Tarifa = d.Tarifa,
                     Valor = d.Valor,
-                    ValorTotal = d.ValorTotal
+                    ValorTotal = d.ValorTotal,
+                    InfoAdicional = null
                 }).ToList() ?? new List<DetalleFacturaDto>(),
                 InfoAdicional = factura.InfoAdicional?.Select(i => new InfoAdicionalDto
                 {
                     Nombre = i.Nombre,
                     Valor = i.Valor
-                }).ToList() ?? new List<InfoAdicionalDto>()
+                }).ToList() ?? new List<InfoAdicionalDto>(),
+                Observaciones = factura.Observaciones,
+                XmlPath = factura.XmlPath,
+                XmlFirmadoPath = factura.XmlFirmadoPath,
+                PdfPath = factura.PdfPath,
+                NumeroAutorizacion = factura.NumeroAutorizacion,
+                FechaAutorizacion = factura.FechaAutorizacion ?? factura.FechaHoraAutorizacion,
+                MensajesSRI = factura.MensajesSRI,
+                FechaCreacion = factura.FechaCreacion,
+                FechaModificacion = factura.FechaModificacion
             };
         }
 
         private static decimal CalcularTotalIVA(Factura factura)
         {
-            var iva12 = factura.Subtotal12 * 0.12m;
-            var iva15 = factura.Subtotal15 * 0.15m;
-            return iva12 + iva15;
+            return factura.IVA15;
         }
 
         private static string ObtenerDescripcionEstado(EstadoFactura estado)
