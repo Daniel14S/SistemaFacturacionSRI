@@ -74,11 +74,6 @@ public class FacturaDto
     public decimal Subtotal0 { get; set; }
     
     /// <summary>
-    /// Subtotal de productos con tarifa 12% IVA
-    /// </summary>
-    public decimal Subtotal12 { get; set; }
-    
-    /// <summary>
     /// Subtotal de productos con tarifa 15% IVA
     /// </summary>
     public decimal Subtotal15 { get; set; }

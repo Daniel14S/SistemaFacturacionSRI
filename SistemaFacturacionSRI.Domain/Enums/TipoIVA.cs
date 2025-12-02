@@ -13,12 +13,6 @@ namespace SistemaFacturacionSRI.Domain.Enums
         IVA_0 = 0,
 
         /// <summary>
-        /// IVA del 12% - Tarifa estándar de IVA.
-        /// Ejemplo: La mayoría de productos y servicios.
-        /// </summary>
-        IVA_12 = 12,
-
-        /// <summary>
         /// IVA del 15% - Tarifa especial de IVA.
         /// Ejemplo: Productos suntuarios, servicios especiales.
         /// </summary>

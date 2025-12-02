@@ -260,12 +260,11 @@ namespace Tests.Services
                 
                 // Totales
                 Subtotal0 = 0.00m,
-                Subtotal12 = 100.00m,
-                Subtotal15 = 0.00m,
+                Subtotal15 = 100.00m,
                 SubtotalTotal = 100.00m,
                 TotalDescuento = 0.00m,
-                TotalIVA = 12.00m,
-                Total = 112.00m,
+                TotalIVA = 15.00m,
+                Total = 115.00m,
                 
                 // Información del cliente
                 Cliente = new ClienteFacturaDto
@@ -291,10 +290,10 @@ namespace Tests.Services
                         Descuento = 0.00m,
                         PrecioTotalSinImpuesto = 100.00m,
                         BaseImponible = 100.00m,
-                        CodigoPorcentajeIVA = 2, // Código 2 = 12%
-                        Tarifa = 0.12m,
-                        Valor = 12.00m,
-                        ValorTotal = 112.00m
+                        CodigoPorcentajeIVA = 15,
+                        Tarifa = 0.15m,
+                        Valor = 15.00m,
+                        ValorTotal = 115.00m
                     }
                 },
                 

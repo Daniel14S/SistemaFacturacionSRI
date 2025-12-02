@@ -71,10 +71,10 @@ public class CrearDetalleFacturaDto
 
     /// <summary>
     /// Código del porcentaje de IVA aplicable según enum TipoIVA
-    /// 0 = 0% (IVA_0), 12 = 12% (IVA_12), 15 = 15% (IVA_15)
+    /// 0 = 0% (IVA_0), 15 = 15% (IVA_15)
     /// </summary>
     [Required(ErrorMessage = "Debe especificar el código de IVA")]
-    public int CodigoPorcentajeIVA { get; set; } = 15; // ✅ Por defecto 12%
+    public int CodigoPorcentajeIVA { get; set; } = 15; // ✅ Por defecto 15%
 
     /// <summary>
     /// ID del lote específico a usar (opcional, si no se especifica se usa FIFO)

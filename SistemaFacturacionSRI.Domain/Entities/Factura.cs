@@ -35,13 +35,11 @@ namespace SistemaFacturacionSRI.Domain.Entities
         
         // Totales
         public decimal Subtotal0 { get; set; }
-        public decimal Subtotal12 { get; set; }
         public decimal Subtotal15 { get; set; }
         public decimal SubtotalNoObjetoIVA { get; set; }
         public decimal SubtotalExentoIVA { get; set; }
         public decimal SubtotalConDescuento { get; set; }
         public decimal Descuento { get; set; }
-        public decimal IVA12 { get; set; }
         public decimal IVA15 { get; set; }
         public decimal Propina { get; set; }
         public decimal ImporteTotal { get; set; }

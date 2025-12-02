@@ -302,8 +302,8 @@ public decimal ValorIVA => TipoIVA.CalcularIVA(Precio);
 
 **Ejemplo:**
 ```csharp
-var producto = new Producto { Precio = 100, TipoIVA = TipoIVA.IVA_12 };
-Console.WriteLine(producto.ValorIVA);  // 12 (se calcula automáticamente)
+var producto = new Producto { Precio = 100, TipoIVA = TipoIVA.IVA_15 };
+Console.WriteLine(producto.ValorIVA);  // 15 (se calcula automáticamente)
 ```
 
 ---
@@ -316,7 +316,6 @@ Lista de valores constantes para tipos de IVA.
 public enum TipoIVA
 {
     IVA_0 = 0,    // 0%
-    IVA_12 = 12,  // 12%
     IVA_15 = 15   // 15%
 }
 ```
@@ -351,7 +350,6 @@ public static class TipoIVAExtensions
         return tipoIVA switch
         {
             TipoIVA.IVA_0 => "IVA 0%",
-            TipoIVA.IVA_12 => "IVA 12%",
             TipoIVA.IVA_15 => "IVA 15%",
             _ => "IVA Desconocido"
         };
@@ -361,10 +359,10 @@ public static class TipoIVAExtensions
 
 **Uso:**
 ```csharp
-TipoIVA iva = TipoIVA.IVA_12;
-decimal porcentaje = iva.ObtenerPorcentaje();  // 0.12
-decimal valor = iva.CalcularIVA(100);          // 12
-string desc = iva.ObtenerDescripcion();        // "IVA 12%"
+TipoIVA iva = TipoIVA.IVA_15;
+decimal porcentaje = iva.ObtenerPorcentaje();  // 0.15
+decimal valor = iva.CalcularIVA(100);          // 15
+string desc = iva.ObtenerDescripcion();        // "IVA 15%"
 ```
 
 **🔑 Palabra clave `this`**  
@@ -1200,7 +1198,7 @@ public async Task<ProductoDto> CrearAsync(CrearProductoDto dto)
     //     Codigo = "PROD-001",
     //     Nombre = "Laptop HP",
     //     Precio = 1000,
-    //     TipoIVA = TipoIVA.IVA_12,
+    //     TipoIVA = TipoIVA.IVA_15,
     //     Stock = 0,
     //     UnidadMedida = "Unidad"
     // };

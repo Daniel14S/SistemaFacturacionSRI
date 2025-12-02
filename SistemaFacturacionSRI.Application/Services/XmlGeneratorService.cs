@@ -120,7 +120,7 @@ public class XmlGeneratorService : IXmlGeneratorService
             RazonSocialComprador = factura.Cliente.NombreCompleto(),
             IdentificacionComprador = factura.Cliente.Identificacion,
             DireccionComprador = factura.Cliente.Direccion,
-            TotalSinImpuestos = factura.Subtotal0 + factura.Subtotal12 + factura.Subtotal15,
+            TotalSinImpuestos = factura.Subtotal0 + factura.Subtotal15,
             TotalDescuento = factura.Descuento,
             Propina = factura.Propina,
             ImporteTotal = factura.ImporteTotal,

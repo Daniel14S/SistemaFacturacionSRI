@@ -222,11 +222,6 @@ public class FacturaXML
             {
                 resumen.Subtotal0 = subtotal;
             }
-            else if (tarifa == 12)
-            {
-                resumen.Subtotal12 = subtotal;
-                resumen.IVA12 = impuesto;
-            }
             else if (tarifa == 15)
             {
                 resumen.Subtotal15 = subtotal;
@@ -234,9 +229,9 @@ public class FacturaXML
             }
         }
 
-        resumen.SubtotalTotal = resumen.Subtotal0 + resumen.Subtotal12 + resumen.Subtotal15;
+        resumen.SubtotalTotal = resumen.Subtotal0 + resumen.Subtotal15;
         resumen.TotalDescuento = Detalles.Sum(d => d.Descuento);
-        resumen.TotalIVA = resumen.IVA12 + resumen.IVA15;
+        resumen.TotalIVA = resumen.IVA15;
         resumen.Total = resumen.SubtotalTotal - resumen.TotalDescuento + resumen.TotalIVA;
 
         return resumen;
@@ -249,11 +244,9 @@ public class FacturaXML
 public class ResumenTotales
 {
     public decimal Subtotal0 { get; set; }
-    public decimal Subtotal12 { get; set; }
     public decimal Subtotal15 { get; set; }
     public decimal SubtotalTotal { get; set; }
     public decimal TotalDescuento { get; set; }
-    public decimal IVA12 { get; set; }
     public decimal IVA15 { get; set; }
     public decimal TotalIVA { get; set; }
     public decimal Total { get; set; }

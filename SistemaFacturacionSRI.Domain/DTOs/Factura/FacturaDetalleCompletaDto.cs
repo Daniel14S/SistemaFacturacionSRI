@@ -28,7 +28,6 @@ namespace SistemaFacturacionSRI.Application.DTOs.Facturacion
 
         // Totales
         public decimal Subtotal0 { get; set; }
-        public decimal Subtotal12 { get; set; }
         public decimal Subtotal15 { get; set; }
         public decimal SubtotalConDescuento { get; set; }
         public decimal Descuento { get; set; }
