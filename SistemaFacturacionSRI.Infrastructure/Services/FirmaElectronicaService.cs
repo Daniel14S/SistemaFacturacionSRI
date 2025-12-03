@@ -1,3 +1,4 @@
+// SistemaFacturacionSRI.Infrastructure/Services/FirmaElectronicaService.cs
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using Microsoft.Extensions.Logging;
@@ -7,13 +8,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 {
     /// <summary>
     /// Servicio de firma electrónica XADES-BES
-    /// T-055: Sprint 3 - Día 6 (Interfaz)
-    /// T-057 a T-063: Implementación completa
+    /// T-055: Interfaz creada
+    /// T-057: Carga de certificado implementada
+    /// T-058 a T-063: Implementación de firma
     /// </summary>
     public class FirmaElectronicaService : IFirmaElectronicaService
     {
         private readonly ICertificadoDigitalService _certificadoService;
         private readonly ILogger<FirmaElectronicaService> _logger;
+        private X509Certificate2? _certificadoCargado;
+        private readonly object _lockCertificado = new object();
 
         public FirmaElectronicaService(
             ICertificadoDigitalService certificadoService,
@@ -21,7 +25,130 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             _certificadoService = certificadoService ?? throw new ArgumentNullException(nameof(certificadoService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // T-057: Inicializar certificado al crear el servicio
+            InicializarCertificado();
         }
+
+        // ============================================================
+        // T-057: CARGA Y GESTIÓN DE CERTIFICADO
+        // ============================================================
+
+        /// <summary>
+        /// T-057: Inicializa y valida el certificado al arrancar el servicio
+        /// </summary>
+        private void InicializarCertificado()
+        {
+            try
+            {
+                _logger.LogInformation("Inicializando certificado digital para firma electrónica...");
+
+                // Cargar certificado
+                _certificadoCargado = _certificadoService.CargarCertificado();
+
+                // Validar que sea apto para firma
+                var esValido = _certificadoService.ValidarYRegistrarCertificado(_certificadoCargado);
+
+                if (!esValido)
+                {
+                    _logger.LogError("El certificado cargado NO es válido para firma electrónica");
+                    throw new InvalidOperationException(
+                        "El certificado digital no es válido para firma electrónica. " +
+                        "Revise los errores en el log y corrija la configuración.");
+                }
+
+                // Verificar que tenga clave privada (crítico para firma)
+                if (!_certificadoCargado.HasPrivateKey)
+                {
+                    _logger.LogError("El certificado NO tiene clave privada");
+                    throw new InvalidOperationException(
+                        "El certificado no contiene clave privada. " +
+                        "Se requiere un certificado con clave privada para firmar documentos.");
+                }
+
+                // Log de éxito
+                var info = _certificadoService.ObtenerInformacionCertificado(_certificadoCargado);
+                _logger.LogInformation("✅ Certificado inicializado correctamente");
+                _logger.LogInformation("   Subject: {Subject}", info.Subject);
+                _logger.LogInformation("   Válido hasta: {ValidoHasta:dd/MM/yyyy}", info.ValidoHasta);
+                _logger.LogInformation("   Días restantes: {Dias}", info.DiasRestantes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error crítico al inicializar certificado digital");
+                _certificadoCargado = null;
+                throw new InvalidOperationException(
+                    "No se pudo inicializar el servicio de firma electrónica. " +
+                    "Verifique la configuración del certificado digital.", ex);
+            }
+        }
+
+        /// <summary>
+        /// T-057: Obtiene el certificado, asegurándose de que esté cargado
+        /// </summary>
+        private X509Certificate2 ObtenerCertificado()
+        {
+            lock (_lockCertificado)
+            {
+                if (_certificadoCargado == null)
+                {
+                    _logger.LogWarning("Certificado no estaba cargado, recargando...");
+                    InicializarCertificado();
+                }
+
+                if (_certificadoCargado == null)
+                {
+                    throw new InvalidOperationException(
+                        "No hay certificado digital disponible para firmar. " +
+                        "Verifique la configuración.");
+                }
+
+                return _certificadoCargado;
+            }
+        }
+
+        /// <summary>
+        /// T-057: Valida el certificado antes de usarlo para firmar
+        /// </summary>
+        private void ValidarCertificadoParaFirma(X509Certificate2 certificado)
+        {
+            _logger.LogDebug("Validando certificado antes de firmar...");
+
+            // Verificar que no esté expirado
+            if (DateTime.Now > certificado.NotAfter)
+            {
+                throw new InvalidOperationException(
+                    $"El certificado está EXPIRADO desde {certificado.NotAfter:dd/MM/yyyy}. " +
+                    "No se puede usar para firmar documentos.");
+            }
+
+            // Verificar que ya sea válido
+            if (DateTime.Now < certificado.NotBefore)
+            {
+                throw new InvalidOperationException(
+                    $"El certificado aún no es válido. Será válido desde {certificado.NotBefore:dd/MM/yyyy}.");
+            }
+
+            // Verificar clave privada
+            if (!certificado.HasPrivateKey)
+            {
+                throw new InvalidOperationException(
+                    "El certificado no tiene clave privada. No se puede firmar.");
+            }
+
+            // Advertir si está por expirar
+            var diasRestantes = (certificado.NotAfter - DateTime.Now).Days;
+            if (diasRestantes <= 7)
+            {
+                _logger.LogWarning("⚠️ URGENTE: El certificado expira en {Dias} días!", diasRestantes);
+            }
+
+            _logger.LogDebug("✅ Certificado validado correctamente para firma");
+        }
+
+        // ============================================================
+        // MÉTODOS DE FIRMA (T-058 a T-063: Pendientes)
+        // ============================================================
 
         /// <summary>
         /// T-058 a T-063: Firma un XML con XADES-BES
@@ -30,8 +157,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             _logger.LogInformation("Iniciando firma de XML");
 
-            // Obtener certificado configurado
-            var certificado = _certificadoService.ObtenerCertificadoActual();
+            // T-057: Obtener y validar certificado
+            var certificado = ObtenerCertificado();
+            ValidarCertificadoParaFirma(certificado);
 
             // Delegar a sobrecarga con certificado
             return await FirmarXml(xmlSinFirmar, certificado);
@@ -44,20 +172,39 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             _logger.LogInformation("Firmando XML con certificado: {Subject}", certificado.Subject);
 
-            // TODO T-057: Validar certificado
-            // TODO T-058: Crear estructura SignedInfo
-            // TODO T-059: Calcular hash del documento
-            // TODO T-060: Firmar con RSA
-            // TODO T-061: Incluir certificado en KeyInfo
-            // TODO T-062: Agregar SignedProperties
-            // TODO T-063: Insertar firma en XML
+            // T-057: Validar certificado antes de firmar
+            ValidarCertificadoParaFirma(certificado);
 
-            await Task.CompletedTask; // Placeholder para async
+            try
+            {
+                // TODO T-058: Crear estructura SignedInfo
+                // TODO T-059: Calcular hash del documento
+                // TODO T-060: Firmar con RSA
+                // TODO T-061: Incluir certificado en KeyInfo
+                // TODO T-062: Agregar SignedProperties
+                // TODO T-063: Insertar firma en XML
 
-            throw new NotImplementedException(
-                "Implementación pendiente en tareas T-057 a T-063. " +
-                "Esta funcionalidad se completará en los próximos días del sprint.");
+                await Task.CompletedTask; // Placeholder
+
+                throw new NotImplementedException(
+                    "La firma XADES-BES se implementará en las tareas T-058 a T-063. " +
+                    "Certificado validado correctamente, listo para firmar.");
+            }
+            catch (NotImplementedException)
+            {
+                throw; // Re-lanzar NotImplementedException
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al firmar XML");
+                throw new InvalidOperationException(
+                    $"Error al firmar el documento: {ex.Message}", ex);
+            }
         }
+
+        // ============================================================
+        // MÉTODOS DE VALIDACIÓN (Pendientes)
+        // ============================================================
 
         /// <summary>
         /// Valida una firma XADES-BES
@@ -109,6 +256,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             // TODO: Implementar extracción de certificado desde KeyInfo
             throw new NotImplementedException("Pendiente de implementación");
         }
+
+        // ============================================================
+        // MÉTODOS AUXILIARES (Implementados en T-055)
+        // ============================================================
 
         /// <summary>
         /// Verifica si un XML tiene firma
@@ -172,11 +323,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         }
 
         /// <summary>
-        /// Obtiene el certificado configurado
+        /// T-057: Obtiene el certificado configurado
         /// </summary>
         public X509Certificate2 ObtenerCertificadoConfiguracion()
         {
-            return _certificadoService.ObtenerCertificadoActual();
+            return ObtenerCertificado();
         }
     }
 }
