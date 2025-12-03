@@ -1,3 +1,4 @@
+// SistemaFacturacionSRI.Domain/Interfaces/Services/ICertificadoDigitalService.cs
 using System.Security.Cryptography.X509Certificates;
 
 namespace SistemaFacturacionSRI.Domain.Interfaces.Services
@@ -54,6 +55,20 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         /// Obtiene el certificado actualmente cargado (singleton)
         /// </summary>
         X509Certificate2 ObtenerCertificadoActual();
+
+        /// <summary>
+        /// T-054: Validación completa y estricta del certificado
+        /// </summary>
+        /// <param name="certificado">Certificado a validar</param>
+        /// <returns>Tupla con resultado, errores y advertencias</returns>
+        (bool EsValido, List<string> Errores, List<string> Advertencias) ValidarCertificadoCompleto(X509Certificate2 certificado);
+
+        /// <summary>
+        /// T-054: Valida y registra en logs el resultado
+        /// </summary>
+        /// <param name="certificado">Certificado a validar</param>
+        /// <returns>True si es válido</returns>
+        bool ValidarYRegistrarCertificado(X509Certificate2 certificado);
     }
 
     /// <summary>
