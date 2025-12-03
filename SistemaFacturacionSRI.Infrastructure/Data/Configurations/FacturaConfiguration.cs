@@ -101,6 +101,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
             builder.Property(f => f.XmlPath).HasMaxLength(500);
             builder.Property(f => f.XmlFirmadoPath).HasMaxLength(500);
             builder.Property(f => f.PdfPath).HasMaxLength(500);
+
+            // Guía de Remisión asociada (formato: 000-000-000000000)
+            builder.Property(f => f.GuiaRemision)
+                .HasMaxLength(21)
+                .HasComment("Número de Guía de Remisión asociada");
         }
     }
 }

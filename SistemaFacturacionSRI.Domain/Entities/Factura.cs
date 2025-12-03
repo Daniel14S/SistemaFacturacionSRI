@@ -53,6 +53,9 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public string? XmlFirmadoPath { get; set; }
         public string? PdfPath { get; set; }
         
+        // Guía de Remisión asociada (opcional, formato: 000-000-000000000)
+        public string? GuiaRemision { get; set; }
+        
         // Mensajes y observaciones
         public string? MensajesSRI { get; set; }
         public string? Observaciones { get; set; }

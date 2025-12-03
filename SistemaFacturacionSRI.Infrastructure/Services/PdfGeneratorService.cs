@@ -234,7 +234,7 @@ public class PdfGeneratorService : IPdfGeneratorService
                                     });
                                 });
 
-                            // Sección: Información del Cliente
+                            // Sección: Información del Cliente (T-096)
                             column.Item().PaddingTop(10)
                                 .Border(1)
                                 .BorderColor(Colors.Grey.Lighten1)
@@ -244,92 +244,166 @@ public class PdfGeneratorService : IPdfGeneratorService
                                     clienteColumn.Item()
                                         .Background(Colors.Grey.Lighten3)
                                         .Padding(5)
-                                        .Text("INFORMACIÓN DEL CLIENTE")
+                                        .Text("INFORMACIÓN DEL CLIENTE / RECEPTOR")
                                         .Bold()
                                         .FontSize(11);
 
+                                    // Fila 1: Razón Social y Fecha de Emisión
                                     clienteColumn.Item().PaddingTop(8).Row(row =>
                                     {
-                                        row.ConstantItem(150).Text("Razón Social / Nombre:").Bold().FontSize(9);
-                                        row.RelativeItem().Text(factura.Cliente?.NombreCompleto() ?? "N/A").FontSize(9);
+                                        row.RelativeItem().Row(innerRow =>
+                                        {
+                                            innerRow.ConstantItem(150).Text("Razón Social / Nombres:").Bold().FontSize(9);
+                                            innerRow.RelativeItem().Text(factura.Cliente?.NombreCompleto() ?? "CONSUMIDOR FINAL").FontSize(9);
+                                        });
+                                        row.ConstantItem(200).Row(innerRow =>
+                                        {
+                                            innerRow.ConstantItem(100).Text("Fecha Emisión:").Bold().FontSize(9);
+                                            innerRow.RelativeItem().Text($"{factura.FechaEmision:dd/MM/yyyy}").FontSize(9);
+                                        });
                                     });
 
-                                    clienteColumn.Item().PaddingTop(3).Row(row =>
+                                    // Fila 2: Identificación y Tipo
+                                    clienteColumn.Item().PaddingTop(5).Row(row =>
                                     {
-                                        row.ConstantItem(150).Text("Identificación:").Bold().FontSize(9);
-                                        row.RelativeItem().Text(factura.Cliente?.Identificacion ?? "N/A").FontSize(9);
+                                        row.RelativeItem().Row(innerRow =>
+                                        {
+                                            innerRow.ConstantItem(150).Text("Identificación:").Bold().FontSize(9);
+                                            var tipoId = factura.Cliente?.TipoIdentificacion?.Nombre ?? "RUC/CÉDULA";
+                                            innerRow.RelativeItem().Text($"{factura.Cliente?.Identificacion ?? "9999999999999"} ({tipoId})").FontSize(9);
+                                        });
+                                        row.ConstantItem(200).Row(innerRow =>
+                                        {
+                                            innerRow.ConstantItem(100).Text("Guía Remisión:").Bold().FontSize(9);
+                                            innerRow.RelativeItem().Text(factura.GuiaRemision ?? "-").FontSize(9);
+                                        });
                                     });
 
-                                    if (!string.IsNullOrEmpty(factura.Cliente?.Direccion))
+                                    // Fila 3: Dirección
+                                    clienteColumn.Item().PaddingTop(5).Row(row =>
                                     {
-                                        clienteColumn.Item().PaddingTop(3).Row(row =>
-                                        {
-                                            row.ConstantItem(150).Text("Dirección:").Bold().FontSize(9);
-                                            row.RelativeItem().Text(factura.Cliente.Direccion).FontSize(9);
-                                        });
-                                    }
+                                        row.ConstantItem(150).Text("Dirección:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.Cliente?.Direccion ?? "S/N").FontSize(9);
+                                    });
 
-                                    if (!string.IsNullOrEmpty(factura.Cliente?.Telefono))
+                                    // Fila 4: Teléfono y Email (en la misma línea)
+                                    clienteColumn.Item().PaddingTop(5).Row(row =>
                                     {
-                                        clienteColumn.Item().PaddingTop(3).Row(row =>
+                                        row.RelativeItem().Row(innerRow =>
                                         {
-                                            row.ConstantItem(150).Text("Teléfono:").Bold().FontSize(9);
-                                            row.RelativeItem().Text(factura.Cliente.Telefono).FontSize(9);
+                                            innerRow.ConstantItem(150).Text("Teléfono:").Bold().FontSize(9);
+                                            innerRow.RelativeItem().Text(factura.Cliente?.Telefono ?? "-").FontSize(9);
                                         });
-                                    }
-
-                                    if (!string.IsNullOrEmpty(factura.Cliente?.Email))
-                                    {
-                                        clienteColumn.Item().PaddingTop(3).Row(row =>
+                                        row.ConstantItem(200).Row(innerRow =>
                                         {
-                                            row.ConstantItem(150).Text("Email:").Bold().FontSize(9);
-                                            row.RelativeItem().Text(factura.Cliente.Email).FontSize(9);
+                                            innerRow.ConstantItem(100).Text("Email:").Bold().FontSize(9);
+                                            innerRow.RelativeItem().Text(factura.Cliente?.Email ?? "-").FontSize(9);
                                         });
-                                    }
+                                    });
                                 });
 
-                            // Detalle de la factura
-                            column.Item().PaddingTop(10).Text("DETALLE DE PRODUCTOS/SERVICIOS").Bold();
-                            
-                            // Tabla de detalles
-                            column.Item().Table(table =>
-                            {
-                                table.ColumnsDefinition(columns =>
+                            // Sección: Detalle de Productos/Servicios (T-097)
+                            column.Item().PaddingTop(10)
+                                .Border(1)
+                                .BorderColor(Colors.Grey.Lighten1)
+                                .Column(detalleColumn =>
                                 {
-                                    columns.ConstantColumn(50);  // Cant
-                                    columns.RelativeColumn(3);    // Descripción
-                                    columns.RelativeColumn(1);    // P.Unit
-                                    columns.RelativeColumn(1);    // Total
-                                });
+                                    detalleColumn.Item()
+                                        .Background(Colors.Grey.Lighten3)
+                                        .Padding(5)
+                                        .Text("DETALLE DE PRODUCTOS / SERVICIOS")
+                                        .Bold()
+                                        .FontSize(11);
 
-                                // Encabezado
-                                table.Header(header =>
-                                {
-                                    header.Cell().Element(CellStyle).Text("Cant").Bold();
-                                    header.Cell().Element(CellStyle).Text("Descripción").Bold();
-                                    header.Cell().Element(CellStyle).Text("P.Unit").Bold();
-                                    header.Cell().Element(CellStyle).Text("Total").Bold();
-
-                                    static IContainer CellStyle(IContainer container)
+                                    // Tabla de detalles completa según Ficha Técnica RIDE
+                                    detalleColumn.Item().Padding(5).Table(table =>
                                     {
-                                        return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten2).PaddingVertical(5);
-                                    }
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.ConstantColumn(60);   // Código
+                                            columns.RelativeColumn(3);    // Descripción
+                                            columns.ConstantColumn(45);   // Cantidad
+                                            columns.ConstantColumn(60);   // P. Unitario
+                                            columns.ConstantColumn(55);   // Descuento
+                                            columns.ConstantColumn(65);   // Subtotal
+                                            columns.ConstantColumn(40);   // IVA %
+                                            columns.ConstantColumn(65);   // Total
+                                        });
+
+                                        // Encabezado de la tabla
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().Element(HeaderCellStyle).AlignCenter().Text("Código").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).Text("Descripción").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignCenter().Text("Cant.").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("P. Unit.").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Desc.").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Subtotal").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignCenter().Text("IVA").Bold().FontSize(8);
+                                            header.Cell().Element(HeaderCellStyle).AlignRight().Text("Total").Bold().FontSize(8);
+
+                                            static IContainer HeaderCellStyle(IContainer container)
+                                            {
+                                                return container
+                                                    .Background(Colors.Blue.Lighten4)
+                                                    .BorderBottom(1)
+                                                    .BorderColor(Colors.Blue.Medium)
+                                                    .PaddingVertical(5)
+                                                    .PaddingHorizontal(3);
+                                            }
+                                        });
+
+                                        // Filas de detalle
+                                        foreach (var detalle in factura.Detalles)
+                                        {
+                                            // Código Principal
+                                            table.Cell().Element(DataCellStyle).AlignCenter()
+                                                .Text(detalle.CodigoPrincipal).FontSize(7);
+                                            
+                                            // Descripción (con código auxiliar si existe)
+                                            var descripcion = detalle.Descripcion;
+                                            if (!string.IsNullOrEmpty(detalle.CodigoAuxiliar))
+                                            {
+                                                descripcion += $" [{detalle.CodigoAuxiliar}]";
+                                            }
+                                            table.Cell().Element(DataCellStyle)
+                                                .Text(descripcion).FontSize(8);
+                                            
+                                            // Cantidad (hasta 6 decimales según XSD V1.1.0+)
+                                            table.Cell().Element(DataCellStyle).AlignCenter()
+                                                .Text(detalle.Cantidad.ToString("G")).FontSize(8);
+                                            
+                                            // Precio Unitario
+                                            table.Cell().Element(DataCellStyle).AlignRight()
+                                                .Text($"${detalle.PrecioUnitario:F4}").FontSize(8);
+                                            
+                                            // Descuento
+                                            table.Cell().Element(DataCellStyle).AlignRight()
+                                                .Text($"${detalle.Descuento:F2}").FontSize(8);
+                                            
+                                            // Subtotal (Precio sin impuesto)
+                                            table.Cell().Element(DataCellStyle).AlignRight()
+                                                .Text($"${detalle.PrecioTotalSinImpuesto:F2}").FontSize(8);
+                                            
+                                            // IVA % (tarifa del detalle)
+                                            table.Cell().Element(DataCellStyle).AlignCenter()
+                                                .Text($"{detalle.Tarifa:F0}%").FontSize(8);
+                                            
+                                            // Total (con IVA)
+                                            table.Cell().Element(DataCellStyle).AlignRight()
+                                                .Text($"${detalle.ValorTotal:F2}").FontSize(8).Bold();
+
+                                            static IContainer DataCellStyle(IContainer container)
+                                            {
+                                                return container
+                                                    .BorderBottom(1)
+                                                    .BorderColor(Colors.Grey.Lighten3)
+                                                    .PaddingVertical(4)
+                                                    .PaddingHorizontal(3);
+                                            }
+                                        }
+                                    });
                                 });
-
-                                // Filas de detalle
-                                foreach (var detalle in factura.Detalles)
-                                {
-                                    table.Cell().Element(CellStyle).Text(detalle.Cantidad.ToString());
-                                    table.Cell().Element(CellStyle).Text(detalle.Producto?.Nombre ?? "N/A");
-                                    table.Cell().Element(CellStyle).Text($"${detalle.PrecioUnitario:F2}");
-                                    table.Cell().Element(CellStyle).Text($"${detalle.ValorTotal:F2}");
-
-                                    static IContainer CellStyle(IContainer container)
-                                    {
-                                        return container.BorderBottom(1).BorderColor(Colors.Grey.Lighten3).PaddingVertical(5);
-                                    }
-                                }
-                            });
 
                             // Totales
                             column.Item().PaddingTop(10).AlignRight().Column(totalColumn =>
