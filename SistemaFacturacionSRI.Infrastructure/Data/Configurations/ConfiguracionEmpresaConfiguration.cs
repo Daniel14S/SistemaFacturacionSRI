@@ -61,6 +61,14 @@ public class ConfiguracionEmpresaConfiguration : IEntityTypeConfiguration<Config
             .HasMaxLength(10)
             .HasComment("Resolución de agente de retención");
 
+        builder.Property(c => c.ContribuyenteEspecial)
+            .HasMaxLength(20)
+            .HasComment("Número de resolución de Contribuyente Especial");
+
+        builder.Property(c => c.RegimenRimpe)
+            .HasMaxLength(60)
+            .HasComment("Régimen RIMPE del contribuyente");
+
         // ==================== DATOS DE CONTACTO ====================
 
         builder.Property(c => c.Telefono)

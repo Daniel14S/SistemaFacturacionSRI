@@ -117,9 +117,22 @@ public class PdfGeneratorService : IPdfGeneratorService
                                 empresaColumn.Item().PaddingTop(3).Text($"Establecimiento: {configuracion.CodigoEstablecimiento} - Pto. Emisión: {configuracion.PuntoEmision}").FontSize(9);
                                 empresaColumn.Item().Text($"Obligado a llevar contabilidad: {(configuracion.ObligadoContabilidad ? "SÍ" : "NO")}").FontSize(9);
                                 
+                                // Contribuyente Especial (obligatorio si aplica según Ficha Técnica RIDE V2.32)
+                                if (!string.IsNullOrEmpty(configuracion.ContribuyenteEspecial))
+                                {
+                                    empresaColumn.Item().Text($"Contribuyente Especial Nro. {configuracion.ContribuyenteEspecial}").FontSize(9);
+                                }
+                                
+                                // Agente de Retención (obligatorio desde XSD V2.1.0)
                                 if (!string.IsNullOrEmpty(configuracion.AgenteRetencion))
                                 {
-                                    empresaColumn.Item().Text($"Agente de Retención: Resolución N° {configuracion.AgenteRetencion}").FontSize(9);
+                                    empresaColumn.Item().Text($"Agente de Retención Resolución N° {configuracion.AgenteRetencion}").FontSize(9);
+                                }
+                                
+                                // Régimen RIMPE (obligatorio si aplica según normativa SRI)
+                                if (!string.IsNullOrEmpty(configuracion.RegimenRimpe))
+                                {
+                                    empresaColumn.Item().Text(configuracion.RegimenRimpe).FontSize(9).Bold();
                                 }
                             });
 
@@ -153,17 +166,127 @@ public class PdfGeneratorService : IPdfGeneratorService
                         {
                             column.Spacing(10);
 
-                            // Información de la empresa
-                            column.Item().Text("INFORMACIÓN DEL EMISOR").Bold();
-                            column.Item().Text($"Razón Social: {factura.Cliente?.NombreCompleto() ?? "N/A"}");
-                            column.Item().Text($"RUC: {factura.Cliente?.Identificacion ?? "N/A"}");
+                            // Sección: Información Tributaria
+                            column.Item()
+                                .Border(1)
+                                .BorderColor(Colors.Grey.Lighten1)
+                                .Padding(10)
+                                .Column(tributariaColumn =>
+                                {
+                                    tributariaColumn.Item()
+                                        .Background(Colors.Grey.Lighten3)
+                                        .Padding(5)
+                                        .Text("INFORMACIÓN TRIBUTARIA")
+                                        .Bold()
+                                        .FontSize(11);
 
-                            // Información de la factura
-                            column.Item().PaddingTop(10).Text("DATOS DE LA FACTURA").Bold();
-                            column.Item().Text($"Fecha Emisión: {factura.FechaEmision:dd/MM/yyyy}");
-                            column.Item().Text($"Clave de Acceso: {factura.ClaveAcceso}");
-                            column.Item().Text($"Ambiente: {factura.Ambiente}");
-                            column.Item().Text($"Estado: {factura.Estado}");
+                                    tributariaColumn.Item().PaddingTop(8).Row(row =>
+                                    {
+                                        row.RelativeItem().Column(col =>
+                                        {
+                                            col.Item().Row(r =>
+                                            {
+                                                r.ConstantItem(120).Text("Ambiente:").Bold().FontSize(9);
+                                                r.RelativeItem().Text(factura.Ambiente == Ambiente.PRUEBAS ? "PRUEBAS" : "PRODUCCIÓN").FontSize(9);
+                                            });
+                                            col.Item().PaddingTop(3).Row(r =>
+                                            {
+                                                r.ConstantItem(120).Text("Tipo Emisión:").Bold().FontSize(9);
+                                                r.RelativeItem().Text(factura.TipoEmision == TipoEmision.NORMAL ? "NORMAL" : "CONTINGENCIA").FontSize(9);
+                                            });
+                                            col.Item().PaddingTop(3).Row(r =>
+                                            {
+                                                r.ConstantItem(120).Text("Fecha Emisión:").Bold().FontSize(9);
+                                                r.RelativeItem().Text($"{factura.FechaEmision:dd/MM/yyyy HH:mm:ss}").FontSize(9);
+                                            });
+                                        });
+                                    });
+
+                                    tributariaColumn.Item().PaddingTop(8).Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("Clave de Acceso:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.ClaveAcceso).FontSize(8).FontFamily("Courier New");
+                                    });
+
+                                    tributariaColumn.Item().PaddingTop(5).Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("N° Autorización:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.NumeroAutorizacion ?? "PENDIENTE DE AUTORIZACIÓN").FontSize(8).FontFamily("Courier New");
+                                    });
+
+                                    if (factura.FechaHoraAutorizacion.HasValue)
+                                    {
+                                        tributariaColumn.Item().PaddingTop(5).Row(row =>
+                                        {
+                                            row.ConstantItem(120).Text("Fecha Autorización:").Bold().FontSize(9);
+                                            row.RelativeItem().Text($"{factura.FechaHoraAutorizacion:dd/MM/yyyy HH:mm:ss}").FontSize(9);
+                                        });
+                                    }
+
+                                    tributariaColumn.Item().PaddingTop(5).Row(row =>
+                                    {
+                                        row.ConstantItem(120).Text("Estado:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.Estado.ToString().Replace("_", " "))
+                                            .FontSize(9)
+                                            .FontColor(factura.Estado == EstadoFactura.AUTORIZADA ? Colors.Green.Darken2 : 
+                                                      factura.Estado == EstadoFactura.NO_AUTORIZADA || factura.Estado == EstadoFactura.DEVUELTA ? Colors.Red.Darken2 : 
+                                                      Colors.Orange.Darken2);
+                                    });
+                                });
+
+                            // Sección: Información del Cliente
+                            column.Item().PaddingTop(10)
+                                .Border(1)
+                                .BorderColor(Colors.Grey.Lighten1)
+                                .Padding(10)
+                                .Column(clienteColumn =>
+                                {
+                                    clienteColumn.Item()
+                                        .Background(Colors.Grey.Lighten3)
+                                        .Padding(5)
+                                        .Text("INFORMACIÓN DEL CLIENTE")
+                                        .Bold()
+                                        .FontSize(11);
+
+                                    clienteColumn.Item().PaddingTop(8).Row(row =>
+                                    {
+                                        row.ConstantItem(150).Text("Razón Social / Nombre:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.Cliente?.NombreCompleto() ?? "N/A").FontSize(9);
+                                    });
+
+                                    clienteColumn.Item().PaddingTop(3).Row(row =>
+                                    {
+                                        row.ConstantItem(150).Text("Identificación:").Bold().FontSize(9);
+                                        row.RelativeItem().Text(factura.Cliente?.Identificacion ?? "N/A").FontSize(9);
+                                    });
+
+                                    if (!string.IsNullOrEmpty(factura.Cliente?.Direccion))
+                                    {
+                                        clienteColumn.Item().PaddingTop(3).Row(row =>
+                                        {
+                                            row.ConstantItem(150).Text("Dirección:").Bold().FontSize(9);
+                                            row.RelativeItem().Text(factura.Cliente.Direccion).FontSize(9);
+                                        });
+                                    }
+
+                                    if (!string.IsNullOrEmpty(factura.Cliente?.Telefono))
+                                    {
+                                        clienteColumn.Item().PaddingTop(3).Row(row =>
+                                        {
+                                            row.ConstantItem(150).Text("Teléfono:").Bold().FontSize(9);
+                                            row.RelativeItem().Text(factura.Cliente.Telefono).FontSize(9);
+                                        });
+                                    }
+
+                                    if (!string.IsNullOrEmpty(factura.Cliente?.Email))
+                                    {
+                                        clienteColumn.Item().PaddingTop(3).Row(row =>
+                                        {
+                                            row.ConstantItem(150).Text("Email:").Bold().FontSize(9);
+                                            row.RelativeItem().Text(factura.Cliente.Email).FontSize(9);
+                                        });
+                                    }
+                                });
 
                             // Detalle de la factura
                             column.Item().PaddingTop(10).Text("DETALLE DE PRODUCTOS/SERVICIOS").Bold();

@@ -53,6 +53,18 @@ public class ConfiguracionEmpresa : EntidadBase
     /// </summary>
     public string? AgenteRetencion { get; set; }
     
+    /// <summary>
+    /// Número de resolución de Contribuyente Especial (null si no aplica)
+    /// Ejemplo: "12345" para contribuyentes especiales
+    /// </summary>
+    public string? ContribuyenteEspecial { get; set; }
+    
+    /// <summary>
+    /// Régimen RIMPE al que pertenece el contribuyente (null si no aplica)
+    /// Valores válidos: "CONTRIBUYENTE RÉGIMEN RIMPE" o "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE"
+    /// </summary>
+    public string? RegimenRimpe { get; set; }
+    
     // ==================== DATOS DE CONTACTO ====================
     
     /// <summary>
