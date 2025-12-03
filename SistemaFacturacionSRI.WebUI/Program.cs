@@ -71,6 +71,9 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<ISecuenciaService, SecuenciaService>();
 builder.Services.AddScoped<IConfiguracionService, ConfiguracionService>();
 builder.Services.AddScoped<IFacturaService, SistemaFacturacionSRI.Infrastructure.Services.FacturaService>();
+builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
+builder.Services.AddScoped<IConfiguracionEmpresaRepository, ConfiguracionEmpresaRepository>();
+builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
 
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();

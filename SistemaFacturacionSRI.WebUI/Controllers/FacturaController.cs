@@ -5,6 +5,8 @@ using SistemaFacturacionSRI.Domain.DTOs.Factura;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.WebUI.Authorization;
+using SistemaFacturacionSRI.Domain.Interfaces;
+using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
@@ -22,13 +24,19 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
     public class FacturaController : ControllerBase
     {
         private readonly IFacturaService _facturaService;
+        private readonly IPdfGeneratorService _pdfGeneratorService;
+        private readonly IWebHostEnvironment _environment;
         private readonly ILogger<FacturaController> _logger;
 
         public FacturaController(
             IFacturaService facturaService,
+            IPdfGeneratorService pdfGeneratorService,
+            IWebHostEnvironment environment,
             ILogger<FacturaController> logger)
         {
             _facturaService = facturaService;
+            _pdfGeneratorService = pdfGeneratorService;
+            _environment = environment;
             _logger = logger;
         }
 
@@ -554,6 +562,138 @@ public async Task<IActionResult> DescargarXml(int id)
         return StatusCode(StatusCodes.Status500InternalServerError, new
         {
             message = "Error interno al descargar el archivo XML"
+        });
+    }
+}
+
+/// <summary>
+/// GET /api/factura/{id}/pdf
+/// Genera y descarga el PDF RIDE de una factura
+/// PERMISOS: Administrador ✅ (cualquier factura) | Vendedor ✅ (solo sus facturas)
+/// </summary>
+[HttpGet("{id}/pdf")]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> DescargarPdfRide(int id)
+{
+    try
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        // 1. Obtener la factura
+        var factura = await _facturaService.ObtenerPorIdAsync(id);
+
+        if (factura == null)
+        {
+            return NotFound(new 
+            { 
+                message = $"Factura con ID {id} no encontrada" 
+            });
+        }
+
+        // 2. Validar permisos: Vendedor solo puede descargar sus propias facturas
+        if (!EsAdministrador())
+        {
+            int usuarioId = ObtenerUsuarioId();
+            
+            if (factura.UsuarioId != usuarioId)
+            {
+                _logger.LogWarning(
+                    "Usuario {UsuarioId} intentó descargar PDF de factura {FacturaId} de otro usuario",
+                    usuarioId, id);
+                
+                return Forbid();
+            }
+        }
+
+        // 3. Generar el PDF RIDE
+        byte[] pdfBytes = await _pdfGeneratorService.GenerarRideBytesAsync(id);
+
+        // 4. Generar nombre del archivo para descarga
+        string nombreArchivo = string.IsNullOrWhiteSpace(factura.ClaveAcceso)
+            ? $"RIDE_{factura.NumeroFactura}.pdf"
+            : $"RIDE_{factura.ClaveAcceso}.pdf";
+
+        _logger.LogInformation(
+            "Usuario {UsuarioId} descargó PDF RIDE de factura {FacturaId} ({NumeroFactura})",
+            ObtenerUsuarioId(), id, factura.NumeroFactura);
+
+        // 5. Retornar el archivo PDF
+        return File(
+            pdfBytes,
+            "application/pdf",
+            nombreArchivo
+        );
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return NotFound(new { message = ex.Message });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Acceso no autorizado al descargar PDF de factura {FacturaId}", id);
+        return Forbid();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al generar PDF RIDE de factura {FacturaId}", id);
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno al generar el archivo PDF"
+        });
+    }
+}
+
+/// <summary>
+/// GET /api/factura/{id}/pdf/almacenar
+/// Genera y almacena el PDF RIDE en el servidor
+/// PERMISOS: Administrador ✅ | Vendedor ✅
+/// </summary>
+[HttpPost("{id}/pdf/almacenar")]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> AlmacenarPdfRide(int id)
+{
+    try
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        // Generar y almacenar el PDF
+        string rutaPdf = await _pdfGeneratorService.GenerarYAlmacenarRideAsync(id, _environment.WebRootPath);
+
+        _logger.LogInformation(
+            "PDF RIDE generado y almacenado para factura {FacturaId}. Ruta: {Ruta}",
+            id, rutaPdf);
+
+        return Ok(new
+        {
+            message = "PDF RIDE generado y almacenado exitosamente",
+            facturaId = id,
+            rutaPdf = rutaPdf,
+            urlDescarga = $"/api/factura/{id}/pdf"
+        });
+    }
+    catch (KeyNotFoundException ex)
+    {
+        return NotFound(new { message = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al almacenar PDF RIDE de factura {FacturaId}", id);
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno al almacenar el archivo PDF"
         });
     }
 }
