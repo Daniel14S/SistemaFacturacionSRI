@@ -3,6 +3,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using SistemaFacturacionSRI.Domain.Interfaces;
 using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using ZXing;
 using ZXing.Common;
@@ -19,13 +20,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Services;
 public class PdfGeneratorService : IPdfGeneratorService
 {
     private readonly IFacturaRepository _facturaRepository;
+    private readonly IConfiguracionEmpresaRepository _configuracionRepository;
     private readonly ILogger<PdfGeneratorService> _logger;
 
     public PdfGeneratorService(
         IFacturaRepository facturaRepository,
+        IConfiguracionEmpresaRepository configuracionRepository,
         ILogger<PdfGeneratorService> logger)
     {
         _facturaRepository = facturaRepository;
+        _configuracionRepository = configuracionRepository;
         _logger = logger;
         
         // Configurar licencia de QuestPDF (Community License)
@@ -51,6 +55,13 @@ public class PdfGeneratorService : IPdfGeneratorService
                 throw new InvalidOperationException($"La factura {facturaId} no tiene clave de acceso generada");
             }
 
+            // Obtener configuración de la empresa
+            var configuracion = await _configuracionRepository.ObtenerConfiguracionAsync();
+            if (configuracion == null)
+            {
+                throw new InvalidOperationException("No se encontró la configuración de la empresa");
+            }
+
             // Crear directorio si no existe
             var directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -73,8 +84,68 @@ public class PdfGeneratorService : IPdfGeneratorService
                     page.DefaultTextStyle(x => x.FontSize(10));
 
                     page.Header()
-                        .Text($"FACTURA N° {factura.NumeroFactura}")
-                        .SemiBold().FontSize(20).FontColor(Colors.Blue.Medium);
+                        .BorderBottom(2)
+                        .BorderColor(Colors.Grey.Lighten1)
+                        .PaddingBottom(10)
+                        .Row(row =>
+                        {
+                            // Columna del logo
+                            row.ConstantItem(120).Column(logoColumn =>
+                            {
+                                if (!string.IsNullOrEmpty(configuracion.LogoPath) && File.Exists(configuracion.LogoPath))
+                                {
+                                    logoColumn.Item().Height(80).Image(configuracion.LogoPath);
+                                }
+                                else
+                                {
+                                    logoColumn.Item().Height(80).Border(1).BorderColor(Colors.Grey.Lighten2)
+                                        .AlignCenter().AlignMiddle().Text("LOGO").FontSize(12).FontColor(Colors.Grey.Medium);
+                                }
+                            });
+
+                            // Espaciador
+                            row.RelativeItem().PaddingLeft(15);
+
+                            // Columna de información de la empresa
+                            row.RelativeItem(2).Column(empresaColumn =>
+                            {
+                                empresaColumn.Item().Text(configuracion.RazonSocial).Bold().FontSize(14);
+                                empresaColumn.Item().Text(configuracion.NombreComercial).FontSize(11).Italic();
+                                empresaColumn.Item().PaddingTop(5).Text($"RUC: {configuracion.RUC}").FontSize(10);
+                                empresaColumn.Item().Text($"Dir. Matriz: {configuracion.DirMatriz}").FontSize(9);
+                                empresaColumn.Item().Text($"Dir. Sucursal: {configuracion.DirEstablecimiento}").FontSize(9);
+                                empresaColumn.Item().PaddingTop(3).Text($"Establecimiento: {configuracion.CodigoEstablecimiento} - Pto. Emisión: {configuracion.PuntoEmision}").FontSize(9);
+                                empresaColumn.Item().Text($"Obligado a llevar contabilidad: {(configuracion.ObligadoContabilidad ? "SÍ" : "NO")}").FontSize(9);
+                                
+                                if (!string.IsNullOrEmpty(configuracion.AgenteRetencion))
+                                {
+                                    empresaColumn.Item().Text($"Agente de Retención: Resolución N° {configuracion.AgenteRetencion}").FontSize(9);
+                                }
+                            });
+
+                            // Espaciador
+                            row.RelativeItem().PaddingLeft(15);
+
+                            // Columna de información de la factura
+                            row.RelativeItem(1).Column(facturaInfoColumn =>
+                            {
+                                facturaInfoColumn.Item()
+                                    .Border(2)
+                                    .BorderColor(Colors.Blue.Medium)
+                                    .Padding(8)
+                                    .Column(infoBox =>
+                                    {
+                                        infoBox.Item().AlignCenter().Text("FACTURA").Bold().FontSize(14).FontColor(Colors.Blue.Darken2);
+                                        infoBox.Item().AlignCenter().Text($"N° {factura.NumeroFactura}").Bold().FontSize(12);
+                                        infoBox.Item().PaddingTop(5).Text($"Número de Autorización:").FontSize(7).Bold();
+                                        infoBox.Item().Text(factura.NumeroAutorizacion ?? "PENDIENTE").FontSize(7);
+                                        infoBox.Item().PaddingTop(3).Text($"Fecha Autorización:").FontSize(7).Bold();
+                                        infoBox.Item().Text(factura.FechaHoraAutorizacion?.ToString("dd/MM/yyyy HH:mm:ss") ?? "PENDIENTE").FontSize(7);
+                                        infoBox.Item().PaddingTop(3).Text($"Ambiente: {(factura.Ambiente == Ambiente.PRUEBAS ? "PRUEBAS" : "PRODUCCIÓN")}").FontSize(7);
+                                        infoBox.Item().Text($"Emisión: {(factura.TipoEmision == TipoEmision.NORMAL ? "NORMAL" : "CONTINGENCIA")}").FontSize(7);
+                                    });
+                            });
+                        });
 
                     page.Content()
                         .PaddingVertical(1, Unit.Centimetre)
