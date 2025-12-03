@@ -4,6 +4,8 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Infrastructure.Services;
+using System.Security.Cryptography.X509Certificates; // ← Faltaba este using
+using SistemaFacturacionSRI.Domain.Models; // ← Para InformacionCertificado y ResultadoValidacionFirma
 
 namespace Tests.Services
 {
@@ -101,16 +103,64 @@ namespace Tests.Services
         }
 
         [Fact]
-        public async Task FirmarXml_EnEstadoActual_DebeLanzarNotImplementedException()
+        public async Task FirmarXml_ConCertificadoValido_DebeLanzarNotImplementedException()
         {
             // Arrange
             var xml = "<factura></factura>";
+            var certificadoMock = new Mock<X509Certificate2>();
+            certificadoMock.Setup(c => c.HasPrivateKey).Returns(true);
+            certificadoMock.Setup(c => c.NotAfter).Returns(DateTime.UtcNow.AddDays(30)); // ← Cambiado a UtcNow
+            certificadoMock.Setup(c => c.NotBefore).Returns(DateTime.UtcNow.AddDays(-30)); // ← Cambiado a UtcNow
+
+            _certificadoServiceMock
+                .Setup(s => s.ObtenerCertificadoActual())
+                .Returns(certificadoMock.Object);
+            
+            _certificadoServiceMock
+                .Setup(s => s.ValidarYRegistrarCertificado(It.IsAny<X509Certificate2>()))
+                .Returns(true);
 
             // Act & Assert
-            // En el estado actual (stub), debe lanzar NotImplementedException
+            // T-057 valida el certificado, luego lanza NotImplementedException (firma pendiente)
             await Assert.ThrowsAsync<NotImplementedException>(
                 async () => await _service.FirmarXml(xml)
             );
+        }
+
+        [Fact]
+        public void Constructor_DebeInicializarCertificado()
+        {
+            // Arrange
+            var certificadoMock = new Mock<X509Certificate2>();
+            certificadoMock.Setup(c => c.HasPrivateKey).Returns(true);
+            certificadoMock.Setup(c => c.NotAfter).Returns(DateTime.UtcNow.AddDays(30)); // ← Cambiado a UtcNow
+            certificadoMock.Setup(c => c.NotBefore).Returns(DateTime.UtcNow.AddDays(-30)); // ← Cambiado a UtcNow
+
+            _certificadoServiceMock
+                .Setup(s => s.CargarCertificado())
+                .Returns(certificadoMock.Object);
+            
+            _certificadoServiceMock
+                .Setup(s => s.ValidarYRegistrarCertificado(It.IsAny<X509Certificate2>()))
+                .Returns(true);
+            
+            _certificadoServiceMock
+                .Setup(s => s.ObtenerInformacionCertificado(It.IsAny<X509Certificate2>()))
+                .Returns(new InformacionCertificado
+                {
+                    Subject = "CN=Test",
+                    ValidoHasta = DateTime.UtcNow.AddDays(30), // ← Cambiado a UtcNow
+                    DiasRestantes = 30
+                });
+
+            // Act & Assert - Constructor debe ejecutarse sin errores
+            var service = new FirmaElectronicaService(
+                _certificadoServiceMock.Object,
+                _loggerMock.Object
+            );
+
+            // Verificar que se llamó CargarCertificado
+            _certificadoServiceMock.Verify(s => s.CargarCertificado(), Times.Once);
         }
 
         [Fact]
@@ -145,7 +195,7 @@ namespace Tests.Services
         {
             // Arrange & Act
             var resultado = ResultadoValidacionFirma.Exitoso(
-                DateTime.Now,
+                DateTime.UtcNow, // ← Cambiado a UtcNow
                 "CN=Test"
             );
 

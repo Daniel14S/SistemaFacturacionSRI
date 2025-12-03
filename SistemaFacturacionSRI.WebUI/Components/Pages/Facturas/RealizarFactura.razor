@@ -1,0 +1,143 @@
+@page "/realizar-factura"
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+
+<PageTitle>Realizar Factura</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="mb-0">
+            <i class="bi bi-receipt-cutoff me-2"></i>
+            Realizar Nueva Factura
+        </h3>
+        <button class="btn btn-sm btn-secondary" @onclick="Volver">
+            <i class="bi bi-arrow-left me-1"></i>
+            Volver al Historial
+        </button>
+    </div>
+
+    <!-- Placeholder temporal -->
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle fs-1 d-block text-center mb-3"></i>
+        <h4 class="text-center">Módulo en Desarrollo</h4>
+        <p class="text-center mb-0">
+            La funcionalidad de creación de facturas estará disponible próximamente.
+            <br>
+            Por ahora puedes consultar el historial de facturas existentes.
+        </p>
+    </div>
+
+    <!-- Vista previa de cómo se verá -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-clipboard-data me-2"></i>
+                Información de la Factura (Próximamente)
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label fw-bold">Cliente:</label>
+                    <input type="text" class="form-control" placeholder="Buscar cliente..." disabled>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-bold">Fecha Emisión:</label>
+                    <input type="date" class="form-control" disabled>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-bold">Tipo Emisión:</label>
+                    <select class="form-select" disabled>
+                        <option>Normal</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-cart3 me-2"></i>
+                Productos (Próximamente)
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>P. Unitario</th>
+                            <th>Descuento</th>
+                            <th>Subtotal</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                Aquí aparecerán los productos agregados...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-sm btn-success" disabled>
+                <i class="bi bi-plus-circle me-1"></i>
+                Agregar Producto
+            </button>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-calculator me-2"></i>
+                Totales
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12 col-md-6 offset-md-6">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Subtotal 0%:</span>
+                        <span>$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Subtotal 15%:</span>
+                        <span>$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">IVA 15%:</span>
+                        <span>$0.00</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold fs-5">TOTAL:</span>
+                        <span class="fw-bold fs-5 text-success">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <button class="btn btn-lg btn-success me-2" disabled>
+            <i class="bi bi-save me-2"></i>
+            Guardar Borrador
+        </button>
+        <button class="btn btn-lg btn-primary" disabled>
+            <i class="bi bi-send me-2"></i>
+            Generar y Enviar al SRI
+        </button>
+    </div>
+</div>
+
+@code {
+    private void Volver()
+    {
+        Nav.NavigateTo("/facturas");
+    }
+}
