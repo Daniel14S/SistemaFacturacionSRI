@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using SistemaFacturacionSRI.Infrastructure.Data;
-using SistemaFacturacionSRI.Infrastructure.Contexts;  // ⭐ AGREGADO
+using SistemaFacturacionSRI.Infrastructure.Contexts;
 using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
 using SistemaFacturacionSRI.Domain.Interfaces;
 using SistemaFacturacionSRI.Infrastructure.Repositories;
@@ -21,6 +21,8 @@ using SistemaFacturacionSRI.WebUI.Authorization;
 using Blazored.LocalStorage;  
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaFacturacionSRI.Infrastructure.Services;
+using SistemaFacturacionSRI.Domain.Configuration;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -211,6 +213,13 @@ builder.Services
 // AutoMapper (para mapear DTOs ↔ entidades)
 builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 
+builder.Services.Configure<CertificadoDigitalOptions>(
+    builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
+
+builder.Services.AddSingleton<ICertificadoDigitalService, CertificadoDigitalService>();
+
+builder.Services.AddScoped<IFirmaElectronicaService, FirmaElectronicaService>();
+
 var app = builder.Build();
 
 // ===========================
@@ -218,6 +227,64 @@ var app = builder.Build();
 // ===========================
 
 // ✅ Headers de seguridad CSP
+
+    try
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        var certificadoService = app.Services.GetRequiredService<ICertificadoDigitalService>();
+        
+        logger.LogInformation("Cargando certificado digital...");
+        var certificado = certificadoService.CargarCertificado();
+        
+        logger.LogInformation("Validando certificado...");
+        
+        // T-054: Usar validación completa
+        var esValido = certificadoService.ValidarYRegistrarCertificado(certificado);
+        
+        if (esValido)
+        {
+            var info = certificadoService.ObtenerInformacionCertificado(certificado);
+            
+            logger.LogInformation("═══════════════════════════════════════");
+            logger.LogInformation("✅ CERTIFICADO DIGITAL LISTO");
+            logger.LogInformation("═══════════════════════════════════════");
+            logger.LogInformation("📋 Subject: {Subject}", info.Subject);
+            logger.LogInformation("🏢 Emisor: {Issuer}", info.Issuer);
+            logger.LogInformation("📅 Válido hasta: {FechaExpiracion:dd/MM/yyyy}", info.ValidoHasta);
+            logger.LogInformation("⏰ Días restantes: {Dias}", info.DiasRestantes);
+            logger.LogInformation("🔐 Algoritmo: {Algorithm}", info.SignatureAlgorithm);
+            logger.LogInformation("🔑 Tiene clave privada: {HasKey}", info.TieneClavePrivada ? "✅ Sí" : "❌ No");
+            logger.LogInformation("═══════════════════════════════════════");
+            
+            // Advertencia especial si expira pronto
+            if (info.DiasRestantes <= 7)
+            {
+                logger.LogWarning("⚠️⚠️⚠️ URGENTE: El certificado expira en {Dias} días! ⚠️⚠️⚠️", info.DiasRestantes);
+            }
+            else if (info.DiasRestantes <= 30)
+            {
+                logger.LogWarning("⚠️ IMPORTANTE: El certificado expira en {Dias} días. Planifique su renovación.", info.DiasRestantes);
+            }
+        }
+        else
+        {
+            logger.LogError("❌ CERTIFICADO NO VÁLIDO - La firma electrónica NO estará disponible");
+            logger.LogError("Revise los errores anteriores y corrija la configuración del certificado");
+            
+            // Descomentar para DETENER la aplicación si el certificado es crítico
+            // throw new InvalidOperationException("No se puede iniciar sin un certificado válido");
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "❌ ERROR CRÍTICO al cargar certificado digital");
+        logger.LogError("La funcionalidad de firma electrónica NO estará disponible");
+        
+        // Decidir si continuar o detener la aplicación
+        // throw; // Descomentar para detener si el certificado es crítico para el funcionamiento
+    }
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers["Content-Security-Policy"] =

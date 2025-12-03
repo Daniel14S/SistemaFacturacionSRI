@@ -422,7 +422,20 @@ FodyWeavers.xsd
 # EF Core migrations (keep local, do not commit)
 SistemaFacturacionSRI.Infrastructure/Migrations/
 
-# Certificate files
+# Ignorar TODOS los certificados
 *.p12
 *.pfx
+*.pem
+*.key
+*.crt
+*.cer
+
+# Ignorar archivos de contraseñas
+*.pwd
+*.password
+passwords.txt
+
+# Permitir solo archivos README
+!README.md
+!.gitignore
 
