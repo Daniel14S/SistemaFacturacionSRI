@@ -21,6 +21,8 @@ using SistemaFacturacionSRI.WebUI.Authorization;
 using Blazored.LocalStorage;  
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaFacturacionSRI.Infrastructure.Services;
+using SistemaFacturacionSRI.Domain.Configuration;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -210,6 +212,9 @@ builder.Services
 
 // AutoMapper (para mapear DTOs ↔ entidades)
 builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
+
+builder.Services.Configure<CertificadoDigitalOptions>(
+    builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
 
 var app = builder.Build();
 
