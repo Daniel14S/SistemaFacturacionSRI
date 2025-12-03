@@ -69,9 +69,13 @@ public class PdfGeneratorService : IPdfGeneratorService
                 Directory.CreateDirectory(directory);
             }
 
-            // Generar código QR en memoria
+            // Generar código QR en memoria (T-099)
             var qrImagePath = Path.Combine(Path.GetTempPath(), $"qr_{factura.ClaveAcceso}.png");
             await GenerarCodigoBarrasAsync(factura.ClaveAcceso, qrImagePath, usarQr: true);
+
+            // Generar código de barras Code128 en memoria (T-099)
+            var barcodeImagePath = Path.Combine(Path.GetTempPath(), $"barcode_{factura.ClaveAcceso}.png");
+            await GenerarCodigoBarrasAsync(factura.ClaveAcceso, barcodeImagePath, usarQr: false);
 
             // Generar el PDF usando QuestPDF
             Document.Create(container =>
@@ -405,20 +409,139 @@ public class PdfGeneratorService : IPdfGeneratorService
                                     });
                                 });
 
-                            // Totales
-                            column.Item().PaddingTop(10).AlignRight().Column(totalColumn =>
+                            // Sección: Totales (T-098) - Según Ficha Técnica RIDE V2.32
+                            column.Item().PaddingTop(10).Row(totalesRow =>
                             {
-                                totalColumn.Item().Text($"Subtotal 0%: ${factura.Subtotal0:F2}");
-                                totalColumn.Item().Text($"Subtotal 15%: ${factura.Subtotal15:F2}");
-                                totalColumn.Item().Text($"IVA 15%: ${factura.IVA15:F2}");
-                                totalColumn.Item().Text($"TOTAL: ${factura.ImporteTotal:F2}").Bold().FontSize(12);
+                                // Espacio izquierdo para información adicional o formas de pago (futuro)
+                                totalesRow.RelativeItem(2).Column(infoCol =>
+                                {
+                                    // Espacio para formas de pago o información adicional
+                                    infoCol.Item().Text(""); // Placeholder
+                                });
+
+                                // Columna de totales a la derecha
+                                totalesRow.RelativeItem(1)
+                                    .Border(1)
+                                    .BorderColor(Colors.Grey.Lighten1)
+                                    .Padding(8)
+                                    .Column(totalColumn =>
+                                    {
+                                        totalColumn.Item()
+                                            .Background(Colors.Grey.Lighten3)
+                                            .Padding(5)
+                                            .Text("TOTALES")
+                                            .Bold()
+                                            .FontSize(10);
+
+                                        // Subtotal 0%
+                                        totalColumn.Item().PaddingTop(5).Row(row =>
+                                        {
+                                            row.RelativeItem().Text("Subtotal 0%:").FontSize(9);
+                                            row.ConstantItem(80).AlignRight().Text($"${factura.Subtotal0:F2}").FontSize(9);
+                                        });
+
+                                        // Subtotal 12% (mantener por compatibilidad histórica)
+                                        if (factura.Subtotal15 > 0 || factura.IVA15 > 0)
+                                        {
+                                            // Mostrar como 15% si hay valores (tarifa vigente 2024/2025)
+                                            totalColumn.Item().Row(row =>
+                                            {
+                                                row.RelativeItem().Text("Subtotal 15%:").FontSize(9);
+                                                row.ConstantItem(80).AlignRight().Text($"${factura.Subtotal15:F2}").FontSize(9);
+                                            });
+                                        }
+
+                                        // Subtotal No Objeto de IVA
+                                        if (factura.SubtotalNoObjetoIVA > 0)
+                                        {
+                                            totalColumn.Item().Row(row =>
+                                            {
+                                                row.RelativeItem().Text("Subtotal No Objeto IVA:").FontSize(9);
+                                                row.ConstantItem(80).AlignRight().Text($"${factura.SubtotalNoObjetoIVA:F2}").FontSize(9);
+                                            });
+                                        }
+
+                                        // Subtotal Exento de IVA
+                                        if (factura.SubtotalExentoIVA > 0)
+                                        {
+                                            totalColumn.Item().Row(row =>
+                                            {
+                                                row.RelativeItem().Text("Subtotal Exento IVA:").FontSize(9);
+                                                row.ConstantItem(80).AlignRight().Text($"${factura.SubtotalExentoIVA:F2}").FontSize(9);
+                                            });
+                                        }
+
+                                        // Descuento
+                                        totalColumn.Item().Row(row =>
+                                        {
+                                            row.RelativeItem().Text("Descuento:").FontSize(9);
+                                            row.ConstantItem(80).AlignRight().Text($"${factura.Descuento:F2}").FontSize(9);
+                                        });
+
+                                        // Subtotal con Descuento (si es diferente del subtotal base)
+                                        if (factura.SubtotalConDescuento > 0 && factura.Descuento > 0)
+                                        {
+                                            totalColumn.Item().Row(row =>
+                                            {
+                                                row.RelativeItem().Text("Subtotal sin Impuestos:").FontSize(9);
+                                                row.ConstantItem(80).AlignRight().Text($"${factura.SubtotalConDescuento:F2}").FontSize(9);
+                                            });
+                                        }
+
+                                        // IVA (tarifa vigente)
+                                        totalColumn.Item().Row(row =>
+                                        {
+                                            row.RelativeItem().Text("IVA 15%:").FontSize(9);
+                                            row.ConstantItem(80).AlignRight().Text($"${factura.IVA15:F2}").FontSize(9);
+                                        });
+
+                                        // Propina (si aplica)
+                                        if (factura.Propina > 0)
+                                        {
+                                            totalColumn.Item().Row(row =>
+                                            {
+                                                row.RelativeItem().Text("Propina:").FontSize(9);
+                                                row.ConstantItem(80).AlignRight().Text($"${factura.Propina:F2}").FontSize(9);
+                                            });
+                                        }
+
+                                        // Línea separadora
+                                        totalColumn.Item().PaddingVertical(5).LineHorizontal(1).LineColor(Colors.Grey.Medium);
+
+                                        // TOTAL FINAL
+                                        totalColumn.Item().Row(row =>
+                                        {
+                                            row.RelativeItem().Text("VALOR TOTAL:").Bold().FontSize(11);
+                                            row.ConstantItem(80).AlignRight().Text($"${factura.ImporteTotal:F2}").Bold().FontSize(11);
+                                        });
+                                    });
                             });
 
-                            // Código QR
-                            if (File.Exists(qrImagePath))
+                            // Sección: Código de Barras y QR (T-099)
+                            column.Item().PaddingTop(15).Row(codigosRow =>
                             {
-                                column.Item().PaddingTop(20).AlignCenter().Width(150).Image(qrImagePath);
-                            }
+                                // Código de Barras Code128 (izquierda)
+                                codigosRow.RelativeItem().Column(barcodeCol =>
+                                {
+                                    barcodeCol.Item().AlignCenter().Text("Clave de Acceso").FontSize(8).Bold();
+                                    if (File.Exists(barcodeImagePath))
+                                    {
+                                        barcodeCol.Item().PaddingTop(5).AlignCenter().Height(60).Image(barcodeImagePath);
+                                    }
+                                    barcodeCol.Item().PaddingTop(3).AlignCenter()
+                                        .Text(factura.ClaveAcceso).FontSize(6).FontFamily("Courier New");
+                                });
+
+                                // Código QR (derecha)
+                                codigosRow.ConstantItem(150).Column(qrCol =>
+                                {
+                                    qrCol.Item().AlignCenter().Text("Código QR").FontSize(8).Bold();
+                                    if (File.Exists(qrImagePath))
+                                    {
+                                        qrCol.Item().PaddingTop(5).AlignCenter().Width(120).Image(qrImagePath);
+                                    }
+                                });
+                            });
                         });
 
                     page.Footer()
@@ -432,16 +555,19 @@ public class PdfGeneratorService : IPdfGeneratorService
             })
             .GeneratePdf(outputPath);
 
-            // Limpiar archivo temporal del QR
-            if (File.Exists(qrImagePath))
+            // Limpiar archivos temporales (QR y Código de Barras)
+            foreach (var tempFile in new[] { qrImagePath, barcodeImagePath })
             {
-                try
+                if (File.Exists(tempFile))
                 {
-                    File.Delete(qrImagePath);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "No se pudo eliminar archivo temporal de QR: {Path}", qrImagePath);
+                    try
+                    {
+                        File.Delete(tempFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "No se pudo eliminar archivo temporal: {Path}", tempFile);
+                    }
                 }
             }
 
