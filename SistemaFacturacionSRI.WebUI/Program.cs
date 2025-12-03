@@ -216,6 +216,8 @@ builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 builder.Services.Configure<CertificadoDigitalOptions>(
     builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
 
+builder.Services.AddSingleton<ICertificadoDigitalService, CertificadoDigitalService>();
+
 var app = builder.Build();
 
 // ===========================
