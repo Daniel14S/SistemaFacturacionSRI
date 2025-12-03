@@ -542,6 +542,86 @@ public class PdfGeneratorService : IPdfGeneratorService
                                     }
                                 });
                             });
+
+                            // Sección: Información Adicional (T-100)
+                            if ((factura.InfoAdicional != null && factura.InfoAdicional.Any()) || 
+                                !string.IsNullOrEmpty(factura.Observaciones))
+                            {
+                                column.Item().PaddingTop(15)
+                                    .Border(1)
+                                    .BorderColor(Colors.Grey.Lighten1)
+                                    .Padding(8)
+                                    .Column(infoAdicionalColumn =>
+                                    {
+                                        infoAdicionalColumn.Item()
+                                            .Background(Colors.Grey.Lighten3)
+                                            .Padding(5)
+                                            .Text("INFORMACIÓN ADICIONAL")
+                                            .Bold()
+                                            .FontSize(10);
+
+                                        // Mostrar campos de información adicional del XML
+                                        if (factura.InfoAdicional != null && factura.InfoAdicional.Any())
+                                        {
+                                            foreach (var info in factura.InfoAdicional)
+                                            {
+                                                infoAdicionalColumn.Item().PaddingTop(3).Row(row =>
+                                                {
+                                                    row.ConstantItem(150).Text($"{info.Nombre}:").Bold().FontSize(8);
+                                                    row.RelativeItem().Text(info.Valor).FontSize(8);
+                                                });
+                                            }
+                                        }
+
+                                        // Mostrar observaciones si existen
+                                        if (!string.IsNullOrEmpty(factura.Observaciones))
+                                        {
+                                            infoAdicionalColumn.Item().PaddingTop(5).Row(row =>
+                                            {
+                                                row.ConstantItem(150).Text("Observaciones:").Bold().FontSize(8);
+                                                row.RelativeItem().Text(factura.Observaciones).FontSize(8);
+                                            });
+                                        }
+                                    });
+                            }
+
+                            // Sección: Leyendas Legales (T-100)
+                            column.Item().PaddingTop(15).Column(leyendasColumn =>
+                            {
+                                // Leyenda de validez del documento electrónico
+                                leyendasColumn.Item()
+                                    .Background(Colors.Blue.Lighten5)
+                                    .Border(1)
+                                    .BorderColor(Colors.Blue.Lighten3)
+                                    .Padding(8)
+                                    .Column(legalCol =>
+                                    {
+                                        legalCol.Item().Text("IMPORTANTE").Bold().FontSize(8).FontColor(Colors.Blue.Darken2);
+                                        legalCol.Item().PaddingTop(3).Text(
+                                            "Este documento es una REPRESENTACIÓN IMPRESA de un comprobante electrónico (RIDE). " +
+                                            "La validez tributaria del comprobante reside en el archivo XML firmado electrónicamente y autorizado por el SRI."
+                                        ).FontSize(7);
+                                        legalCol.Item().PaddingTop(3).Text(
+                                            "Puede verificar la validez de este documento en: https://srienlinea.sri.gob.ec/sri-en-linea/SriDec498Web/ConsultaComprobanteElectronico/Consultas/consultaComprobante"
+                                        ).FontSize(6).FontColor(Colors.Blue.Darken1);
+                                    });
+
+                                // Información adicional por defecto de la empresa (si existe)
+                                if (!string.IsNullOrEmpty(configuracion.InfoAdicionalDefecto))
+                                {
+                                    var leyendasDefecto = configuracion.InfoAdicionalDefecto.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                                    if (leyendasDefecto.Length > 0)
+                                    {
+                                        leyendasColumn.Item().PaddingTop(5).Column(defaultInfoCol =>
+                                        {
+                                            foreach (var leyenda in leyendasDefecto)
+                                            {
+                                                defaultInfoCol.Item().Text(leyenda.Trim()).FontSize(7).Italic();
+                                            }
+                                        });
+                                    }
+                                }
+                            });
                         });
 
                     page.Footer()
@@ -650,6 +730,61 @@ public class PdfGeneratorService : IPdfGeneratorService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error al generar código {Tipo}", usarQr ? "QR" : "de barras");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Genera el RIDE y lo almacena en la ruta estándar (wwwroot/comprobantes/pdf),
+    /// actualizando el campo PdfPath de la factura en la base de datos (T-101)
+    /// </summary>
+    public async Task<string> GenerarYAlmacenarRideAsync(int facturaId, string webRootPath)
+    {
+        try
+        {
+            _logger.LogInformation("Generando y almacenando RIDE para factura {FacturaId}", facturaId);
+
+            // Obtener la factura para construir el nombre del archivo
+            var factura = await _facturaRepository.ObtenerConDetallesCompletosAsync(facturaId);
+            if (factura == null)
+            {
+                throw new ArgumentException($"No se encontró la factura con ID {facturaId}");
+            }
+
+            // Construir la ruta del directorio: wwwroot/comprobantes/pdf/{año}/{mes}
+            var fechaEmision = factura.FechaEmision;
+            var directorioRelativo = Path.Combine("comprobantes", "pdf", 
+                fechaEmision.Year.ToString(), 
+                fechaEmision.Month.ToString("D2"));
+            var directorioAbsoluto = Path.Combine(webRootPath, directorioRelativo);
+
+            // Crear directorio si no existe
+            if (!Directory.Exists(directorioAbsoluto))
+            {
+                Directory.CreateDirectory(directorioAbsoluto);
+                _logger.LogInformation("Directorio creado: {Directorio}", directorioAbsoluto);
+            }
+
+            // Construir nombre del archivo: RIDE_{ClaveAcceso}.pdf
+            var nombreArchivo = $"RIDE_{factura.ClaveAcceso}.pdf";
+            var rutaAbsoluta = Path.Combine(directorioAbsoluto, nombreArchivo);
+            var rutaRelativa = Path.Combine(directorioRelativo, nombreArchivo);
+
+            // Generar el PDF
+            await GenerarRideAsync(facturaId, rutaAbsoluta);
+
+            // Actualizar el campo PdfPath en la factura
+            factura.PdfPath = rutaRelativa;
+            factura.FechaModificacion = DateTime.Now;
+            await _facturaRepository.ActualizarAsync(factura);
+
+            _logger.LogInformation("RIDE almacenado exitosamente. Ruta: {RutaRelativa}", rutaRelativa);
+
+            return rutaRelativa;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar y almacenar RIDE para factura {FacturaId}", facturaId);
             throw;
         }
     }
