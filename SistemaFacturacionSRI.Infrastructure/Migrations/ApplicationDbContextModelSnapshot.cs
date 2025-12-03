@@ -516,6 +516,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .IsFixedLength()
                         .HasComment("Código del establecimiento (ej: 001)");
 
+                    b.Property<string>("ContribuyenteEspecial")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasComment("Número de resolución de Contribuyente Especial");
+
                     b.Property<string>("DirEstablecimiento")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -582,6 +587,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)")
                         .HasComment("Razón social de la empresa");
+
+                    b.Property<string>("RegimenRimpe")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)")
+                        .HasComment("Régimen RIMPE del contribuyente");
 
                     b.Property<string>("RutaCertificadoDigital")
                         .HasMaxLength(500)
@@ -814,6 +824,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
 
                     b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("GuiaRemision")
+                        .HasMaxLength(21)
+                        .HasColumnType("nvarchar(21)")
+                        .HasComment("Número de Guía de Remisión asociada");
 
                     b.Property<decimal>("IVA15")
                         .HasPrecision(18, 2)

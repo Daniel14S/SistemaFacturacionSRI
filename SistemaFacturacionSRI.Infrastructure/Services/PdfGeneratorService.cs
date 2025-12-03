@@ -661,6 +661,54 @@ public class PdfGeneratorService : IPdfGeneratorService
         }
     }
 
+    /// <summary>
+    /// Genera el RIDE y retorna los bytes del PDF (sin almacenar en disco)
+    /// </summary>
+    public async Task<byte[]> GenerarRideBytesAsync(int facturaId)
+    {
+        try
+        {
+            _logger.LogInformation("Generando RIDE (bytes) para factura {FacturaId}", facturaId);
+
+            // Usar archivo temporal
+            var tempPath = Path.Combine(Path.GetTempPath(), $"RIDE_temp_{facturaId}_{Guid.NewGuid()}.pdf");
+            
+            try
+            {
+                // Generar el PDF en archivo temporal
+                await GenerarRideAsync(facturaId, tempPath);
+                
+                // Leer los bytes
+                var bytes = await File.ReadAllBytesAsync(tempPath);
+                
+                _logger.LogInformation("RIDE generado exitosamente para factura {FacturaId}. Tamaño: {Size} bytes", 
+                    facturaId, bytes.Length);
+                
+                return bytes;
+            }
+            finally
+            {
+                // Eliminar archivo temporal
+                if (File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "No se pudo eliminar archivo temporal: {Path}", tempPath);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al generar RIDE (bytes) para factura {FacturaId}", facturaId);
+            throw;
+        }
+    }
+
     public async Task<string> GenerarCodigoBarrasAsync(string claveAcceso, string outputPath, bool usarQr = true)
     {
         try

@@ -14,6 +14,13 @@ public interface IPdfGeneratorService
     Task<string> GenerarRideAsync(int facturaId, string outputPath);
 
     /// <summary>
+    /// Genera el RIDE y retorna los bytes del PDF (sin almacenar en disco)
+    /// </summary>
+    /// <param name="facturaId">ID de la factura</param>
+    /// <returns>Bytes del archivo PDF generado</returns>
+    Task<byte[]> GenerarRideBytesAsync(int facturaId);
+
+    /// <summary>
     /// Genera el RIDE y lo almacena en la ruta estándar (wwwroot/comprobantes/pdf),
     /// actualizando el campo PdfPath de la factura en la base de datos
     /// </summary>
