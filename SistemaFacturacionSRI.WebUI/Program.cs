@@ -77,6 +77,12 @@ builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<CustomAuthenticationStateProvider>());
 
+// ✅ Factura HttpClient con AuthHeaderHandler
+builder.Services.AddHttpClient<IFacturaHttpService, FacturaHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Después de las líneas existentes, agregar:
 builder.Services.AddScoped<ToastService>();
