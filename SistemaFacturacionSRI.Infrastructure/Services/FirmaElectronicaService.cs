@@ -1,8 +1,12 @@
 // SistemaFacturacionSRI.Infrastructure/Services/FirmaElectronicaService.cs
+// T-057: Carga de certificado
+// T-063: IMPLEMENTACIÓN COMPLETA DE FIRMA XADES-BES
+
 using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using Microsoft.Extensions.Logging;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
+using SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services
 {
@@ -10,7 +14,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     /// Servicio de firma electrónica XADES-BES
     /// T-055: Interfaz creada
     /// T-057: Carga de certificado implementada
-    /// T-058 a T-063: Implementación de firma
+    /// T-063: Firma XADES-BES COMPLETA
     /// </summary>
     public class FirmaElectronicaService : IFirmaElectronicaService
     {
@@ -108,7 +112,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         }
 
         /// <summary>
-        /// T-057: Valida el certificado antes de usarlo para firmar
+        /// T-057, T-066: Valida el certificado antes de usarlo para firmar con manejo de errores específico
         /// </summary>
         private void ValidarCertificadoParaFirma(X509Certificate2 certificado)
         {
@@ -117,23 +121,23 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             // Verificar que no esté expirado
             if (DateTime.Now > certificado.NotAfter)
             {
-                throw new InvalidOperationException(
-                    $"El certificado está EXPIRADO desde {certificado.NotAfter:dd/MM/yyyy}. " +
-                    "No se puede usar para firmar documentos.");
+                _logger.LogError("Certificado expirado: {FechaExpiracion}", certificado.NotAfter);
+                throw new SistemaFacturacionSRI.Domain.Exceptions.CertificadoExpiradoException(certificado.NotAfter);
             }
 
             // Verificar que ya sea válido
             if (DateTime.Now < certificado.NotBefore)
             {
-                throw new InvalidOperationException(
-                    $"El certificado aún no es válido. Será válido desde {certificado.NotBefore:dd/MM/yyyy}.");
+                _logger.LogError("Certificado aún no válido: {FechaInicio}", certificado.NotBefore);
+                throw new SistemaFacturacionSRI.Domain.Exceptions.CertificadoInvalidoException(
+                    $"El certificado aún no es válido. Será válido desde {certificado.NotBefore:dd/MM/yyyy}");
             }
 
             // Verificar clave privada
             if (!certificado.HasPrivateKey)
             {
-                throw new InvalidOperationException(
-                    "El certificado no tiene clave privada. No se puede firmar.");
+                _logger.LogError("Certificado sin clave privada");
+                throw new SistemaFacturacionSRI.Domain.Exceptions.ClavePrivadaNoDisponibleException();
             }
 
             // Advertir si está por expirar
@@ -141,17 +145,23 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (diasRestantes <= 7)
             {
                 _logger.LogWarning("⚠️ URGENTE: El certificado expira en {Dias} días!", diasRestantes);
+                // Lanzar excepción de advertencia si quedan menos de 3 días
+                if (diasRestantes <= 3)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.CertificadoPorExpirarException(
+                        certificado.NotAfter, diasRestantes);
+                }
             }
 
             _logger.LogDebug("✅ Certificado validado correctamente para firma");
         }
 
         // ============================================================
-        // MÉTODOS DE FIRMA (T-058 a T-063: Pendientes)
+        // T-063: IMPLEMENTACIÓN COMPLETA DE FIRMA XADES-BES
         // ============================================================
 
         /// <summary>
-        /// T-058 a T-063: Firma un XML con XADES-BES
+        /// T-063: Firma un XML con XADES-BES usando el certificado configurado
         /// </summary>
         public async Task<string> FirmarXml(string xmlSinFirmar)
         {
@@ -166,44 +176,216 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         }
 
         /// <summary>
-        /// T-058 a T-063: Firma un XML con certificado específico
+        /// T-063, T-066: Firma un XML con certificado específico - IMPLEMENTACIÓN COMPLETA CON MANEJO DE ERRORES
         /// </summary>
         public async Task<string> FirmarXml(string xmlSinFirmar, X509Certificate2 certificado)
         {
-            _logger.LogInformation("Firmando XML con certificado: {Subject}", certificado.Subject);
-
-            // T-057: Validar certificado antes de firmar
-            ValidarCertificadoParaFirma(certificado);
-
+            var startTime = DateTime.Now;
+            
             try
             {
-                // TODO T-058: Crear estructura SignedInfo
-                // TODO T-059: Calcular hash del documento
-                // TODO T-060: Firmar con RSA
-                // TODO T-061: Incluir certificado en KeyInfo
-                // TODO T-062: Agregar SignedProperties
-                // TODO T-063: Insertar firma en XML
+                _logger.LogInformation("═══════════════════════════════════════");
+                _logger.LogInformation("INICIANDO FIRMA ELECTRÓNICA XADES-BES");
+                _logger.LogInformation("═══════════════════════════════════════");
+                _logger.LogInformation("Certificado: {Subject}", certificado.Subject);
 
-                await Task.CompletedTask; // Placeholder
+                // T-057, T-066: Validar certificado antes de firmar
+                ValidarCertificadoParaFirma(certificado);
 
-                throw new NotImplementedException(
-                    "La firma XADES-BES se implementará en las tareas T-058 a T-063. " +
-                    "Certificado validado correctamente, listo para firmar.");
+                // 1️⃣ CARGAR Y VALIDAR XML
+                _logger.LogInformation("1️⃣ Cargando y validando XML...");
+                
+                if (string.IsNullOrWhiteSpace(xmlSinFirmar))
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.XmlInvalidoException(
+                        "El contenido XML está vacío");
+                }
+
+                XmlDocument doc;
+                try
+                {
+                    doc = new XmlDocument { PreserveWhitespace = true };
+                    doc.LoadXml(xmlSinFirmar);
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.XmlInvalidoException(
+                        "No se pudo parsear el XML", ex);
+                }
+
+                // Verificar que el XML no esté firmado ya
+                if (TieneFirma(xmlSinFirmar))
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.XmlYaFirmadoException();
+                }
+
+                // Buscar el nodo raíz que se va a firmar (debe tener id="comprobante")
+                var nodoRaiz = doc.DocumentElement;
+                if (nodoRaiz == null)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.XmlInvalidoException(
+                        "El XML no tiene nodo raíz");
+                }
+
+                var idNodo = nodoRaiz.GetAttribute("id");
+                if (string.IsNullOrEmpty(idNodo))
+                {
+                    // Si no tiene id, asignamos "comprobante" (estándar SRI)
+                    idNodo = "comprobante";
+                    nodoRaiz.SetAttribute("id", idNodo);
+                    _logger.LogWarning("El nodo raíz no tenía id, se asignó: {Id}", idNodo);
+                }
+
+                _logger.LogInformation("   ✅ Nodo a firmar: {NodoNombre} (id={Id})", nodoRaiz.Name, idNodo);
+
+                // 2️⃣ CALCULAR DIGEST DEL DOCUMENTO
+                _logger.LogInformation("2️⃣ Calculando digest (hash SHA1) del documento...");
+                string digestDocumento;
+                try
+                {
+                    var digestCalculator = new DigestCalculator();
+                    digestDocumento = digestCalculator.CalcularDigestNodo(doc, idNodo);
+                    _logger.LogInformation("   ✅ Digest calculado: {Digest}", digestDocumento.Substring(0, 20) + "...");
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorCalculoDigestException(
+                        "documento", ex);
+                }
+
+                // 3️⃣ CREAR ESTRUCTURA SIGNATURE
+                _logger.LogInformation("3️⃣ Creando estructura XADES-BES...");
+                var fechaFirma = DateTime.Now;
+                string certificadoBase64;
+                
+                try
+                {
+                    certificadoBase64 = Convert.ToBase64String(certificado.Export(X509ContentType.Cert));
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "No se pudo exportar el certificado a Base64", ex, "exportar_certificado");
+                }
+
+                // Crear estructura temporal para obtener SignedInfo
+                XmlElement signatureNode;
+                try
+                {
+                    var structureBuilder = new SignatureStructureBuilder(doc);
+                    
+                    // NOTA: Necesitamos crear SignedInfo primero para firmarlo
+                    // Por ahora creamos con valor temporal de firma
+                    var signatureTemporalBase64 = "TEMPORAL";
+                    
+                    signatureNode = structureBuilder.CrearNodoSignature(
+                        signatureTemporalBase64,
+                        digestDocumento,
+                        certificadoBase64,
+                        certificado,
+                        fechaFirma,
+                        idNodo
+                    );
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "Error al crear estructura de firma XADES-BES", ex, "crear_estructura");
+                }
+
+                // 4️⃣ FIRMAR SIGNEDINFO CON RSA
+                _logger.LogInformation("4️⃣ Firmando SignedInfo con RSA-SHA1...");
+                
+                var nsmgr = new XmlNamespaceManager(doc.NameTable);
+                nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+                
+                var signedInfo = signatureNode.SelectSingleNode("ds:SignedInfo", nsmgr) as XmlElement;
+                if (signedInfo == null)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "No se pudo crear SignedInfo", etapa: "crear_signedinfo");
+                }
+
+                string firmaBase64;
+                try
+                {
+                    var rsaSigner = new RsaSigner();
+                    firmaBase64 = rsaSigner.FirmarSignedInfo(signedInfo, certificado);
+                    _logger.LogInformation("   ✅ Firma RSA generada: {Firma}", firmaBase64.Substring(0, 20) + "...");
+                }
+                catch (Exception ex)
+                {
+                    var keySize = certificado.GetRSAPrivateKey()?.KeySize;
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaRsaException(
+                        "Error al firmar con RSA-SHA1", ex, keySize);
+                }
+
+                // 5️⃣ ACTUALIZAR SIGNATUREVALUE CON LA FIRMA REAL
+                _logger.LogInformation("5️⃣ Insertando firma en SignatureValue...");
+                var signatureValue = signatureNode.SelectSingleNode("ds:SignatureValue", nsmgr) as XmlElement;
+                if (signatureValue == null)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "No se pudo encontrar SignatureValue", etapa: "actualizar_signaturevalue");
+                }
+                signatureValue.InnerText = firmaBase64;
+
+                // 6️⃣ INSERTAR FIRMA EN EL XML ORIGINAL
+                _logger.LogInformation("6️⃣ Insertando nodo Signature en el XML...");
+                
+                try
+                {
+                    // Importar el nodo Signature al documento original
+                    var signatureImported = doc.ImportNode(signatureNode, true);
+                    
+                    // Insertar como último hijo del nodo raíz
+                    nodoRaiz.AppendChild(signatureImported);
+
+                    _logger.LogInformation("   ✅ Firma insertada correctamente");
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "Error al insertar firma en el XML", ex, "insertar_firma");
+                }
+
+                // 7️⃣ GENERAR XML FIRMADO FINAL
+                string xmlFirmado;
+                try
+                {
+                    xmlFirmado = doc.OuterXml;
+                }
+                catch (Exception ex)
+                {
+                    throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                        "Error al generar XML firmado final", ex, "generar_xml_final");
+                }
+
+                var tiempoTranscurrido = DateTime.Now - startTime;
+                
+                _logger.LogInformation("═══════════════════════════════════════");
+                _logger.LogInformation("✅ FIRMA COMPLETADA EXITOSAMENTE");
+                _logger.LogInformation("═══════════════════════════════════════");
+                _logger.LogInformation("⏱️  Tiempo: {Tiempo}ms", tiempoTranscurrido.TotalMilliseconds);
+                _logger.LogInformation("📄 Tamaño XML: {Bytes} bytes", xmlFirmado.Length);
+
+                return await Task.FromResult(xmlFirmado);
             }
-            catch (NotImplementedException)
+            catch (SistemaFacturacionSRI.Domain.Exceptions.FirmaElectronicaException)
             {
-                throw; // Re-lanzar NotImplementedException
+                // Re-lanzar excepciones específicas de firma
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al firmar XML");
-                throw new InvalidOperationException(
-                    $"Error al firmar el documento: {ex.Message}", ex);
+                _logger.LogError(ex, "❌ ERROR INESPERADO AL FIRMAR XML");
+                throw new SistemaFacturacionSRI.Domain.Exceptions.ErrorFirmaException(
+                    $"Error inesperado: {ex.Message}", ex);
             }
         }
 
         // ============================================================
-        // MÉTODOS DE VALIDACIÓN (Pendientes)
+        // MÉTODOS DE VALIDACIÓN (Implementación básica)
         // ============================================================
 
         /// <summary>
@@ -224,18 +406,73 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
             try
             {
-                // TODO: Implementar validación completa
-                // 1. Verificar que existe nodo Signature
-                // 2. Extraer certificado de KeyInfo
-                // 3. Validar certificado
-                // 4. Recalcular hash del documento
-                // 5. Verificar firma RSA
-                // 6. Validar SignedProperties
+                // Verificar que tiene firma
+                if (!TieneFirma(xmlFirmado))
+                {
+                    return ResultadoValidacionFirma.ConError("El XML no tiene firma digital");
+                }
 
-                await Task.CompletedTask; // Placeholder
+                var doc = new XmlDocument();
+                doc.LoadXml(xmlFirmado);
 
-                return ResultadoValidacionFirma.ConError(
-                    "Validación de firma no implementada aún (pendiente en tareas posteriores)");
+                var nsmgr = new XmlNamespaceManager(doc.NameTable);
+                nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+                nsmgr.AddNamespace("etsi", "http://uri.etsi.org/01903/v1.3.2#");
+
+                // Extraer certificado de KeyInfo
+                var keyInfo = doc.SelectSingleNode("//ds:KeyInfo", nsmgr) as XmlElement;
+                if (keyInfo == null)
+                {
+                    return ResultadoValidacionFirma.ConError("No se encontró KeyInfo");
+                }
+
+                var keyInfoBuilder = new KeyInfoBuilder(doc);
+                var certificado = keyInfoBuilder.ExtraerCertificado(keyInfo);
+                
+                if (certificado == null)
+                {
+                    return ResultadoValidacionFirma.ConError("No se pudo extraer el certificado");
+                }
+
+                // Extraer SignedInfo
+                var signedInfo = doc.SelectSingleNode("//ds:SignedInfo", nsmgr) as XmlElement;
+                if (signedInfo == null)
+                {
+                    return ResultadoValidacionFirma.ConError("No se encontró SignedInfo");
+                }
+
+                // Extraer SignatureValue
+                var signatureValue = doc.SelectSingleNode("//ds:SignatureValue", nsmgr);
+                if (signatureValue == null || string.IsNullOrWhiteSpace(signatureValue.InnerText))
+                {
+                    return ResultadoValidacionFirma.ConError("No se encontró SignatureValue");
+                }
+
+                // Verificar firma RSA
+                var rsaSigner = new RsaSigner();
+                var firmaValida = rsaSigner.VerificarFirma(
+                    signedInfo.OuterXml,
+                    signatureValue.InnerText,
+                    certificado
+                );
+
+                if (!firmaValida)
+                {
+                    return ResultadoValidacionFirma.ConError("La firma RSA no es válida");
+                }
+
+                // Extraer fecha de firma
+                var signingTime = doc.SelectSingleNode("//etsi:SigningTime", nsmgr);
+                DateTime? fechaFirma = null;
+                if (signingTime != null && DateTime.TryParse(signingTime.InnerText, out var fecha))
+                {
+                    fechaFirma = fecha;
+                }
+
+                return ResultadoValidacionFirma.Exitoso(
+                    fechaFirma ?? DateTime.Now,
+                    certificado.Subject
+                );
             }
             catch (Exception ex)
             {
@@ -251,14 +488,60 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             _logger.LogInformation("Extrayendo información de certificado del XML firmado");
 
-            await Task.CompletedTask; // Placeholder
+            try
+            {
+                var doc = new XmlDocument();
+                doc.LoadXml(xmlFirmado);
 
-            // TODO: Implementar extracción de certificado desde KeyInfo
-            throw new NotImplementedException("Pendiente de implementación");
+                var nsmgr = new XmlNamespaceManager(doc.NameTable);
+                nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
+                nsmgr.AddNamespace("etsi", "http://uri.etsi.org/01903/v1.3.2#");
+
+                // Extraer certificado
+                var keyInfo = doc.SelectSingleNode("//ds:KeyInfo", nsmgr) as XmlElement;
+                if (keyInfo == null)
+                {
+                    throw new InvalidOperationException("No se encontró KeyInfo en el XML");
+                }
+
+                var keyInfoBuilder = new KeyInfoBuilder(doc);
+                var certificado = keyInfoBuilder.ExtraerCertificado(keyInfo);
+                
+                if (certificado == null)
+                {
+                    throw new InvalidOperationException("No se pudo extraer el certificado");
+                }
+
+                // Extraer fecha de firma
+                var signingTime = doc.SelectSingleNode("//etsi:SigningTime", nsmgr);
+                DateTime? fechaFirma = null;
+                if (signingTime != null && DateTime.TryParse(signingTime.InnerText, out var fecha))
+                {
+                    fechaFirma = fecha;
+                }
+
+                return await Task.FromResult(new InformacionCertificadoFirma
+                {
+                    Subject = certificado.Subject,
+                    Issuer = certificado.Issuer,
+                    SerialNumber = certificado.SerialNumber,
+                    ValidoDesde = certificado.NotBefore,
+                    ValidoHasta = certificado.NotAfter,
+                    FechaFirma = fechaFirma,
+                    EstaVigente = DateTime.Now <= certificado.NotAfter,
+                    AlgoritmoFirma = "RSA-SHA1",
+                    HashAlgorithm = "SHA1"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extrayendo información del certificado");
+                throw;
+            }
         }
 
         // ============================================================
-        // MÉTODOS AUXILIARES (Implementados en T-055)
+        // MÉTODOS AUXILIARES
         // ============================================================
 
         /// <summary>
@@ -271,15 +554,13 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 var doc = new XmlDocument();
                 doc.LoadXml(xml);
 
-                // Buscar nodo Signature en namespace de firma digital
                 var nsmgr = new XmlNamespaceManager(doc.NameTable);
                 nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
 
                 var signatureNode = doc.SelectSingleNode("//ds:Signature", nsmgr);
-                
                 var tieneFirma = signatureNode != null;
-                _logger.LogDebug("XML tiene firma: {TieneFirma}", tieneFirma);
 
+                _logger.LogDebug("XML tiene firma: {TieneFirma}", tieneFirma);
                 return tieneFirma;
             }
             catch (Exception ex)
@@ -301,12 +582,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 var doc = new XmlDocument();
                 doc.LoadXml(xmlFirmado);
 
-                // Buscar y eliminar nodo Signature
                 var nsmgr = new XmlNamespaceManager(doc.NameTable);
                 nsmgr.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
 
                 var signatureNode = doc.SelectSingleNode("//ds:Signature", nsmgr);
-                
+
                 if (signatureNode != null && signatureNode.ParentNode != null)
                 {
                     signatureNode.ParentNode.RemoveChild(signatureNode);
