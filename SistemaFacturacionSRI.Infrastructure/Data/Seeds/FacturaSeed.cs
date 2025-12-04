@@ -41,11 +41,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Seeds
                     FechaHoraAutorizacion = null,
                     XmlPath = null,
                     XmlFirmadoPath = null,
-                    PdfPath = null,
+                    PdfPath = "comprobantes/pdf/RIDE_1234567890123456789012345678901234567890123456789.pdf",
                     MensajesSRI = "ERROR 70: Clave de acceso inválida",
                     Observaciones = "Factura de prueba rechazada por el SRI",
                     FechaCreacion = fechaRechazo,
-                    FechaModificacion = null
+                    FechaModificacion = fechaRechazo
                 },
                 new Factura
                 {
@@ -76,7 +76,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Seeds
                     MensajesSRI = "DEVUELTA: Falta detalle de impuestos",
                     Observaciones = "Factura de prueba devuelta para corrección",
                     FechaCreacion = fechaDevuelta,
-                    FechaModificacion = null
+                    FechaModificacion = fechaDevuelta
                 }
             );
 
