@@ -5,6 +5,7 @@ namespace SistemaFacturacionSRI.WebUI.Services;
 
 public interface IFacturaHttpService
 {
+    // ========== MÉTODOS EXISTENTES ==========
     Task<PagedResultDto<FacturaDto>> ObtenerFacturasAsync(
         int pageNumber = 1, 
         int pageSize = 10,
@@ -17,4 +18,71 @@ public interface IFacturaHttpService
     Task<byte[]?> DescargarXmlAsync(int id);
     Task<bool> ReenviarSriAsync(int id);
     Task<bool> AnularAsync(int id, string motivo);
+
+    // ========== MÉTODOS NUEVOS (T-105) ==========
+    
+    /// <summary>
+    /// T-105: Crea una nueva factura en estado BORRADOR
+    /// </summary>
+    Task<CrearFacturaResponseDto?> CrearFacturaAsync(CrearFacturaDto dto);
+    
+    /// <summary>
+    /// T-105: Firma electrónicamente una factura (T-065)
+    /// </summary>
+    Task<FirmarFacturaResponseDto?> FirmarFacturaAsync(int id);
+    
+    /// <summary>
+    /// T-105: Descarga el PDF RIDE de una factura
+    /// </summary>
+    Task<byte[]?> DescargarPdfAsync(int id);
+}
+
+// ========== DTOs PARA RESPUESTAS (según tu API real) ==========
+
+/// <summary>
+/// Respuesta del endpoint POST /api/factura (crear)
+/// </summary>
+public class CrearFacturaResponseDto
+{
+    public string? Message { get; set; }
+    public FacturaDto? Factura { get; set; }
+    public EnlacesFacturaDto? Enlaces { get; set; }
+}
+
+public class EnlacesFacturaDto
+{
+    public string? VerDetalle { get; set; }
+    public string? DescargarXml { get; set; }
+    public string? EnviarSri { get; set; }
+}
+
+/// <summary>
+/// Respuesta del endpoint POST /api/factura/{id}/firmar
+/// </summary>
+public class FirmarFacturaResponseDto
+{
+    public string? Message { get; set; }
+    public int FacturaId { get; set; }
+    public string? NumeroFactura { get; set; }
+    public string? ClaveAcceso { get; set; }
+    public string? EstadoAnterior { get; set; }
+    public string? EstadoActual { get; set; }
+    public ArchivosFacturaDto? Archivos { get; set; }
+    public DateTime FechaFirma { get; set; }
+    public SiguientePasoDto? SiguientePaso { get; set; }
+}
+
+public class ArchivosFacturaDto
+{
+    public string? XmlOriginal { get; set; }
+    public string? XmlFirmado { get; set; }
+    public string? UrlDescargarXml { get; set; }
+    public string? UrlDescargarXmlFirmado { get; set; }
+}
+
+public class SiguientePasoDto
+{
+    public string? Accion { get; set; }
+    public string? Endpoint { get; set; }
+    public string? Descripcion { get; set; }
 }
