@@ -20,7 +20,9 @@
     <None Update="Resources\XSD\README.md">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <!-- Copiar certificados al directorio de salida -->
+    <None Include="Resources\Certificados\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Resources\Certificados\**\*.p12">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
