@@ -4,6 +4,7 @@ using SistemaFacturacionSRI.Domain.DTOs.Factura;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
 using SistemaFacturacionSRI.Infrastructure.Data;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services
@@ -15,6 +16,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ISecuenciaService _secuenciaService;
+        private readonly IXmlGeneratorService? _xmlGeneratorService;
+        private readonly IFirmaElectronicaService? _firmaElectronicaService;
+        private readonly IFacturaRepository? _facturaRepository;
         
         private static readonly IReadOnlyDictionary<EstadoFactura, EstadoFactura[]> _transicionesPermitidas =
             new Dictionary<EstadoFactura, EstadoFactura[]>
@@ -35,6 +39,23 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             _context = context;
             _secuenciaService = secuenciaService;
+        }
+
+        /// <summary>
+        /// Constructor completo con servicios de firma electrónica (T-064)
+        /// </summary>
+        public FacturaService(
+            ApplicationDbContext context, 
+            ISecuenciaService secuenciaService,
+            IXmlGeneratorService xmlGeneratorService,
+            IFirmaElectronicaService firmaElectronicaService,
+            IFacturaRepository facturaRepository)
+        {
+            _context = context;
+            _secuenciaService = secuenciaService;
+            _xmlGeneratorService = xmlGeneratorService;
+            _firmaElectronicaService = firmaElectronicaService;
+            _facturaRepository = facturaRepository;
         }
 
         // ==================== CREAR FACTURA ====================
@@ -413,6 +434,109 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
             await _context.SaveChangesAsync(cancellationToken);
             return factura;
+        }
+
+        // ==================== FIRMAR Y ALMACENAR XML (T-064) ====================
+
+        /// <summary>
+        /// T-064: Firma el XML de una factura y almacena el resultado.
+        /// Genera el XML si no existe, lo firma con el certificado digital configurado,
+        /// guarda el XML firmado en el sistema de archivos y actualiza los campos
+        /// XmlPath y XmlFirmadoPath en la base de datos.
+        /// </summary>
+        public async Task<(string XmlPath, string XmlFirmadoPath)> FirmarYAlmacenarXmlAsync(int facturaId, CancellationToken cancellationToken = default)
+        {
+            // Validar que los servicios estén inyectados
+            if (_xmlGeneratorService == null)
+                throw new InvalidOperationException("El servicio de generación de XML no está configurado.");
+            
+            if (_firmaElectronicaService == null)
+                throw new InvalidOperationException("El servicio de firma electrónica no está configurado.");
+            
+            if (_facturaRepository == null)
+                throw new InvalidOperationException("El repositorio de facturas no está configurado.");
+
+            // 1. Obtener la factura
+            var factura = await _context.Facturas
+                .Include(f => f.Cliente)
+                    .ThenInclude(c => c!.TipoIdentificacion)
+                .Include(f => f.Detalles)
+                .Include(f => f.InfoAdicional)
+                .FirstOrDefaultAsync(f => f.Id == facturaId, cancellationToken);
+
+            if (factura == null)
+            {
+                throw new KeyNotFoundException($"No existe una factura con Id {facturaId}.");
+            }
+
+            // 2. Validar estado de la factura (debe estar al menos GENERADA para firmar)
+            var estadosPermitidosParaFirmar = new[] 
+            { 
+                EstadoFactura.GENERADA, 
+                EstadoFactura.FIRMADA,  // Permitir re-firmar si es necesario
+                EstadoFactura.DEVUELTA,
+                EstadoFactura.NO_AUTORIZADA 
+            };
+
+            if (!estadosPermitidosParaFirmar.Contains(factura.Estado))
+            {
+                throw new InvalidOperationException(
+                    $"La factura debe estar en estado GENERADA, FIRMADA, DEVUELTA o NO_AUTORIZADA para firmar. " +
+                    $"Estado actual: {factura.Estado}");
+            }
+
+            // 3. Generar XML si no existe
+            string xmlContent;
+            string xmlPath = factura.XmlPath ?? string.Empty;
+
+            if (string.IsNullOrEmpty(factura.XmlPath))
+            {
+                // Crear DTO para generar XML
+                var facturaDto = MapearAFacturaDto(factura);
+                xmlContent = _xmlGeneratorService.GenerarXmlFactura(facturaDto);
+                
+                // Guardar XML original
+                xmlPath = await _xmlGeneratorService.GuardarXmlEnArchivo(xmlContent, factura.ClaveAcceso);
+            }
+            else
+            {
+                // Leer XML existente
+                var rutaAbsoluta = Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, 
+                    "wwwroot", 
+                    factura.XmlPath.Replace("/", Path.DirectorySeparatorChar.ToString()));
+                
+                if (!File.Exists(rutaAbsoluta))
+                {
+                    throw new FileNotFoundException($"No se encontró el archivo XML en: {factura.XmlPath}");
+                }
+                
+                xmlContent = await File.ReadAllTextAsync(rutaAbsoluta, cancellationToken);
+            }
+
+            // 4. Firmar el XML
+            var xmlFirmado = await _firmaElectronicaService.FirmarXml(xmlContent);
+
+            // 5. Guardar XML firmado
+            var xmlFirmadoPath = await _xmlGeneratorService.GuardarXmlFirmadoEnArchivo(xmlFirmado, factura.ClaveAcceso);
+
+            // 6. Actualizar la factura en la base de datos
+            await _facturaRepository.ActualizarRespuestaSRIAsync(
+                facturaId,
+                numeroAutorizacion: null,
+                fechaAutorizacion: null,
+                xmlPath: xmlPath,
+                xmlFirmadoPath: xmlFirmadoPath,
+                pdfPath: null,
+                mensajesSRI: null);
+
+            // 7. Cambiar estado a FIRMADA si estaba en GENERADA
+            if (factura.Estado == EstadoFactura.GENERADA)
+            {
+                await ActualizarEstadoAsync(facturaId, EstadoFactura.FIRMADA, cancellationToken);
+            }
+
+            return (xmlPath, xmlFirmadoPath);
         }
 
         // ==================== MÉTODOS AUXILIARES ====================
