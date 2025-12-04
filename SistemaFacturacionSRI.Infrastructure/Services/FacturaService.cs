@@ -469,9 +469,10 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 throw new KeyNotFoundException($"No existe una factura con Id {facturaId}.");
             }
 
-            // 2. Validar estado de la factura (debe estar al menos GENERADA para firmar)
+            // 2. Validar estado de la factura (debe estar al menos BORRADOR para firmar)
             var estadosPermitidosParaFirmar = new[] 
             { 
+                EstadoFactura.BORRADOR,  // Permitir firmar desde borrador
                 EstadoFactura.GENERADA, 
                 EstadoFactura.FIRMADA,  // Permitir re-firmar si es necesario
                 EstadoFactura.DEVUELTA,
@@ -481,7 +482,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
             if (!estadosPermitidosParaFirmar.Contains(factura.Estado))
             {
                 throw new InvalidOperationException(
-                    $"La factura debe estar en estado GENERADA, FIRMADA, DEVUELTA o NO_AUTORIZADA para firmar. " +
+                    $"La factura debe estar en estado BORRADOR, GENERADA, FIRMADA, DEVUELTA o NO_AUTORIZADA para firmar. " +
                     $"Estado actual: {factura.Estado}");
             }
 

@@ -74,6 +74,7 @@ builder.Services.AddScoped<IFacturaService, SistemaFacturacionSRI.Infrastructure
 builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
 builder.Services.AddScoped<IConfiguracionEmpresaRepository, ConfiguracionEmpresaRepository>();
 builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
+builder.Services.AddScoped<IXmlGeneratorService, SistemaFacturacionSRI.Infrastructure.Services.XmlGeneratorService>();
 
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
