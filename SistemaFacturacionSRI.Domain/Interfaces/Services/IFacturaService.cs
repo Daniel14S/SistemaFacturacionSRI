@@ -67,5 +67,18 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         /// <exception cref="InvalidOperationException">Si la factura no está autorizada</exception>
         /// <exception cref="UnauthorizedAccessException">Si el usuario no tiene permisos suficientes</exception>
         Task<Factura> AnularFacturaAsync(int facturaId, int usuarioId, string? motivo = null, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// T-064: Firma el XML de una factura y almacena el resultado.
+        /// Genera el XML si no existe, lo firma con el certificado digital configurado,
+        /// guarda el XML firmado en el sistema de archivos y actualiza los campos
+        /// XmlPath y XmlFirmadoPath en la base de datos.
+        /// </summary>
+        /// <param name="facturaId">Identificador de la factura</param>
+        /// <param name="cancellationToken">Token de cancelación</param>
+        /// <returns>Tupla con (RutaXmlOriginal, RutaXmlFirmado)</returns>
+        /// <exception cref="KeyNotFoundException">Si la factura no existe</exception>
+        /// <exception cref="InvalidOperationException">Si la factura no está en estado válido para firmar</exception>
+        Task<(string XmlPath, string XmlFirmadoPath)> FirmarYAlmacenarXmlAsync(int facturaId, CancellationToken cancellationToken = default);
     }
 }

@@ -434,6 +434,46 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             }
         }
 
+        /// <summary>
+        /// T-064: Guarda el XML firmado en el sistema de archivos
+        /// Los XMLs firmados se guardan en una subcarpeta "firmados"
+        /// </summary>
+        /// <param name="xmlFirmado">Contenido del XML firmado</param>
+        /// <param name="claveAcceso">Clave de acceso de 49 dígitos</param>
+        /// <returns>Ruta relativa donde se guardó el archivo</returns>
+        public async Task<string> GuardarXmlFirmadoEnArchivo(string xmlFirmado, string claveAcceso)
+        {
+            try
+            {
+                // Validar que el XML tenga firma
+                if (!xmlFirmado.Contains("<ds:Signature") && !xmlFirmado.Contains("<Signature"))
+                {
+                    throw new InvalidOperationException("El XML proporcionado no contiene una firma digital válida.");
+                }
+
+                // Crear directorio para XMLs firmados si no existe
+                var directorioFirmados = Path.Combine(_xmlOutputPath, "firmados");
+                if (!Directory.Exists(directorioFirmados))
+                {
+                    Directory.CreateDirectory(directorioFirmados);
+                }
+
+                var nombreArchivo = $"{claveAcceso}_firmado.xml";
+                var rutaCompleta = Path.Combine(directorioFirmados, nombreArchivo);
+
+                await File.WriteAllTextAsync(rutaCompleta, xmlFirmado, Encoding.UTF8);
+
+                return Path.Combine("comprobantes", "xml", "firmados", nombreArchivo);
+            }
+            catch (Exception ex) when (ex is not InvalidOperationException)
+            {
+                throw new InvalidOperationException(
+                    $"Error al guardar XML firmado en archivo: {ex.Message}",
+                    ex
+                );
+            }
+        }
+
         // ============================================================
         // MÉTODOS ANTERIORES (STUB - IMPLEMENTAR DESPUÉS)
         // ============================================================
