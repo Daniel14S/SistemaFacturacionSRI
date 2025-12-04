@@ -2,6 +2,7 @@ using Microsoft.JSInterop;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using System.Text;
 using System.Text.Json.Serialization;
 using SistemaFacturacionSRI.Infrastructure.Data;
@@ -21,6 +22,7 @@ using SistemaFacturacionSRI.WebUI.Authorization;
 using Blazored.LocalStorage;  
 using Microsoft.AspNetCore.Components.Authorization;
 using SistemaFacturacionSRI.Infrastructure.Services;
+using SistemaFacturacionSRI.Infrastructure.Services.SRI;
 using SistemaFacturacionSRI.Domain.Configuration;
 
 
@@ -229,6 +231,52 @@ builder.Services.Configure<CertificadoDigitalOptions>(
 builder.Services.AddSingleton<ICertificadoDigitalService, CertificadoDigitalService>();
 
 builder.Services.AddScoped<IFirmaElectronicaService, FirmaElectronicaService>();
+
+builder.Services.Configure<SriWebServicesOptions>(
+    builder.Configuration.GetSection(SriWebServicesOptions.SectionName));
+
+// Registrar SoapResponseParser
+builder.Services.AddSingleton<SoapResponseParser>();
+
+// Registrar HttpClient para SRI con configuración específica
+builder.Services.AddHttpClient<ISriWebServiceClient, SriWebServiceClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<SriWebServicesOptions>>().Value;
+    
+    // Configuración base del HttpClient
+    client.Timeout = TimeSpan.FromSeconds(options.TimeoutSegundos);
+    client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
+    client.DefaultRequestHeaders.Add("Accept", "text/xml, application/xml");
+})
+.ConfigurePrimaryHttpMessageHandler(() =>
+{
+    return new HttpClientHandler
+    {
+        // Configurar validación de certificado SSL
+        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
+        {
+            // En producción, validar siempre el certificado
+            // En desarrollo, se puede relajar si hay problemas con certificados SSL
+            var options = builder.Configuration
+                .GetSection(SriWebServicesOptions.SectionName)
+                .Get<SriWebServicesOptions>();
+            
+            if (options?.ValidarCertificadoSsl == false)
+            {
+                // Solo para desarrollo/debugging
+                return true;
+            }
+            
+            // Validación normal
+            return errors == System.Net.Security.SslPolicyErrors.None;
+        },
+        
+        // Configurar compresión
+        AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+    };
+})
+.SetHandlerLifetime(TimeSpan.FromMinutes(5)); // Lifetime del handler
+
 
 var app = builder.Build();
 
