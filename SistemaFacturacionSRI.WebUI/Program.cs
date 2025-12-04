@@ -228,7 +228,8 @@ builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 builder.Services.Configure<CertificadoDigitalOptions>(
     builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
 
-builder.Services.AddSingleton<ICertificadoDigitalService, CertificadoDigitalService>();
+// ✅ CORREGIDO: Cambiar de Singleton a Scoped
+builder.Services.AddScoped<ICertificadoDigitalService, CertificadoDigitalService>();
 
 builder.Services.AddScoped<IFirmaElectronicaService, FirmaElectronicaService>();
 
@@ -284,12 +285,13 @@ var app = builder.Build();
 // CONFIGURACIÓN DE MIDDLEWARE
 // ===========================
 
-// ✅ Headers de seguridad CSP
-
+// ✅ CORREGIDO: Validación de certificado dentro de un scope
+using (var scope = app.Services.CreateScope())
+{
     try
     {
-        var logger = app.Services.GetRequiredService<ILogger<Program>>();
-        var certificadoService = app.Services.GetRequiredService<ICertificadoDigitalService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var certificadoService = scope.ServiceProvider.GetRequiredService<ICertificadoDigitalService>();
         
         logger.LogInformation("Cargando certificado digital...");
         var certificado = certificadoService.CargarCertificado();
@@ -342,7 +344,9 @@ var app = builder.Build();
         // Decidir si continuar o detener la aplicación
         // throw; // Descomentar para detener si el certificado es crítico para el funcionamiento
     }
+}
 
+// ✅ Headers de seguridad CSP
 app.Use(async (context, next) =>
 {
     context.Response.Headers["Content-Security-Policy"] =
