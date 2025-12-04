@@ -1,6 +1,7 @@
 // SistemaFacturacionSRI.WebUI/Models/Facturacion/DetalleFacturaViewModel.cs
 
 using System.ComponentModel.DataAnnotations;
+using SistemaFacturacionSRI.Domain.DTOs.Producto;
 
 namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
 {
@@ -124,5 +125,10 @@ namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
                 _ => "No aplicable"
             };
         }
+
+        public string? BusquedaProducto { get; set; }
+public List<ProductoDto> ResultadosBusqueda { get; set; } = new();
+
+
     }
 }
