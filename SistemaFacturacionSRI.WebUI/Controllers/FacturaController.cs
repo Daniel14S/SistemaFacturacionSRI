@@ -698,7 +698,162 @@ public async Task<IActionResult> AlmacenarPdfRide(int id)
     }
 }
 
+
+/// <summary>
+/// T-065: POST /api/factura/{id}/firmar
+/// Firma electrónicamente el XML de una factura con certificado digital XADES-BES
+/// Genera el XML si no existe, lo firma, almacena el XML firmado y actualiza el estado a FIRMADA
+/// PERMISOS: Administrador ✅ | Vendedor ✅ (solo sus facturas)
+/// </summary>
+[HttpPost("{id}/firmar")]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> FirmarFactura(int id)
+{
+    try
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        // 1. Obtener la factura para validar permisos
+        var factura = await _facturaService.ObtenerPorIdAsync(id);
+
+        if (factura == null)
+        {
+            return NotFound(new 
+            { 
+                message = $"Factura con ID {id} no encontrada" 
+            });
+        }
+
+        // 2. Validar permisos: Vendedor solo puede firmar sus propias facturas
+        if (!EsAdministrador())
+        {
+            int usuarioId = ObtenerUsuarioId();
+            
+            if (factura.UsuarioId != usuarioId)
+            {
+                _logger.LogWarning(
+                    "Usuario {UsuarioId} intentó firmar factura {FacturaId} de otro usuario",
+                    usuarioId, id);
+                
+                return Forbid();
+            }
+        }
+
+        // 3. Validar estado actual de la factura
+        if (!Enum.TryParse(factura.Estado, true, out EstadoFactura estadoActual))
+        {
+            return BadRequest(new
+            {
+                message = $"El estado actual de la factura no es válido: {factura.Estado}"
+            });
+        }
+
+        // Solo se pueden firmar facturas en estado BORRADOR o GENERADA
+        if (estadoActual != EstadoFactura.BORRADOR && 
+            estadoActual != EstadoFactura.GENERADA)
+        {
+            return BadRequest(new
+            {
+                message = $"Solo se pueden firmar facturas en estado BORRADOR o GENERADA. Estado actual: {factura.Estado}",
+                estadoActual = factura.Estado,
+                estadosPermitidos = new[] { "BORRADOR", "GENERADA" }
+            });
+        }
+
+        // 4. Validar que no esté ya firmada
+        if (!string.IsNullOrWhiteSpace(factura.XmlFirmadoPath))
+        {
+            return BadRequest(new
+            {
+                message = "La factura ya ha sido firmada anteriormente",
+                xmlFirmadoPath = factura.XmlFirmadoPath,
+                estadoActual = factura.Estado
+            });
+        }
+
+        _logger.LogInformation(
+            "Iniciando firma electrónica de factura {FacturaId} ({NumeroFactura}). Usuario: {UsuarioId}",
+            id, factura.NumeroFactura, ObtenerUsuarioId());
+
+        // 5. Llamar al servicio que genera XML, firma y almacena
+        var (xmlPath, xmlFirmadoPath) = await _facturaService.FirmarYAlmacenarXmlAsync(id);
+
+        _logger.LogInformation(
+            "Factura {FacturaId} firmada exitosamente. XML: {XmlPath}, XML Firmado: {XmlFirmadoPath}",
+            id, xmlPath, xmlFirmadoPath);
+
+        // 6. Obtener la factura actualizada para devolver en la respuesta
+        var facturaActualizada = await _facturaService.ObtenerPorIdAsync(id);
+
+        // 7. Retornar respuesta exitosa
+        return Ok(new
+        {
+            message = "Factura firmada electrónicamente de forma exitosa",
+            facturaId = id,
+            numeroFactura = factura.NumeroFactura,
+            claveAcceso = factura.ClaveAcceso,
+            estadoAnterior = estadoActual.ToString(),
+            estadoActual = facturaActualizada?.Estado ?? "FIRMADA",
+            archivos = new
+            {
+                xmlOriginal = xmlPath,
+                xmlFirmado = xmlFirmadoPath,
+                urlDescargarXml = $"/api/factura/{id}/xml",
+                urlDescargarXmlFirmado = xmlFirmadoPath
+            },
+            fechaFirma = DateTime.Now,
+            siguientePaso = new
+            {
+                accion = "Enviar al SRI",
+                endpoint = $"/api/factura/{id}/enviar-sri",
+                descripcion = "La factura está lista para ser enviada al Servicio de Rentas Internas"
+            }
+        });
     }
+    catch (KeyNotFoundException ex)
+    {
+        _logger.LogWarning(ex, "Factura {FacturaId} no encontrada al intentar firmar", id);
+        return NotFound(new { message = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Errores de validación de estado o configuración
+        _logger.LogWarning(ex, "Error de validación al firmar factura {FacturaId}", id);
+        return BadRequest(new 
+        { 
+            message = ex.Message,
+            tipo = "ValidationError"
+        });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Acceso no autorizado al firmar factura {FacturaId}", id);
+        return Forbid();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error interno al firmar factura {FacturaId}", id);
+        
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno del servidor al firmar la factura",
+            tipo = "InternalError",
+            detalles = ex.Message
+        });
+    }
+}
+
+    }
+
+    
 
     
 }
