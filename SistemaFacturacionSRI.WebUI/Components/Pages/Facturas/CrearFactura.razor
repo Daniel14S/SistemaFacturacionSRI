@@ -1,0 +1,704 @@
+@* SistemaFacturacionSRI.WebUI/Components/Pages/Facturas/CrearFactura.razor *@
+@page "/crearfactura"
+@using SistemaFacturacionSRI.WebUI.Models.Facturacion
+@using SistemaFacturacionSRI.WebUI.Services
+@using SistemaFacturacionSRI.Domain.DTOs.Factura
+@using SistemaFacturacionSRI.Domain.DTOs.Producto
+@using SistemaFacturacionSRI.Domain.DTOs.Cliente
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Policy = "AdminOrVendedor")]
+@inject IFacturaHttpService FacturaService
+@inject IClienteHttpService ClienteService
+@inject IProductoHttpService ProductoService
+@inject NavigationManager Navigation
+@inject ToastService Toast
+@rendermode InteractiveServer
+
+<PageTitle>Crear Factura - Sistema de Facturación</PageTitle>
+
+<!-- ==================== HEADER ==================== -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-1">
+                    <i class="bi bi-file-earmark-plus text-primary me-2"></i>
+                    Nueva Factura Electrónica
+                </h3>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Complete los datos del cliente y agregue los productos
+                </p>
+            </div>
+            <div>
+                <button class="btn btn-outline-secondary" @onclick="Cancelar">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (cargandoInicial)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="text-muted mt-3">Cargando información inicial...</p>
+    </div>
+}
+else
+{
+    <EditForm Model="@modelo" OnValidSubmit="GuardarBorrador" FormName="crearFacturaForm">
+        <DataAnnotationsValidator />
+        
+        <!-- ==================== CARD CLIENTE ==================== -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-circle me-2"></i>
+                    1. Información del Cliente
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (clienteSeleccionado == null)
+                {
+                    <!-- Búsqueda de cliente -->
+                    <div class="row g-3">
+                        <div class="col-md-10">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-search me-1"></i>Buscar Cliente
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       placeholder="Ingrese nombre o identificación del cliente..."
+                                       @bind="terminoBusquedaCliente"
+                                       @oninput="BuscarClientesIncremental" />
+                                @if (!string.IsNullOrWhiteSpace(terminoBusquedaCliente))
+                                {
+                                    <button class="btn btn-outline-secondary" 
+                                            type="button"
+                                            @onclick="LimpiarBusquedaCliente">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                }
+                            </div>
+                            
+                            <!-- Resultados de búsqueda -->
+                            @if (clientesBuscados.Any())
+                            {
+                                <div class="list-group mt-2 shadow">
+                                    @foreach (var cliente in clientesBuscados)
+                                    {
+                                        <button type="button" 
+                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
+                                                @onclick="() => SeleccionarCliente(cliente)">
+                                            <div class="ms-2 me-auto">
+                                                <div class="fw-bold">
+                                                    <i class="bi bi-person-badge me-1 text-primary"></i>
+                                                    @cliente.NombreCompleto
+                                                </div>
+                                                <small class="text-muted">
+                                                    <i class="bi bi-credit-card me-1"></i>
+                                                    @cliente.TipoIdentificacion: @cliente.Identificacion
+                                                </small>
+                                                @if (!string.IsNullOrWhiteSpace(cliente.Email))
+                                                {
+                                                    <small class="text-muted ms-3">
+                                                        <i class="bi bi-envelope me-1"></i>@cliente.Email
+                                                    </small>
+                                                }
+                                            </div>
+                                            <span class="badge bg-success rounded-pill">
+                                                <i class="bi bi-check-circle"></i>
+                                            </span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                            else if (buscandoClientes)
+                            {
+                                <div class="alert alert-info mt-2">
+                                    <i class="bi bi-hourglass-split me-2"></i>Buscando clientes...
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(terminoBusquedaCliente) && !buscandoClientes)
+                            {
+                                <div class="alert alert-warning mt-2">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>
+                                    No se encontraron clientes con ese criterio
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" 
+                                    class="btn btn-success btn-lg w-100"
+                                    @onclick="AbrirModalNuevoCliente">
+                                <i class="bi bi-plus-circle me-2"></i>
+                                Nuevo
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <ValidationMessage For="@(() => modelo.ClienteId)" class="text-danger mt-2" />
+                }
+                else
+                {
+                    <!-- Cliente seleccionado -->
+                    <div class="alert alert-success border-start border-success border-4 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="alert-heading mb-3">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    Cliente Seleccionado
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p class="mb-2">
+                                            <strong><i class="bi bi-person me-2"></i>Nombre:</strong>
+                                            <span class="ms-2">@clienteSeleccionado.NombreCompleto</span>
+                                        </p>
+                                        <p class="mb-2">
+                                            <strong><i class="bi bi-credit-card me-2"></i>Identificación:</strong>
+                                            <span class="ms-2">@clienteSeleccionado.Identificacion</span>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        @if (!string.IsNullOrWhiteSpace(clienteSeleccionado.Email))
+                                        {
+                                            <p class="mb-2">
+                                                <strong><i class="bi bi-envelope me-2"></i>Email:</strong>
+                                                <span class="ms-2">@clienteSeleccionado.Email</span>
+                                            </p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(clienteSeleccionado.Telefono))
+                                        {
+                                            <p class="mb-2">
+                                                <strong><i class="bi bi-telephone me-2"></i>Teléfono:</strong>
+                                                <span class="ms-2">@clienteSeleccionado.Telefono</span>
+                                            </p>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" 
+                                    class="btn btn-outline-danger btn-sm"
+                                    @onclick="DeseleccionarCliente">
+                                <i class="bi bi-x-circle"></i> Cambiar
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ==================== CARD PRODUCTOS ==================== -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cart3 me-2"></i>
+                        2. Productos y Servicios
+                    </h5>
+                    <button type="button" 
+                            class="btn btn-light btn-sm"
+                            @onclick="AgregarNuevoDetalle"
+                            disabled="@(clienteSeleccionado == null)">
+                        <i class="bi bi-plus-circle me-1"></i>Agregar Producto
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (clienteSeleccionado == null)
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Primero debe seleccionar un cliente
+                    </div>
+                }
+                else if (!modelo.Detalles.Any())
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-cart-x text-muted" style="font-size: 4rem;"></i>
+                        <p class="text-muted mt-3">No hay productos agregados</p>
+                        <button type="button" 
+                                class="btn btn-primary"
+                                @onclick="AgregarNuevoDetalle">
+                            <i class="bi bi-plus-circle me-2"></i>Agregar Primer Producto
+                        </button>
+                    </div>
+                }
+                else
+                {
+                    <!-- Tabla de productos -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 30%;">Producto</th>
+                                    <th style="width: 10%;" class="text-center">Cantidad</th>
+                                    <th style="width: 12%;" class="text-end">P. Unitario</th>
+                                    <th style="width: 12%;" class="text-end">Descuento</th>
+                                    <th style="width: 10%;" class="text-center">IVA</th>
+                                    <th style="width: 13%;" class="text-end">Subtotal</th>
+                                    <th style="width: 8%;" class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < modelo.Detalles.Count; i++)
+                                {
+                                    var detalle = modelo.Detalles[i];
+                                    var index = i;
+                                    
+                                    <tr class="@(detalle.ProductoId == 0 ? "table-warning" : "")">
+                                        <td class="fw-bold text-muted">@(i + 1)</td>
+                                        
+                                        <!-- Producto Dropdown -->
+                                        <td>
+                                            @if (detalle.ProductoId == 0)
+                                            {
+                                                <select class="form-select form-select-sm"
+                                                        @onchange="@(e => SeleccionarProducto(index, int.Parse(e.Value?.ToString() ?? "0")))">
+                                                    <option value="0">-- Seleccionar producto --</option>
+                                                    @foreach (var prod in productosDisponibles.Where(p => p.Activo && p.Stock > 0))
+                                                    {
+                                                        <option value="@prod.Id">
+                                                            @prod.Nombre (@prod.Codigo) - Stock: @prod.Stock
+                                                        </option>
+                                                    }
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-box-seam text-primary me-2"></i>
+                                                    <div>
+                                                        <div class="fw-semibold">@detalle.ProductoNombre</div>
+                                                        <small class="text-muted">
+                                                            Código: @detalle.ProductoCodigo | 
+                                                            Stock disponible: @detalle.ProductoStock
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </td>
+                                        
+                                        <!-- Cantidad -->
+                                        <td>
+                                            <input type="number" 
+                                                   class="form-control form-control-sm text-center"
+                                                   min="0.01" 
+                                                   step="0.01"
+                                                   max="@detalle.ProductoStock"
+                                                   disabled="@(detalle.ProductoId == 0)"
+                                                   @bind="detalle.Cantidad"
+                                                   @oninput="@(() => RecalcularDetalle(index))" />
+                                        </td>
+                                        
+                                        <!-- Precio Unitario -->
+                                        <td class="text-end">
+                                            <input type="number" 
+                                                   class="form-control form-control-sm text-end"
+                                                   min="0.01" 
+                                                   step="0.01"
+                                                   disabled="@(detalle.ProductoId == 0)"
+                                                   @bind="detalle.PrecioUnitario"
+                                                   @oninput="@(() => RecalcularDetalle(index))" />
+                                        </td>
+                                        
+                                        <!-- Descuento -->
+                                        <td class="text-end">
+                                            <input type="number" 
+                                                   class="form-control form-control-sm text-end"
+                                                   min="0" 
+                                                   step="0.01"
+                                                   disabled="@(detalle.ProductoId == 0)"
+                                                   @bind="detalle.Descuento"
+                                                   @oninput="@(() => RecalcularDetalle(index))" />
+                                        </td>
+                                        
+                                        <!-- IVA -->
+                                        <td class="text-center">
+                                            <select class="form-select form-select-sm"
+                                                    disabled="@(detalle.ProductoId == 0)"
+                                                    value="@detalle.CodigoPorcentajeIVA"
+                                                    @onchange="@(e => { detalle.CodigoPorcentajeIVA = int.Parse(e.Value?.ToString() ?? "15"); RecalcularDetalle(index); })">
+                                                <option value="0">0%</option>
+                                                <option value="15">15%</option>
+                                            </select>
+                                        </td>
+                                        
+                                        <!-- Subtotal calculado -->
+                                        <td class="text-end">
+                                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">
+                                                $@detalle.ValorTotal.ToString("N2")
+                                            </span>
+                                        </td>
+                                        
+                                        <!-- Eliminar -->
+                                        <td class="text-center">
+                                            <button type="button" 
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    @onclick="() => EliminarDetalle(index)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <ValidationMessage For="@(() => modelo.Detalles)" class="text-danger" />
+                }
+            </div>
+        </div>
+
+        <!-- ==================== CARD TOTALES ==================== -->
+        @if (modelo.Detalles.Any(d => d.ProductoId > 0))
+        {
+            <div class="card mb-4 shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calculator me-2"></i>
+                        3. Resumen de Totales
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Observaciones opcionales -->
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-chat-left-text me-1"></i>
+                                Observaciones (Opcional)
+                            </label>
+                            <textarea class="form-control" 
+                                      rows="4"
+                                      maxlength="500"
+                                      placeholder="Ingrese observaciones adicionales..."
+                                      @bind="modelo.Observaciones"></textarea>
+                            <small class="text-muted">
+                                @((modelo.Observaciones?.Length ?? 0)) / 500 caracteres
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal 0%:</span>
+                                        <strong>$@modelo.Subtotal0.ToString("N2")</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal 15%:</span>
+                                        <strong>$@modelo.Subtotal15.ToString("N2")</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2 text-danger">
+                                        <span>Descuento:</span>
+                                        <strong>-$@modelo.TotalDescuento.ToString("N2")</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>IVA 15%:</span>
+                                        <strong>$@modelo.TotalIVA.ToString("N2")</strong>
+                                    </div>
+                                    <hr class="my-2" />
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fs-5 fw-bold text-success">TOTAL:</span>
+                                        <span class="fs-4 fw-bold text-success">
+                                            $@modelo.Total.ToString("N2")
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ==================== BOTONES DE ACCIÓN ==================== -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button type="button" 
+                                class="btn btn-outline-secondary w-100"
+                                @onclick="Cancelar"
+                                disabled="@guardando">
+                            <i class="bi bi-x-circle me-2"></i>Cancelar
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" 
+                                class="btn btn-primary w-100"
+                                disabled="@(!modelo.EsValida() || guardando)">
+                            @if (guardando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-save me-2"></i>
+                            }
+                            Guardar Borrador
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" 
+                                class="btn btn-success w-100"
+                                @onclick="GenerarYEnviarSri"
+                                disabled="@(!modelo.EsValida() || guardando)">
+                            @if (guardando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-send-check me-2"></i>
+                            }
+                            Generar y Enviar al SRI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    // ==================== VARIABLES ====================
+    private CrearFacturaViewModel modelo = new();
+    private ClienteListDto? clienteSeleccionado;
+    private List<ClienteListDto> clientesBuscados = new();
+    private List<ProductoDto> productosDisponibles = new();
+    private bool cargandoInicial = true;
+    private bool guardando = false;
+    private bool buscandoClientes = false;
+    private string terminoBusquedaCliente = string.Empty;
+    private System.Threading.Timer? debounceTimer;
+
+    // ==================== INICIALIZACIÓN ====================
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatosIniciales();
+    }
+
+    private async Task CargarDatosIniciales()
+    {
+        cargandoInicial = true;
+        try
+        {
+            productosDisponibles = await ProductoService.ObtenerTodosAsync();
+            productosDisponibles = productosDisponibles.Where(p => p.Activo && p.Stock > 0).ToList();
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError($"Error al cargar datos: {ex.Message}");
+        }
+        finally
+        {
+            cargandoInicial = false;
+        }
+    }
+
+    // ==================== BÚSQUEDA DE CLIENTES ====================
+    private void BuscarClientesIncremental(ChangeEventArgs e)
+    {
+        terminoBusquedaCliente = e.Value?.ToString() ?? string.Empty;
+        
+        if (string.IsNullOrWhiteSpace(terminoBusquedaCliente))
+        {
+            clientesBuscados.Clear();
+            return;
+        }
+        
+        debounceTimer?.Dispose();
+        debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await BuscarClientesAsync();
+                StateHasChanged();
+            });
+        }, null, 300, Timeout.Infinite);
+    }
+    
+    private async Task BuscarClientesAsync()
+    {
+        if (string.IsNullOrWhiteSpace(terminoBusquedaCliente)) return;
+        
+        buscandoClientes = true;
+        try
+        {
+            clientesBuscados = await ClienteService.BuscarClientesAsync(terminoBusquedaCliente, 10);
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError($"Error al buscar clientes: {ex.Message}");
+            clientesBuscados.Clear();
+        }
+        finally
+        {
+            buscandoClientes = false;
+        }
+    }
+    
+    private async Task SeleccionarCliente(ClienteListDto cliente)
+    {
+        try
+        {
+            var clienteCompleto = await ClienteService.ObtenerPorIdAsync(cliente.ClienteId);
+            if (clienteCompleto == null) return;
+            
+            modelo.ClienteId = clienteCompleto.ClienteId;
+            modelo.ClienteNombre = clienteCompleto.NombreCompleto;
+            modelo.ClienteIdentificacion = clienteCompleto.Identificacion;
+            clienteSeleccionado = cliente;
+            
+            terminoBusquedaCliente = string.Empty;
+            clientesBuscados.Clear();
+            Toast.ShowSuccess($"Cliente seleccionado: {clienteCompleto.NombreCompleto}");
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError($"Error: {ex.Message}");
+        }
+    }
+    
+    private void DeseleccionarCliente()
+    {
+        clienteSeleccionado = null;
+        modelo.ClienteId = 0;
+    }
+    
+    private void LimpiarBusquedaCliente()
+    {
+        terminoBusquedaCliente = string.Empty;
+        clientesBuscados.Clear();
+    }
+
+    // ==================== GESTIÓN DE DETALLES ====================
+    private void AgregarNuevoDetalle()
+    {
+        if (clienteSeleccionado == null) return;
+        modelo.AgregarDetalle();
+    }
+    
+    private void EliminarDetalle(int index)
+    {
+        if (index < 0 || index >= modelo.Detalles.Count) return;
+        modelo.EliminarDetalle(modelo.Detalles[index]);
+    }
+    
+    private void SeleccionarProducto(int index, int productoId)
+    {
+        if (productoId == 0 || index >= modelo.Detalles.Count) return;
+        
+        var detalle = modelo.Detalles[index];
+        var producto = productosDisponibles.FirstOrDefault(p => p.Id == productoId);
+        if (producto == null) return;
+        
+        detalle.ProductoId = producto.Id;
+        detalle.ProductoNombre = producto.Nombre;
+        detalle.ProductoCodigo = producto.Codigo;
+        detalle.ProductoPrecio = producto.Precio ?? 0m;
+        detalle.PrecioUnitario = producto.Precio ?? 0m;
+        detalle.ProductoStock = producto.Stock;
+        detalle.Cantidad = 1;
+        detalle.PrecioUnitario = producto.Precio ?? 0m;
+        detalle.CodigoPorcentajeIVA = 15;
+        
+        RecalcularDetalle(index);
+    }
+    
+    private void RecalcularDetalle(int index)
+    {
+        if (index >= modelo.Detalles.Count) return;
+        modelo.Detalles[index].RecalcularTotales();
+        modelo.RecalcularTotales();
+    }
+
+    // ==================== GUARDADO ====================
+    private async Task GuardarBorrador()
+    {
+        await GuardarFacturaAsync(false);
+    }
+    
+    private async Task GenerarYEnviarSri()
+    {
+        await GuardarFacturaAsync(true);
+    }
+    
+    private async Task GuardarFacturaAsync(bool enviarSri)
+    {
+        if (!modelo.EsValida()) return;
+        
+        guardando = true;
+        try
+        {
+            var dto = new CrearFacturaDto
+            {
+                ClienteId = modelo.ClienteId,
+                Observaciones = modelo.Observaciones,
+                Detalles = modelo.Detalles.Where(d => d.ProductoId > 0)
+                    .Select(d => new CrearDetalleFacturaDto
+                    {
+                        ProductoId = d.ProductoId,
+                        Cantidad = d.Cantidad,
+                        PrecioUnitario = d.PrecioUnitario,
+                        Descuento = d.Descuento,
+                        CodigoPorcentajeIVA = d.CodigoPorcentajeIVA
+                    }).ToList()
+            };
+            
+            var response = await FacturaService.CrearFacturaAsync(dto);
+            if (response?.Factura == null) return;
+            
+            Toast.ShowSuccess($"Factura {response.Factura.NumeroFactura} creada");
+            
+            if (enviarSri)
+                await EnviarFacturaAlSri(response.Factura.Id);
+            else
+                Navigation.NavigateTo($"/facturas/{response.Factura.Id}");
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+    
+    private async Task EnviarFacturaAlSri(int facturaId)
+    {
+        try
+        {
+            await FacturaService.FirmarFacturaAsync(facturaId);
+            await FacturaService.ReenviarSriAsync(facturaId);
+            Navigation.NavigateTo($"/facturas/{facturaId}");
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError($"Error: {ex.Message}");
+        }
+    }
+
+    private void AbrirModalNuevoCliente()
+    {
+        Toast.ShowInfo("Use el módulo de Clientes para crear uno nuevo");
+    }
+    
+    private void Cancelar()
+    {
+        Navigation.NavigateTo("/facturas");
+    }
+
+    public void Dispose()
+    {
+        debounceTimer?.Dispose();
+    }
+}
