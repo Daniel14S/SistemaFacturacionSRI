@@ -127,17 +127,18 @@ public class FacturaHttpService : IFacturaHttpService
     {
         try
         {
-            _logger.LogInformation("Reenviando factura ID {Id} al SRI", id);
-            var response = await _httpClient.PostAsync($"/api/factura/{id}/reenviar", null);
+            _logger.LogInformation("Enviando factura ID {Id} al SRI", id);
+            // Usamos el endpoint enviar-sri que soporta FIRMADA, DEVUELTA y NO_AUTORIZADA
+            var response = await _httpClient.PostAsync($"/api/factura/{id}/enviar-sri", null);
 
             if (response.IsSuccessStatusCode)
             {
-                _logger.LogInformation("Factura {Id} reenviada exitosamente", id);
+                _logger.LogInformation("Factura {Id} enviada exitosamente", id);
                 return true;
             }
 
             var error = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Error al reenviar factura {Id}: {Error}", id, error);
+            _logger.LogError("Error al enviar factura {Id}: {Error}", id, error);
             return false;
         }
         catch (Exception ex)
