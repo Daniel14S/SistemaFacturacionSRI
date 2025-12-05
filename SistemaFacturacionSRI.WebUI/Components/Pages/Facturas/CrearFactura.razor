@@ -260,26 +260,44 @@ else
         <div>
             <input type="text"
                    class="form-control form-control-sm"
-                   placeholder="Buscar producto..."
+                   placeholder="Buscar por código o nombre..."
                    @bind="detalle.BusquedaProducto"
                    @oninput="@(e => BuscarProductoIncremental(index, e.Value?.ToString() ?? ""))" />
 
             @if (detalle.ResultadosBusqueda != null && detalle.ResultadosBusqueda.Any())
-            {
-                <div class="list-group shadow position-absolute" style="z-index:1000; max-height:180px; overflow:auto;">
-                    @foreach (var p in detalle.ResultadosBusqueda)
-                    {
-                        <button type="button"
-                                class="list-group-item list-group-item-action"
-                                @onclick="() => SeleccionarProducto(index, p.Id)">
-                            <div class="fw-semibold">@p.Nombre</div>
-                            <small class="text-muted">
-                                Código: @p.Codigo — Precio: $@p.Precio — Stock: @p.Stock
-                            </small>
-                        </button>
-                    }
+{
+    <div class="list-group shadow position-absolute" 
+         style="z-index:1000; max-height:250px; overflow-y:auto; width: 100%;">
+        @foreach (var p in detalle.ResultadosBusqueda)
+        {
+            <button type="button"
+                    class="list-group-item list-group-item-action"
+                    @onclick="() => SeleccionarProducto(index, p.Id)">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <!-- ✅ Código destacado -->
+                        <div class="mb-1">
+                            <span class="badge bg-primary me-2" 
+                                  style="font-size: 0.85rem;">
+                                @p.Codigo
+                            </span>
+                            <span class="fw-semibold">@p.Nombre</span>
+                        </div>
+                        <!-- Detalles -->
+                        <small class="text-muted">
+                            <i class="bi bi-cash-coin me-1"></i>
+                            $@(p.Precio?.ToString("N2") ?? "0.00")
+                            <span class="mx-2">|</span>
+                            <i class="bi bi-box-seam me-1"></i>
+                            Stock: @p.Stock
+                        </small>
+                    </div>
+                    <i class="bi bi-plus-circle text-success fs-5"></i>
                 </div>
-            }
+            </button>
+        }
+    </div>
+}
         </div>
     }
     else
@@ -540,17 +558,34 @@ private async Task BuscarProductoIncremental(int index, string termino)
         return;
     }
 
-    // Buscar en la lista de productos cargados
-    detalle.ResultadosBusqueda = productosDisponibles
+    // Limpiar término para búsqueda flexible
+    var terminoLimpio = termino.Replace("-", "").Replace(" ", "").ToLower();
+
+    // Buscar con priorización
+    var resultados = productosDisponibles
+        .Where(p => p.Stock > 0)
         .Where(p => 
-            (p.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
-             p.Codigo.Contains(termino, StringComparison.OrdinalIgnoreCase)) &&
-            p.Stock > 0)
+            // Código completo
+            p.Codigo.Contains(termino, StringComparison.OrdinalIgnoreCase) ||
+            // Código limpio (sin guiones/espacios)
+            p.Codigo.Replace("-", "").Replace(" ", "")
+                .Contains(terminoLimpio, StringComparison.OrdinalIgnoreCase) ||
+            // Nombre
+            p.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase)
+        )
+        .OrderBy(p => 
+            // Priorizar coincidencias exactas de código
+            p.Codigo.Equals(termino, StringComparison.OrdinalIgnoreCase) ? 0 :
+            p.Codigo.StartsWith(termino, StringComparison.OrdinalIgnoreCase) ? 1 : 2
+        )
+        .ThenBy(p => p.Nombre)
         .Take(10)
         .ToList();
 
+    detalle.ResultadosBusqueda = resultados;
     StateHasChanged();
 }
+
 
 
 
