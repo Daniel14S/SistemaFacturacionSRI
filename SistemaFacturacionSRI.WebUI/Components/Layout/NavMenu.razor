@@ -60,6 +60,18 @@
                     </Authorized>
                 </AuthorizeView>
 
+                <!-- CONFIGURACIÓN (Solo Admin) -->
+<AuthorizeView Roles="Administrador" Context="configAuth">
+    <Authorized>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="configuracion-empresa">
+                <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Configuración
+            </NavLink>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
                 <!-- CLIENTES (Admin y Vendedor) -->
 <div class="nav-item px-3">
     <NavLink class="nav-link" href="clientes">

@@ -28,6 +28,8 @@ using SistemaFacturacionSRI.Domain.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+
 // ===========================
 // CONFIGURACIÓN DE SERVICIOS
 // ===========================
@@ -238,6 +240,13 @@ builder.Services.Configure<SriWebServicesOptions>(
 
 // Registrar SoapResponseParser
 builder.Services.AddSingleton<SoapResponseParser>();
+
+//  ConfiguracionHttpClient con AuthHeaderHandler
+builder.Services.AddHttpClient<IConfiguracionHttpService, ConfiguracionHttpService>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5293");
+})
+.AddHttpMessageHandler<AuthHeaderHandler>();
 
 // Registrar HttpClient para SRI con configuración específica
 builder.Services.AddHttpClient<ISriWebServiceClient, SriWebServiceClient>((serviceProvider, client) =>
