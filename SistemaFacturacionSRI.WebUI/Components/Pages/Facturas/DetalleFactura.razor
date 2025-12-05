@@ -42,6 +42,14 @@
             </button>
         </div>
 
+        <!-- DEBUG: Ver datos de la factura -->
+        <div class="alert alert-info">
+            <details>
+                <summary>Debug: Datos de la Factura (Click para ver)</summary>
+                <pre>@System.Text.Json.JsonSerializer.Serialize(factura, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+            </details>
+        </div>
+
         @* Mensajes *@
         @if (!string.IsNullOrEmpty(mensajeExito))
         {

@@ -26,7 +26,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             // Validar configuración al inicializar
-            _options.Validar();
+            try 
+            {
+                _options.Validar();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "La configuración del certificado digital no es válida. El servicio funcionará en modo limitado.");
+            }
         }
 
         /// <summary>

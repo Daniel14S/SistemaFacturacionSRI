@@ -120,10 +120,11 @@ namespace SistemaFacturacionSRI.Domain.Configuration
             }
 
             // ✅ CORREGIDO: Validar URLs según ambiente con dominios correctos
-            if (Ambiente.ToUpper() == "PRUEBAS" && !UrlRecepcion.Contains("celcer.sri.gob.ec"))
+            // MODIFICACIÓN PARA SIMULADOR: Permitir localhost para pruebas
+            if (Ambiente.ToUpper() == "PRUEBAS" && !UrlRecepcion.Contains("celcer.sri.gob.ec") && !UrlRecepcion.Contains("localhost"))
             {
                 throw new InvalidOperationException(
-                    "URL de recepción para PRUEBAS debe contener 'celcer.sri.gob.ec'");
+                    "URL de recepción para PRUEBAS debe contener 'celcer.sri.gob.ec' o 'localhost' (simulador)");
             }
 
             if (Ambiente.ToUpper() == "PRODUCCION" && UrlRecepcion.Contains("celcer"))

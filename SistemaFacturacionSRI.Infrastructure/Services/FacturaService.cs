@@ -19,11 +19,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         private readonly IXmlGeneratorService? _xmlGeneratorService;
         private readonly IFirmaElectronicaService? _firmaElectronicaService;
         private readonly IFacturaRepository? _facturaRepository;
+        private readonly ClaveAccesoGenerator _claveAccesoGenerator;
         
         private static readonly IReadOnlyDictionary<EstadoFactura, EstadoFactura[]> _transicionesPermitidas =
             new Dictionary<EstadoFactura, EstadoFactura[]>
             {
-                [EstadoFactura.BORRADOR] = new[] { EstadoFactura.GENERADA, EstadoFactura.ANULADA },
+                [EstadoFactura.BORRADOR] = new[] { EstadoFactura.GENERADA, EstadoFactura.FIRMADA, EstadoFactura.ANULADA },
                 [EstadoFactura.GENERADA] = new[] { EstadoFactura.FIRMADA, EstadoFactura.ANULADA },
                 [EstadoFactura.FIRMADA] = new[] { EstadoFactura.ENVIADA, EstadoFactura.ANULADA },
                 [EstadoFactura.ENVIADA] = new[] { EstadoFactura.RECIBIDA, EstadoFactura.DEVUELTA, EstadoFactura.ANULADA },
@@ -35,10 +36,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             };
         private const string RolAdministrador = "Administrador";
 
-        public FacturaService(ApplicationDbContext context, ISecuenciaService secuenciaService)
+        public FacturaService(ApplicationDbContext context, ISecuenciaService secuenciaService, ClaveAccesoGenerator claveAccesoGenerator)
         {
             _context = context;
             _secuenciaService = secuenciaService;
+            _claveAccesoGenerator = claveAccesoGenerator;
         }
 
         /// <summary>
@@ -49,13 +51,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             ISecuenciaService secuenciaService,
             IXmlGeneratorService xmlGeneratorService,
             IFirmaElectronicaService firmaElectronicaService,
-            IFacturaRepository facturaRepository)
+            IFacturaRepository facturaRepository,
+            ClaveAccesoGenerator claveAccesoGenerator)
         {
             _context = context;
             _secuenciaService = secuenciaService;
             _xmlGeneratorService = xmlGeneratorService;
             _firmaElectronicaService = firmaElectronicaService;
             _facturaRepository = facturaRepository;
+            _claveAccesoGenerator = claveAccesoGenerator;
         }
 
         // ==================== CREAR FACTURA ====================
@@ -162,16 +166,48 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
     } // ✅ CIERRA el foreach
 
     // 4. Obtener siguiente número de factura
-    var numeroFactura = await _secuenciaService.ObtenerSiguienteNumeroAsync();
+    string numeroFactura;
+    try
+    {
+        numeroFactura = await _secuenciaService.GenerarNumeroCompletoAsync();
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException($"Error al generar secuencia de factura: {ex.Message}", ex);
+    }
+
+    // Obtener configuración de empresa para RUC y Ambiente
+    var configEmpresa = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync(cancellationToken);
+    if (configEmpresa == null)
+    {
+        throw new InvalidOperationException("No se ha configurado la empresa emisora. Configure los datos de la empresa antes de emitir facturas.");
+    }
+
+    // Generar Clave de Acceso
+    var partesNumero = numeroFactura.Split('-');
+    var establecimiento = partesNumero[0];
+    var puntoEmision = partesNumero[1];
+    var secuencial = partesNumero[2];
+
+    var claveAcceso = _claveAccesoGenerator.GenerarClaveAcceso(
+        DateTime.Now,
+        "01", // Factura
+        configEmpresa.RUC,
+        configEmpresa.AmbienteSRI, 
+        establecimiento,
+        puntoEmision,
+        secuencial
+    );
 
     // 5. Crear entidad Factura
     var factura = new Factura
     {
         NumeroFactura = numeroFactura,
+        ClaveAcceso = claveAcceso,
         ClienteId = dto.ClienteId,
         UsuarioId = usuarioId,
         FechaEmision = DateTime.UtcNow,
-        Ambiente = Ambiente.PRUEBAS,
+        Ambiente = configEmpresa.AmbienteSRI == "2" ? Ambiente.PRODUCCION : Ambiente.PRUEBAS,
         TipoEmision = TipoEmision.NORMAL,
         Estado = EstadoFactura.BORRADOR,
         Observaciones = dto.Observaciones
@@ -226,19 +262,28 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
     // 7. Asignar totales a la factura
     factura.Subtotal0 = subtotales[TipoIVA.IVA_0];
-        factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
+    factura.Subtotal15 = subtotales[TipoIVA.IVA_15];
     factura.SubtotalNoObjetoIVA = 0;
     factura.SubtotalExentoIVA = 0;
     factura.SubtotalConDescuento = subtotales.Values.Sum();
     factura.Descuento = descuentoTotal;
     factura.IVA15 = subtotales[TipoIVA.IVA_15] * 0.15m;
+    factura.Propina = 0; // TODO: Implementar propina si es necesario
     factura.ImporteTotal = factura.SubtotalConDescuento + ivaTotal + factura.Propina;
 
+    // Asignar detalles a la factura
     factura.Detalles = detalles;
 
     // 8. Guardar en base de datos
-    _context.Facturas.Add(factura);
-    await _context.SaveChangesAsync(cancellationToken);
+    try
+    {
+        _context.Facturas.Add(factura);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+    catch (Exception ex)
+    {
+        throw new InvalidOperationException($"Error al guardar factura en base de datos: {ex.Message} - Inner: {ex.InnerException?.Message}", ex);
+    }
 
     // 9. Recargar con relaciones para el DTO
     var facturaCompleta = await _context.Facturas
@@ -251,11 +296,7 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
 
     // 10. Mapear a DTO manualmente
     return MapearAFacturaDto(facturaCompleta!);
-} // ✅ CIERRA el método
-
-
-
-        // ==================== LISTAR FACTURAS ====================
+}
 
         public async Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
@@ -531,8 +572,8 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
                 pdfPath: null,
                 mensajesSRI: null);
 
-            // 7. Cambiar estado a FIRMADA si estaba en GENERADA
-            if (factura.Estado == EstadoFactura.GENERADA)
+            // 7. Cambiar estado a FIRMADA si estaba en GENERADA o BORRADOR
+            if (factura.Estado == EstadoFactura.GENERADA || factura.Estado == EstadoFactura.BORRADOR)
             {
                 await ActualizarEstadoAsync(facturaId, EstadoFactura.FIRMADA, cancellationToken);
             }

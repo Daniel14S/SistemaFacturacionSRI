@@ -1,5 +1,5 @@
 using Xunit;
-using SistemaFacturacionSRI.Application.Services;
+using SistemaFacturacionSRI.Infrastructure.Services;
 
 namespace SistemaFacturacionSRI.Tests.Services;
 

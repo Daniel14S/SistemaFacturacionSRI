@@ -1,5 +1,6 @@
 ﻿using System.Security.Cryptography.X509Certificates;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SistemaFacturacionSRI.Domain.DTOs.Configuracion;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
@@ -13,10 +14,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     public class ConfiguracionService : IConfiguracionService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public ConfiguracionService(ApplicationDbContext context)
+        public ConfiguracionService(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         #region Métodos de la Interfaz IConfiguracionService
@@ -138,23 +141,30 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
-            if (configuracion == null || 
-                string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital) ||
-                string.IsNullOrWhiteSpace(configuracion.ClaveCertificadoDigital))
+            if (configuracion == null) return false;
+
+            var certPath = configuracion.RutaCertificadoDigital;
+            var certPass = configuracion.ClaveCertificadoDigital;
+
+            if (string.IsNullOrWhiteSpace(certPath))
+                certPath = _configuration["FirmaElectronica:RutaCertificado"];
+            
+            if (string.IsNullOrWhiteSpace(certPass))
+                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+
+            if (string.IsNullOrWhiteSpace(certPath) || string.IsNullOrWhiteSpace(certPass))
             {
                 return false;
             }
 
             try
             {
-                if (!File.Exists(configuracion.RutaCertificadoDigital))
+                if (!File.Exists(certPath))
                 {
                     return false;
                 }
 
-                using var cert = new X509Certificate2(
-                    configuracion.RutaCertificadoDigital, 
-                    configuracion.ClaveCertificadoDigital);
+                using var cert = new X509Certificate2(certPath, certPass);
 
                 return DateTime.Now >= cert.NotBefore && DateTime.Now <= cert.NotAfter;
             }
@@ -170,23 +180,30 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
-            if (configuracion == null || 
-                string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital) ||
-                string.IsNullOrWhiteSpace(configuracion.ClaveCertificadoDigital))
+            if (configuracion == null) return null;
+
+            var certPath = configuracion.RutaCertificadoDigital;
+            var certPass = configuracion.ClaveCertificadoDigital;
+
+            if (string.IsNullOrWhiteSpace(certPath))
+                certPath = _configuration["FirmaElectronica:RutaCertificado"];
+            
+            if (string.IsNullOrWhiteSpace(certPass))
+                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+
+            if (string.IsNullOrWhiteSpace(certPath) || string.IsNullOrWhiteSpace(certPass))
             {
                 return null;
             }
 
             try
             {
-                if (!File.Exists(configuracion.RutaCertificadoDigital))
+                if (!File.Exists(certPath))
                 {
                     return null;
                 }
 
-                using var cert = new X509Certificate2(
-                    configuracion.RutaCertificadoDigital, 
-                    configuracion.ClaveCertificadoDigital);
+                using var cert = new X509Certificate2(certPath, certPass);
 
                 var fechaExpiracion = cert.NotAfter;
                 var diasParaExpirar = (fechaExpiracion - DateTime.Now).Days;
@@ -274,15 +291,29 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(configuracion.PuntoEmision))
                 camposFaltantes.Add("Punto de Emisión");
 
-            if (string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital))
+            // Verificar si existe configuración en appsettings si no está en BD
+            var certPath = configuracion.RutaCertificadoDigital;
+            var certPass = configuracion.ClaveCertificadoDigital;
+
+            if (string.IsNullOrWhiteSpace(certPath))
+                certPath = _configuration["FirmaElectronica:RutaCertificado"];
+            
+            if (string.IsNullOrWhiteSpace(certPass))
+                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+
+            if (string.IsNullOrWhiteSpace(certPath))
                 camposFaltantes.Add("Certificado Digital");
 
-            if (string.IsNullOrWhiteSpace(configuracion.ClaveCertificadoDigital))
+            if (string.IsNullOrWhiteSpace(certPass))
                 camposFaltantes.Add("Clave del Certificado");
 
             // Validar que el certificado sea válido
-            if (!string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital))
+            if (!string.IsNullOrWhiteSpace(certPath))
             {
+                // Usamos la lógica de validación pero pasando los valores resueltos
+                // Nota: ValidarCertificadoDigitalAsync usa los de la BD, así que validamos aquí directamente si es necesario
+                // o actualizamos ValidarCertificadoDigitalAsync.
+                // Por simplicidad, llamaremos a ValidarCertificadoDigitalAsync que actualizaremos a continuación.
                 var certificadoValido = await ValidarCertificadoDigitalAsync();
                 if (!certificadoValido)
                 {

@@ -2,7 +2,7 @@
 using Xunit;
 using SistemaFacturacionSRI.Infrastructure.Services;
 using SistemaFacturacionSRI.Domain.DTOs.Factura;
-using ClaveAccesoGenerator = SistemaFacturacionSRI.Application.Services.ClaveAccesoGenerator;
+using ClaveAccesoGenerator = SistemaFacturacionSRI.Infrastructure.Services.ClaveAccesoGenerator;
 
 namespace Tests.Services
 {

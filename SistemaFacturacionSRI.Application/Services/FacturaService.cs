@@ -5,6 +5,7 @@ using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
 using AutoMapper;
+using System;
 
 namespace SistemaFacturacionSRI.Application.Services
 {
@@ -124,7 +125,7 @@ namespace SistemaFacturacionSRI.Application.Services
             }
 
             // ⚠️ CORRECCIÓN: Obtener secuencia con Async
-            var numeroFactura = await _secuenciaService.ObtenerSiguienteNumeroAsync();
+            var numeroFactura = await _secuenciaService.GenerarNumeroCompletoAsync();
 
             // Crear entidad Factura
             var factura = new Factura
@@ -198,6 +199,16 @@ namespace SistemaFacturacionSRI.Application.Services
             factura.Descuento = descuentoTotal;
             factura.IVA15 = subtotales[TipoIVA.IVA_15] * 0.15m;
             factura.ImporteTotal = factura.SubtotalConDescuento + ivaTotal + factura.Propina;
+
+            // DEBUG: Imprimir valores antes de guardar
+            Console.WriteLine($"[DEBUG] CrearFacturaAsync: Detalles Count = {detalles.Count}");
+            Console.WriteLine($"[DEBUG] CrearFacturaAsync: Subtotal15 = {factura.Subtotal15}");
+            Console.WriteLine($"[DEBUG] CrearFacturaAsync: SubtotalConDescuento = {factura.SubtotalConDescuento}");
+            Console.WriteLine($"[DEBUG] CrearFacturaAsync: ImporteTotal = {factura.ImporteTotal}");
+            foreach(var d in detalles)
+            {
+                Console.WriteLine($"[DEBUG] Detalle: ProdId={d.ProductoId}, Cant={d.Cantidad}, Total={d.ValorTotal}");
+            }
 
             // Asignar detalles
             factura.Detalles = detalles;
