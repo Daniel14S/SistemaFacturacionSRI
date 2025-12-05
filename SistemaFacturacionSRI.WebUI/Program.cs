@@ -278,6 +278,9 @@ builder.Services.AddHttpClient<ISriWebServiceClient, SriWebServiceClient>((servi
 })
 .SetHandlerLifetime(TimeSpan.FromMinutes(5)); // Lifetime del handler
 
+builder.Services.AddScoped<SriComprobanteService>();
+
+builder.Services.AddScoped<ISriIntegracionService, SriIntegracionService>();
 
 var app = builder.Build();
 
