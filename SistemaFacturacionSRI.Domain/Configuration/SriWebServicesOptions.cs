@@ -1,5 +1,6 @@
 // SistemaFacturacionSRI.Domain/Configuration/SriWebServicesOptions.cs
 // T-070: Configuración de URLs y opciones de WebServices del SRI
+// ✅ CORREGIDO: Dominios correctos del SRI
 
 using System.ComponentModel.DataAnnotations;
 
@@ -118,17 +119,17 @@ namespace SistemaFacturacionSRI.Domain.Configuration
                     $"Ambiente '{Ambiente}' no coincide con AmbienteCodigo {AmbienteCodigo}");
             }
 
-            // Validar URLs según ambiente
-            if (Ambiente.ToUpper() == "PRUEBAS" && !UrlRecepcion.Contains("celements"))
+            // ✅ CORREGIDO: Validar URLs según ambiente con dominios correctos
+            if (Ambiente.ToUpper() == "PRUEBAS" && !UrlRecepcion.Contains("celcer.sri.gob.ec"))
             {
                 throw new InvalidOperationException(
-                    "URL de recepción para PRUEBAS debe contener 'celements.sri.gob.ec'");
+                    "URL de recepción para PRUEBAS debe contener 'celcer.sri.gob.ec'");
             }
 
-            if (Ambiente.ToUpper() == "PRODUCCION" && UrlRecepcion.Contains("celements"))
+            if (Ambiente.ToUpper() == "PRODUCCION" && UrlRecepcion.Contains("celcer"))
             {
                 throw new InvalidOperationException(
-                    "URL de recepción para PRODUCCION no debe contener 'celements'");
+                    "URL de recepción para PRODUCCION no debe contener 'celcer' (debe ser 'cel.sri.gob.ec')");
             }
         }
 
@@ -167,6 +168,7 @@ namespace SistemaFacturacionSRI.Domain.Configuration
 
     /// <summary>
     /// T-070: Constantes para ambientes SRI
+    /// ✅ CORREGIDO: URLs oficiales actualizadas
     /// </summary>
     public static class SriAmbientes
     {
@@ -176,22 +178,22 @@ namespace SistemaFacturacionSRI.Domain.Configuration
         public const string PRUEBAS_NOMBRE = "PRUEBAS";
         public const string PRODUCCION_NOMBRE = "PRODUCCION";
 
-        // URLs oficiales del SRI
+        // ✅ URLs oficiales CORREGIDAS del SRI
         public static class Urls
         {
-            // Ambiente PRUEBAS
+            // ✅ Ambiente PRUEBAS - Dominio correcto: celcer.sri.gob.ec
             public const string PRUEBAS_RECEPCION = 
-                "https://celements.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline";
+                "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl";
             
             public const string PRUEBAS_AUTORIZACION = 
-                "https://celements.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline";
+                "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl";
 
-            // Ambiente PRODUCCION
+            // ✅ Ambiente PRODUCCION - Dominio: cel.sri.gob.ec
             public const string PRODUCCION_RECEPCION = 
-                "https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline";
+                "https://cel.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl";
             
             public const string PRODUCCION_AUTORIZACION = 
-                "https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline";
+                "https://cel.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl";
         }
 
         /// <summary>

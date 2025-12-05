@@ -26,17 +26,20 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         private readonly IFacturaService _facturaService;
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly IWebHostEnvironment _environment;
+        private readonly ISriIntegracionService _sriIntegracionService;
         private readonly ILogger<FacturaController> _logger;
 
         public FacturaController(
             IFacturaService facturaService,
             IPdfGeneratorService pdfGeneratorService,
             IWebHostEnvironment environment,
+            ISriIntegracionService sriIntegracionService,
             ILogger<FacturaController> logger)
         {
             _facturaService = facturaService;
             _pdfGeneratorService = pdfGeneratorService;
             _environment = environment;
+            _sriIntegracionService = sriIntegracionService;
             _logger = logger;
         }
 
@@ -851,7 +854,171 @@ public async Task<IActionResult> FirmarFactura(int id)
     }
 }
 
+/// <summary>
+/// T-084: POST /api/factura/{id}/enviar-sri
+/// Procesa una factura completa: genera XML → firma → envía al SRI → consulta autorización → actualiza BD
+/// Usa la integración REAL de Pedro (ISriIntegracionService)
+/// PERMISOS: Administrador ✅ | Vendedor ✅ (solo sus facturas)
+/// </summary>
+[HttpPost("{id}/enviar-sri")]
+[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+[ProducesResponseType(typeof(EnviarSriResponseDto), StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status400BadRequest)]
+[ProducesResponseType(StatusCodes.Status403Forbidden)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> EnviarAlSri(int id)
+{
+    try
+    {
+        if (id <= 0)
+        {
+            return BadRequest(new { message = "El ID debe ser mayor a cero" });
+        }
+
+        // 1. Obtener la factura para validar permisos y estado
+        var factura = await _facturaService.ObtenerPorIdAsync(id);
+
+        if (factura == null)
+        {
+            return NotFound(new 
+            { 
+                message = $"Factura con ID {id} no encontrada" 
+            });
+        }
+
+        // 2. Validar permisos: Vendedor solo puede enviar sus propias facturas
+        if (!EsAdministrador())
+        {
+            int usuarioId = ObtenerUsuarioId();
+            
+            if (factura.UsuarioId != usuarioId)
+            {
+                _logger.LogWarning(
+                    "Usuario {UsuarioId} intentó enviar factura {FacturaId} de otro usuario al SRI",
+                    usuarioId, id);
+                
+                return Forbid();
+            }
+        }
+
+        // 3. Validar estado actual
+        if (!Enum.TryParse(factura.Estado, true, out EstadoFactura estadoActual))
+        {
+            return BadRequest(new
+            {
+                message = $"El estado actual de la factura no es válido: {factura.Estado}"
+            });
+        }
+
+        // Solo se pueden enviar facturas FIRMADA, DEVUELTA o NO_AUTORIZADA
+        var estadosPermitidos = new[] 
+        { 
+            EstadoFactura.FIRMADA, 
+            EstadoFactura.DEVUELTA, 
+            EstadoFactura.NO_AUTORIZADA 
+        };
+
+        if (!estadosPermitidos.Contains(estadoActual))
+        {
+            return BadRequest(new
+            {
+                message = $"Solo se pueden enviar facturas FIRMADA, DEVUELTA o NO_AUTORIZADA. Estado actual: {factura.Estado}",
+                estadoActual = factura.Estado,
+                estadosPermitidos = estadosPermitidos.Select(e => e.ToString()),
+                sugerencia = estadoActual == EstadoFactura.BORRADOR 
+                    ? "Debe firmar la factura antes de enviarla al SRI"
+                    : "El estado actual no permite el envío al SRI"
+            });
+        }
+
+        _logger.LogInformation(
+            "════════════════════════════════════════════════════════════════");
+        _logger.LogInformation(
+            "Iniciando envío de factura {FacturaId} ({NumeroFactura}) al SRI", 
+            id, factura.NumeroFactura);
+        _logger.LogInformation(
+            "Usuario: {UsuarioId}, Estado actual: {Estado}", 
+            ObtenerUsuarioId(), factura.Estado);
+        _logger.LogInformation(
+            "════════════════════════════════════════════════════════════════");
+
+        // 4. Llamar al servicio de integración SRI de Pedro (T-082)
+        var resultado = await _sriIntegracionService.ProcesarFacturaCompletaAsync(id);
+
+        // 5. Mapear resultado a DTO de respuesta
+        var response = EnviarSriResponseDto.MapearDesde(resultado, factura.NumeroFactura);
+
+        // 6. Logging del resultado
+        if (resultado.Exitoso)
+        {
+            _logger.LogInformation(
+                "════════════════════════════════════════════════════════════════");
+            _logger.LogInformation(
+                "🎉 Factura {FacturaId} AUTORIZADA exitosamente por el SRI", id);
+            _logger.LogInformation(
+                "Número de Autorización: {NumeroAutorizacion}", resultado.NumeroAutorizacion);
+            _logger.LogInformation(
+                "Tiempo total: {TiempoTotal:F2}s, Intentos: {Intentos}",
+                resultado.TiempoTotal.TotalSeconds, resultado.TotalIntentos);
+            _logger.LogInformation(
+                "════════════════════════════════════════════════════════════════");
+        }
+        else
+        {
+            _logger.LogWarning(
+                "════════════════════════════════════════════════════════════════");
+            _logger.LogWarning(
+                "⚠️ Factura {FacturaId} NO AUTORIZADA por el SRI", id);
+            _logger.LogWarning(
+                "Estado final: {EstadoFinal}", resultado.EstadoFinal);
+            _logger.LogWarning(
+                "Error: {Error}", resultado.MensajeError);
+            _logger.LogWarning(
+                "Tiempo total: {TiempoTotal:F2}s, Intentos: {Intentos}",
+                resultado.TiempoTotal.TotalSeconds, resultado.TotalIntentos);
+            _logger.LogWarning(
+                "════════════════════════════════════════════════════════════════");
+        }
+
+        // 7. Retornar respuesta
+        return Ok(response);
     }
+    catch (KeyNotFoundException ex)
+    {
+        _logger.LogWarning(ex, "Factura {FacturaId} no encontrada al intentar enviar al SRI", id);
+        return NotFound(new { message = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        _logger.LogWarning(ex, "Error de validación al enviar factura {FacturaId} al SRI", id);
+        return BadRequest(new 
+        { 
+            message = ex.Message,
+            tipo = "ValidationError"
+        });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        _logger.LogWarning(ex, "Acceso no autorizado al enviar factura {FacturaId} al SRI", id);
+        return Forbid();
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "❌ Error crítico al enviar factura {FacturaId} al SRI", id);
+        
+        return StatusCode(StatusCodes.Status500InternalServerError, new
+        {
+            message = "Error interno del servidor al enviar la factura al SRI",
+            tipo = "InternalError",
+            detalles = ex.Message
+        });
+    }
+}
+
+
+    }
+
 
     
 
