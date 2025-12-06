@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using SistemaFacturacionSRI.Infrastructure.Services;
 using SistemaFacturacionSRI.Infrastructure.Services.SRI;
 using SistemaFacturacionSRI.Domain.Configuration;
+using System.Net.Http.Headers;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -83,6 +84,7 @@ builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
 builder.Services.AddScoped<IXmlGeneratorService, SistemaFacturacionSRI.Infrastructure.Services.XmlGeneratorService>();
 builder.Services.AddScoped<IReporteService, ReporteService>();
 builder.Services.AddScoped<PdfReporteService>();
+builder.Services.AddScoped<IEmailFacturaService, EmailFacturaService>();
 
 
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
@@ -235,6 +237,9 @@ builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 builder.Services.Configure<CertificadoDigitalOptions>(
     builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
 
+builder.Services.Configure<ResendOptions>(
+    builder.Configuration.GetSection(ResendOptions.SectionName));
+
 builder.Services.AddDataProtection();
 builder.Services.AddScoped<ICertificadoDigitalStorageService, CertificadoDigitalStorageService>();
 
@@ -294,6 +299,20 @@ builder.Services.AddHttpClient<ISriWebServiceClient, SriWebServiceClient>((servi
     };
 })
 .SetHandlerLifetime(TimeSpan.FromMinutes(5)); // Lifetime del handler
+
+builder.Services.AddHttpClient<IEmailFacturaService, EmailFacturaService>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<ResendOptions>>().Value;
+    client.BaseAddress = new Uri("https://api.resend.com/");
+
+    if (!string.IsNullOrWhiteSpace(options.ApiKey))
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+    }
+
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("SistemaFacturacionSRI/1.0");
+})
+.SetHandlerLifetime(TimeSpan.FromMinutes(5));
 
 builder.Services.AddScoped<SriComprobanteService>();
 builder.Services.AddScoped<ClaveAccesoGenerator>();

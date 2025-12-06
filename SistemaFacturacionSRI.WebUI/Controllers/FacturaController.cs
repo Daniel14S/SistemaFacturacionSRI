@@ -27,6 +27,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         private readonly IPdfGeneratorService _pdfGeneratorService;
         private readonly IWebHostEnvironment _environment;
         private readonly ISriIntegracionService _sriIntegracionService;
+        private readonly IEmailFacturaService _emailFacturaService;
         private readonly ILogger<FacturaController> _logger;
 
         public FacturaController(
@@ -34,12 +35,14 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             IPdfGeneratorService pdfGeneratorService,
             IWebHostEnvironment environment,
             ISriIntegracionService sriIntegracionService,
+            IEmailFacturaService emailFacturaService,
             ILogger<FacturaController> logger)
         {
             _facturaService = facturaService;
             _pdfGeneratorService = pdfGeneratorService;
             _environment = environment;
             _sriIntegracionService = sriIntegracionService;
+            _emailFacturaService = emailFacturaService;
             _logger = logger;
         }
 
@@ -155,6 +158,16 @@ public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFactura
         _logger.LogInformation(
             "Factura creada exitosamente. ID: {FacturaId}, Número: {NumeroFactura}, Total: {Total}",
             factura.Id, factura.NumeroFactura, factura.Total);
+
+        // Enviar correo con PDF y XML (no bloquea la creación)
+        try
+        {
+            await _emailFacturaService.EnviarFacturaAsync(factura.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "No se pudo enviar el correo de factura {FacturaId}", factura.Id);
+        }
 
         // 5. Retornar resultado 201 Created con Location header
         return CreatedAtAction(
