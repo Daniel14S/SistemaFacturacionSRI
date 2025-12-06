@@ -15,15 +15,18 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     {
         private readonly CertificadoDigitalOptions _options;
         private readonly ILogger<CertificadoDigitalService> _logger;
+        private readonly ICertificadoDigitalStorageService _storageService;
         private X509Certificate2? _certificadoActual;
         private readonly object _lock = new object();
 
         public CertificadoDigitalService(
             IOptions<CertificadoDigitalOptions> options,
-            ILogger<CertificadoDigitalService> logger)
+            ILogger<CertificadoDigitalService> logger,
+            ICertificadoDigitalStorageService storageService)
         {
             _options = options.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
 
             // Validar configuración al inicializar
             try 
@@ -49,12 +52,61 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                     return _certificadoActual;
                 }
 
-                _logger.LogInformation("Cargando certificado digital desde configuración");
+                // 1) Intentar cargar desde almacenamiento seguro en BD
+                var certificadoBd = _storageService.ObtenerCertificadoActivoAsync().GetAwaiter().GetResult();
+                if (certificadoBd != null)
+                {
+                    _logger.LogInformation("Cargando certificado digital desde almacenamiento seguro en base de datos");
+                    _certificadoActual = CargarCertificado(certificadoBd.ArchivoBytes, certificadoBd.ClavePlano);
+                    return _certificadoActual;
+                }
+
+                // 2) Fallback a configuración de archivos
+                _logger.LogInformation("Cargando certificado digital desde configuración de archivos");
 
                 var rutaAbsoluta = _options.ObtenerRutaAbsoluta();
                 _certificadoActual = CargarCertificado(rutaAbsoluta, _options.ClaveCertificado);
 
                 return _certificadoActual;
+            }
+        }
+
+        /// <summary>
+        /// Carga el certificado desde bytes y contraseña específicas
+        /// </summary>
+        private X509Certificate2 CargarCertificado(byte[] contenido, string password)
+        {
+            try
+            {
+                _logger.LogInformation("Cargando certificado desde almacenamiento seguro (bytes)");
+
+                var certificado = new X509Certificate2(
+                    contenido,
+                    password,
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet
+                );
+
+                _logger.LogInformation("Certificado cargado exitosamente desde BD. Subject: {Subject}",
+                    certificado.Subject);
+
+                if (_options.ValidarVigencia && !ValidarCertificado(certificado))
+                {
+                    throw new InvalidOperationException("El certificado no es válido o está expirado");
+                }
+
+                if (!TieneClavePrivada(certificado))
+                {
+                    throw new InvalidOperationException("El certificado no contiene clave privada.");
+                }
+
+                return certificado;
+            }
+            catch (CryptographicException ex)
+            {
+                _logger.LogError(ex, "Error de criptografía al cargar certificado desde BD");
+                throw new InvalidOperationException(
+                    "No se pudo cargar el certificado almacenado. Verifique la clave.",
+                    ex);
             }
         }
 
@@ -707,6 +759,15 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             }
 
             return esValido;
+        }
+
+        public void RefrescarCertificado()
+        {
+            lock (_lock)
+            {
+                _certificadoActual = null;
+            }
+            _logger.LogInformation("Caché de certificado limpiada; se recargará en el próximo uso.");
         }
 
     }

@@ -35,6 +35,19 @@ public interface IConfiguracionService
     Task<bool> ActualizarCertificadoDigitalAsync(string rutaCertificado, string claveCertificado);
 
     /// <summary>
+    /// Guarda el certificado digital de forma segura en la base de datos.
+    /// </summary>
+    /// <param name="archivo">Contenido del archivo .p12/.pfx</param>
+    /// <param name="clave">Clave del certificado</param>
+    /// <param name="tipo">PRUEBAS o PRODUCCION</param>
+    Task<CertificadoDigitalActivoDto> GuardarCertificadoEnBdAsync(byte[] archivo, string nombreArchivo, string clave, string tipo);
+
+    /// <summary>
+    /// Elimina (inactiva) el certificado almacenado en BD.
+    /// </summary>
+    Task<bool> EliminarCertificadoBdAsync();
+
+    /// <summary>
     /// Actualiza solo el logo de la empresa
     /// </summary>
     /// <param name="rutaLogo">Ruta física del logo</param>

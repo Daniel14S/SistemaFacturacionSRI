@@ -69,6 +69,11 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         /// <param name="certificado">Certificado a validar</param>
         /// <returns>True si es válido</returns>
         bool ValidarYRegistrarCertificado(X509Certificate2 certificado);
+
+        /// <summary>
+        /// Limpia la caché en memoria para forzar recarga desde BD o archivo.
+        /// </summary>
+        void RefrescarCertificado();
     }
 
     /// <summary>

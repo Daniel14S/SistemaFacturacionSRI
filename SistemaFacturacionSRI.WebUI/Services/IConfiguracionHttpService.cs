@@ -57,5 +57,11 @@ public interface IConfiguracionHttpService
     /// Sube el certificado digital .p12 (futuro)
     /// POST /api/configuracion/certificado
     /// </summary>
-    Task<bool> SubirCertificadoAsync(byte[] archivoBytes, string nombreArchivo, string clave);
+    Task<bool> SubirCertificadoAsync(byte[] archivoBytes, string nombreArchivo, string clave, string tipo);
+
+    /// <summary>
+    /// Elimina el certificado almacenado para permitir reemplazo.
+    /// DELETE /api/configuracion/certificado
+    /// </summary>
+    Task<bool> EliminarCertificadoAsync();
 }

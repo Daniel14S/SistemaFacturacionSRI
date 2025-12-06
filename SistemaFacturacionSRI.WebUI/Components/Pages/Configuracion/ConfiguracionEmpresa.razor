@@ -2,6 +2,8 @@
 @rendermode InteractiveServer
 @using SistemaFacturacionSRI.Domain.DTOs.Configuracion
 @using SistemaFacturacionSRI.WebUI.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using System.IO
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Administrador")]
 @inject IConfiguracionHttpService ConfiguracionService
@@ -388,6 +390,76 @@
                                 </div>
                             </li>
                             <li>Reinicie la aplicación</li>
+
+                                <!-- Gestión del Certificado Digital (carga / reemplazo) -->
+                                <div class="card card-config mb-4">
+                                    <div class="card-header card-header-config">
+                                        <h5 class="mb-0" style="color: white !important;">
+                                            <i class="bi bi-upload me-2"></i>
+                                            3.1 Subir / Reemplazar Certificado
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label label-config">
+                                                    <i class="bi bi-file-earmark-lock me-1"></i>
+                                                    Archivo .p12 / .pfx
+                                                </label>
+                                                <InputFile OnChange="OnCertificadoSeleccionado" accept=".p12,.pfx" />
+                                                <small class="text-muted d-block">El archivo se almacenará encriptado en la base de datos.</small>
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label label-config">
+                                                    <i class="bi bi-key-fill me-1"></i>
+                                                    Clave del certificado <span class="text-danger">*</span>
+                                                </label>
+                                                <input type="password" class="form-control input-config" @bind="_claveCertificado" placeholder="Ingrese la clave del certificado" />
+                                            </div>
+
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label label-config">
+                                                    <i class="bi bi-diagram-3-fill me-1"></i>
+                                                    Ambiente del certificado
+                                                </label>
+                                                <select class="form-select input-config" @bind="_tipoCertificado">
+                                                    <option value="PRUEBAS">PRUEBAS</option>
+                                                    <option value="PRODUCCION">PRODUCCIÓN</option>
+                                                </select>
+                                            </div>
+
+                                            <div class="col-12">
+                                                <button type="button"
+                                                        class="btn btn-primary btn-config me-2"
+                                                        @onclick="GuardarCertificadoBd"
+                                                        disabled="@_procesandoCertificado">
+                                                    @if (_procesandoCertificado)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                                        <span>Guardando...</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="bi bi-upload me-2"></i>
+                                                        <span>Subir / Reemplazar</span>
+                                                    }
+                                                </button>
+
+                                                @if (_configuracion?.TieneCertificado == true)
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-danger btn-config"
+                                                            @onclick="EliminarCertificadoBd"
+                                                            disabled="@_procesandoCertificado">
+                                                        <i class="bi bi-trash me-2"></i>
+                                                        Eliminar certificado actual
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                         </ol>
                     </div>
                 </div>
@@ -395,6 +467,28 @@
         }
     </div>
 </div>
+
+@if (_configuracion?.TieneCertificado == true)
+{
+    <div class="d-flex justify-content-end mt-3 mb-1">
+        <button type="button"
+                class="btn btn-danger btn-config"
+                @onclick="EliminarCertificadoBd"
+                disabled="@_procesandoCertificado">
+            <i class="bi bi-trash me-2"></i>
+            Eliminar certificado de la BD
+        </button>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-end mt-3 mb-1">
+        <button type="button" class="btn btn-outline-secondary btn-config" disabled>
+            <i class="bi bi-trash me-2"></i>
+            No hay certificado para eliminar
+        </button>
+    </div>
+}
 
 <style>
 /* Estilos específicos para certificado */
@@ -887,6 +981,10 @@ root {
     private bool _cargando = true;
     private bool _guardando = false;
     private string _ambienteSeleccionado = "1";
+    private IBrowserFile? _archivoCertificado;
+    private string _claveCertificado = string.Empty;
+    private string _tipoCertificado = "PRUEBAS";
+    private bool _procesandoCertificado;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -1027,16 +1125,83 @@ root {
         Navigation.NavigateTo("/");
     }
 
-    private void SubirCertificado()
+    private void OnCertificadoSeleccionado(InputFileChangeEventArgs e)
     {
-        ToastService.ShowInfo("Funcionalidad de carga de certificado estará disponible próximamente");
-        // TODO: Implementar modal de carga de certificado .p12
+        _archivoCertificado = e.File;
     }
 
-    private void CambiarCertificado()
+    private async Task GuardarCertificadoBd()
     {
-        ToastService.ShowInfo("Funcionalidad de actualización de certificado estará disponible próximamente");
-        // TODO: Implementar modal de cambio de certificado
+        if (_procesandoCertificado) return;
+
+        if (_archivoCertificado == null)
+        {
+            ToastService.ShowWarning("Seleccione un archivo .p12/.pfx");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_claveCertificado))
+        {
+            ToastService.ShowWarning("Ingrese la clave del certificado");
+            return;
+        }
+
+        _procesandoCertificado = true;
+        try
+        {
+            await using var ms = new MemoryStream();
+            await _archivoCertificado.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+
+            var ok = await ConfiguracionService.SubirCertificadoAsync(ms.ToArray(), _archivoCertificado.Name, _claveCertificado, _tipoCertificado);
+
+            if (ok)
+            {
+                ToastService.ShowSuccess("Certificado almacenado en la base de datos");
+                _claveCertificado = string.Empty;
+                _archivoCertificado = null;
+                await CargarConfiguracion();
+            }
+            else
+            {
+                ToastService.ShowError("No se pudo guardar el certificado");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al subir certificado: {ex.Message}");
+        }
+        finally
+        {
+            _procesandoCertificado = false;
+        }
+    }
+
+    private async Task EliminarCertificadoBd()
+    {
+        if (_procesandoCertificado) return;
+
+        _procesandoCertificado = true;
+        try
+        {
+            var ok = await ConfiguracionService.EliminarCertificadoAsync();
+            if (ok)
+            {
+                ToastService.ShowSuccess("Certificado eliminado. Puede cargar uno nuevo.");
+                await CargarConfiguracion();
+            }
+            else
+            {
+                ToastService.ShowError("No se pudo eliminar el certificado");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Error al eliminar certificado: {ex.Message}");
+        }
+        finally
+        {
+            _procesandoCertificado = false;
+        }
     }
 
 }

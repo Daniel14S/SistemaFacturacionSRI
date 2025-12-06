@@ -212,7 +212,7 @@ public class ConfiguracionHttpService : IConfiguracionHttpService
         }
     }
 
-    public async Task<bool> SubirCertificadoAsync(byte[] archivoBytes, string nombreArchivo, string clave)
+    public async Task<bool> SubirCertificadoAsync(byte[] archivoBytes, string nombreArchivo, string clave, string tipo)
     {
         try
         {
@@ -223,6 +223,7 @@ public class ConfiguracionHttpService : IConfiguracionHttpService
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-pkcs12");
             content.Add(fileContent, "certificado", nombreArchivo);
             content.Add(new StringContent(clave), "clave");
+            content.Add(new StringContent(tipo), "tipo");
 
             var response = await _httpClient.PostAsync("/api/configuracion/certificado", content);
 
@@ -239,6 +240,29 @@ public class ConfiguracionHttpService : IConfiguracionHttpService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Excepción al subir certificado");
+            return false;
+        }
+    }
+
+    public async Task<bool> EliminarCertificadoAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Eliminando certificado digital almacenado");
+            var response = await _httpClient.DeleteAsync("/api/configuracion/certificado");
+
+            if (response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var error = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Error al eliminar certificado: {Error}", error);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Excepción al eliminar certificado");
             return false;
         }
     }

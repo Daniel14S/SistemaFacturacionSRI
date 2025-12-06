@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using System.Security.Cryptography.X509Certificates;
 using SistemaFacturacionSRI.Domain.Configuration;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Infrastructure.Services;
 
 namespace Tests.Services
@@ -15,11 +16,13 @@ namespace Tests.Services
     public class CertificadoValidacionTests
     {
         private readonly Mock<ILogger<CertificadoDigitalService>> _loggerMock;
+        private readonly Mock<ICertificadoDigitalStorageService> _storageMock;
         private readonly CertificadoDigitalOptions _options;
 
         public CertificadoValidacionTests()
         {
             _loggerMock = new Mock<ILogger<CertificadoDigitalService>>();
+            _storageMock = new Mock<ICertificadoDigitalStorageService>();
             _options = new CertificadoDigitalOptions
             {
                 RutaCertificado = "Infrastructure/Resources/Certificados/pruebas/test.p12",
@@ -88,7 +91,7 @@ namespace Tests.Services
         {
             // Arrange
             var optionsMock = Options.Create(_options);
-            var service = new CertificadoDigitalService(optionsMock, _loggerMock.Object);
+            var service = new CertificadoDigitalService(optionsMock, _loggerMock.Object, _storageMock.Object);
             
             // Este test verificaría que se llama al logger
             // Requiere Mock del logger para verificar las llamadas

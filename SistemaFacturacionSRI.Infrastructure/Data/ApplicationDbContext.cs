@@ -39,6 +39,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
         public DbSet<DetalleFactura> DetalleFacturas { get; set; }
         public DbSet<InfoAdicional> InfoAdicional { get; set; }
         public DbSet<SecuenciaFactura> SecuenciasFactura { get; set; }
+        public DbSet<CertificadoDigital> CertificadosDigitales { get; set; }
         
         /// <summary>
         /// Tabla de configuración de la empresa emisora

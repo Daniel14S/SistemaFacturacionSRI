@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaFacturacionSRI.Domain.DTOs.Configuracion;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.WebUI.Authorization;
+using System.IO;
 
 namespace SistemaFacturacionSRI.WebUI.Controllers
 {
@@ -154,6 +155,78 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
                 {
                     message = "Error interno al obtener información del certificado"
                 });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/configuracion/certificado
+        /// Sube y almacena de forma segura el archivo .p12 y su clave en la base de datos.
+        /// </summary>
+        [HttpPost("certificado")]
+        [RequestSizeLimit(10 * 1024 * 1024)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult> SubirCertificado([FromForm] IFormFile certificado, [FromForm] string clave, [FromForm] string? tipo)
+        {
+            if (certificado == null || certificado.Length == 0)
+            {
+                return BadRequest(new { message = "Debe adjuntar un archivo .p12" });
+            }
+
+            if (string.IsNullOrWhiteSpace(clave))
+            {
+                return BadRequest(new { message = "La clave del certificado es obligatoria" });
+            }
+
+            try
+            {
+                await using var ms = new MemoryStream();
+                await certificado.CopyToAsync(ms);
+
+                var resultado = await _configuracionService.GuardarCertificadoEnBdAsync(
+                    ms.ToArray(),
+                    certificado.FileName,
+                    clave,
+                    string.IsNullOrWhiteSpace(tipo) ? "PRUEBAS" : tipo);
+
+                return Ok(new
+                {
+                    id = resultado.Id,
+                    nombre = resultado.NombreArchivo,
+                    tipo = resultado.Tipo,
+                    expira = resultado.FechaExpiracion,
+                    mensaje = "Certificado almacenado correctamente"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Error al guardar certificado en BD");
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al subir certificado");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error interno al subir certificado" });
+            }
+        }
+
+        /// <summary>
+        /// DELETE /api/configuracion/certificado
+        /// Elimina el certificado almacenado en BD para permitir reemplazo.
+        /// </summary>
+        [HttpDelete("certificado")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult> EliminarCertificado()
+        {
+            try
+            {
+                await _configuracionService.EliminarCertificadoBdAsync();
+                return Ok(new { mensaje = "Certificado eliminado. Puede subir uno nuevo." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar certificado");
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = "Error interno al eliminar certificado" });
             }
         }
 
