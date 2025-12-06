@@ -15,11 +15,19 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ICertificadoDigitalStorageService _certificadoStorage;
+        private readonly ICertificadoDigitalService _certificadoService;
 
-        public ConfiguracionService(ApplicationDbContext context, IConfiguration configuration)
+        public ConfiguracionService(
+            ApplicationDbContext context,
+            IConfiguration configuration,
+            ICertificadoDigitalStorageService certificadoStorage,
+            ICertificadoDigitalService certificadoService)
         {
             _context = context;
             _configuration = configuration;
+            _certificadoStorage = certificadoStorage;
+            _certificadoService = certificadoService;
         }
 
         #region Métodos de la Interfaz IConfiguracionService
@@ -74,40 +82,54 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(claveCertificado))
                 throw new ArgumentException("La clave del certificado es obligatoria", nameof(claveCertificado));
 
+            // Cargar el archivo y almacenarlo de forma segura en la BD
+            var bytes = await File.ReadAllBytesAsync(rutaCertificado);
+            await GuardarCertificadoEnBdAsync(bytes, Path.GetFileName(rutaCertificado), claveCertificado, "PRUEBAS");
+
+            return true;
+        }
+
+        public async Task<CertificadoDigitalActivoDto> GuardarCertificadoEnBdAsync(byte[] archivo, string nombreArchivo, string clave, string tipo)
+        {
+            var resultado = await _certificadoStorage.GuardarCertificadoAsync(new GuardarCertificadoRequest
+            {
+                ArchivoBytes = archivo,
+                NombreArchivo = nombreArchivo,
+                Clave = clave,
+                Tipo = tipo
+            });
+
+            // Limpiar valores antiguos en tabla ConfiguracionEmpresa para evitar rutas en disco
             var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
-            
-            if (configuracion == null)
+            if (configuracion != null)
             {
-                throw new InvalidOperationException("No existe configuración en el sistema");
+                configuracion.RutaCertificadoDigital = null;
+                configuracion.ClaveCertificadoDigital = null;
+                configuracion.FechaModificacion = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
 
-            // Validar que el certificado existe y es válido
-            if (!File.Exists(rutaCertificado))
+            // Limpiar caché para que se recargue el nuevo certificado sin reiniciar
+            _certificadoService.RefrescarCertificado();
+
+            return resultado;
+        }
+
+        public async Task<bool> EliminarCertificadoBdAsync()
+        {
+            await _certificadoStorage.EliminarCertificadoActivoAsync();
+
+            var configuracion = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync();
+            if (configuracion != null)
             {
-                throw new FileNotFoundException("El archivo de certificado no existe", rutaCertificado);
+                configuracion.RutaCertificadoDigital = null;
+                configuracion.ClaveCertificadoDigital = null;
+                configuracion.FechaModificacion = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
 
-            try
-            {
-                // Validar que se puede cargar el certificado con la clave proporcionada
-                using var cert = new X509Certificate2(rutaCertificado, claveCertificado);
-                
-                // Validar que el certificado esté vigente
-                if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
-                {
-                    throw new InvalidOperationException("El certificado no está vigente");
-                }
-            }
-            catch (Exception ex) when (ex is not InvalidOperationException)
-            {
-                throw new InvalidOperationException("No se pudo validar el certificado. Verifique la ruta y la clave.", ex);
-            }
-
-            // TODO: Encriptar la clave antes de guardarla
-            configuracion.RutaCertificadoDigital = rutaCertificado;
-            configuracion.ClaveCertificadoDigital = claveCertificado;
-
-            await _context.SaveChangesAsync();
+            // Limpiar caché para que se recargue el estado sin reiniciar
+            _certificadoService.RefrescarCertificado();
 
             return true;
         }
@@ -137,20 +159,28 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<bool> ValidarCertificadoDigitalAsync()
         {
+            // Prioridad: certificado almacenado en BD
+            var certificadoBd = await _certificadoStorage.ObtenerCertificadoActivoAsync();
+            if (certificadoBd != null)
+            {
+                try
+                {
+                    using var cert = new X509Certificate2(certificadoBd.ArchivoBytes, certificadoBd.ClavePlano);
+                    return DateTime.Now >= cert.NotBefore && DateTime.Now <= cert.NotAfter;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            // Fallback: configuración en appsettings / ruta física
             var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
-            if (configuracion == null) return false;
-
-            var certPath = configuracion.RutaCertificadoDigital;
-            var certPass = configuracion.ClaveCertificadoDigital;
-
-            if (string.IsNullOrWhiteSpace(certPath))
-                certPath = _configuration["FirmaElectronica:RutaCertificado"];
-            
-            if (string.IsNullOrWhiteSpace(certPass))
-                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+            var certPath = configuracion?.RutaCertificadoDigital ?? _configuration["FirmaElectronica:RutaCertificado"];
+            var certPass = configuracion?.ClaveCertificadoDigital ?? _configuration["FirmaElectronica:ClaveCertificado"];
 
             if (string.IsNullOrWhiteSpace(certPath) || string.IsNullOrWhiteSpace(certPass))
             {
@@ -176,20 +206,38 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<InfoCertificadoDto?> ObtenerInfoCertificadoAsync()
         {
+            var certificadoBd = await _certificadoStorage.ObtenerCertificadoActivoAsync();
+            if (certificadoBd != null)
+            {
+                try
+                {
+                    using var cert = new X509Certificate2(certificadoBd.ArchivoBytes, certificadoBd.ClavePlano);
+                    var fechaExpiracion = cert.NotAfter;
+                    var diasParaExpirar = (fechaExpiracion - DateTime.Now).Days;
+
+                    return new InfoCertificadoDto
+                    {
+                        Titular = cert.Subject,
+                        RucTitular = ExtraerRucDeCertificado(cert),
+                        FechaEmision = cert.NotBefore,
+                        FechaExpiracion = fechaExpiracion,
+                        EstaVigente = DateTime.Now >= cert.NotBefore && DateTime.Now <= fechaExpiracion,
+                        DiasParaExpirar = diasParaExpirar > 0 ? diasParaExpirar : 0,
+                        Emisor = cert.Issuer
+                    };
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
             var configuracion = await _context.ConfiguracionEmpresa
                 .AsNoTracking()
                 .FirstOrDefaultAsync();
 
-            if (configuracion == null) return null;
-
-            var certPath = configuracion.RutaCertificadoDigital;
-            var certPass = configuracion.ClaveCertificadoDigital;
-
-            if (string.IsNullOrWhiteSpace(certPath))
-                certPath = _configuration["FirmaElectronica:RutaCertificado"];
-            
-            if (string.IsNullOrWhiteSpace(certPass))
-                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+            var certPath = configuracion?.RutaCertificadoDigital ?? _configuration["FirmaElectronica:RutaCertificado"];
+            var certPass = configuracion?.ClaveCertificadoDigital ?? _configuration["FirmaElectronica:ClaveCertificado"];
 
             if (string.IsNullOrWhiteSpace(certPath) || string.IsNullOrWhiteSpace(certPass))
             {
@@ -291,33 +339,41 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             if (string.IsNullOrWhiteSpace(configuracion.PuntoEmision))
                 camposFaltantes.Add("Punto de Emisión");
 
-            // Verificar si existe configuración en appsettings si no está en BD
-            var certPath = configuracion.RutaCertificadoDigital;
-            var certPass = configuracion.ClaveCertificadoDigital;
-
-            if (string.IsNullOrWhiteSpace(certPath))
-                certPath = _configuration["FirmaElectronica:RutaCertificado"];
-            
-            if (string.IsNullOrWhiteSpace(certPass))
-                certPass = _configuration["FirmaElectronica:ClaveCertificado"];
-
-            if (string.IsNullOrWhiteSpace(certPath))
-                camposFaltantes.Add("Certificado Digital");
-
-            if (string.IsNullOrWhiteSpace(certPass))
-                camposFaltantes.Add("Clave del Certificado");
-
-            // Validar que el certificado sea válido
-            if (!string.IsNullOrWhiteSpace(certPath))
+            var certificadoBd = await _certificadoStorage.ObtenerCertificadoActivoAsync();
+            if (certificadoBd != null)
             {
-                // Usamos la lógica de validación pero pasando los valores resueltos
-                // Nota: ValidarCertificadoDigitalAsync usa los de la BD, así que validamos aquí directamente si es necesario
-                // o actualizamos ValidarCertificadoDigitalAsync.
-                // Por simplicidad, llamaremos a ValidarCertificadoDigitalAsync que actualizaremos a continuación.
                 var certificadoValido = await ValidarCertificadoDigitalAsync();
                 if (!certificadoValido)
                 {
-                    camposFaltantes.Add("Certificado Digital no válido o expirado");
+                    camposFaltantes.Add("Certificado Digital (BD) no válido o expirado");
+                }
+            }
+            else
+            {
+                // Verificar si existe configuración en appsettings si no está en BD
+                var certPath = configuracion.RutaCertificadoDigital;
+                var certPass = configuracion.ClaveCertificadoDigital;
+
+                if (string.IsNullOrWhiteSpace(certPath))
+                    certPath = _configuration["FirmaElectronica:RutaCertificado"];
+                
+                if (string.IsNullOrWhiteSpace(certPass))
+                    certPass = _configuration["FirmaElectronica:ClaveCertificado"];
+
+                if (string.IsNullOrWhiteSpace(certPath))
+                    camposFaltantes.Add("Certificado Digital");
+
+                if (string.IsNullOrWhiteSpace(certPass))
+                    camposFaltantes.Add("Clave del Certificado");
+
+                // Validar que el certificado sea válido
+                if (!string.IsNullOrWhiteSpace(certPath))
+                {
+                    var certificadoValido = await ValidarCertificadoDigitalAsync();
+                    if (!certificadoValido)
+                    {
+                        camposFaltantes.Add("Certificado Digital no válido o expirado");
+                    }
                 }
             }
 
@@ -445,6 +501,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         {
             var infoCertificado = await ObtenerInfoCertificadoAsync();
             var (estaCompleta, camposFaltantes) = await ValidarConfiguracionCompletaAsync();
+            var certificadoBd = await _certificadoStorage.ObtenerCertificadoActivoAsync();
+            var tieneCertificado = certificadoBd != null || !string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital);
+            var origenCertificado = certificadoBd != null ? "ALMACEN_BD" : configuracion.RutaCertificadoDigital;
 
             return new ConfiguracionEmpresaDto
             {
@@ -460,8 +519,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 AgenteRetencion = configuracion.AgenteRetencion,
                 Telefono = configuracion.Telefono,
                 Email = configuracion.Email,
-                TieneCertificado = !string.IsNullOrWhiteSpace(configuracion.RutaCertificadoDigital),
-                RutaCertificadoDigital = configuracion.RutaCertificadoDigital,
+                TieneCertificado = tieneCertificado,
+                RutaCertificadoDigital = origenCertificado,
                 InfoCertificado = infoCertificado,
                 AmbienteSRI = configuracion.AmbienteSRI,
                 AmbienteSRIDescripcion = configuracion.AmbienteSRI == "1" ? "Pruebas" : "Producción",

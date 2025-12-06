@@ -1,13 +1,20 @@
 // Tests/Integration/FirmaElectronicaIntegrationTests.cs
 // T-067: Pruebas con certificado real
 
-using Xunit;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Moq;
 using SistemaFacturacionSRI.Domain.Configuration;
+using SistemaFacturacionSRI.Domain.DTOs.Configuracion;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Infrastructure.Services;
 using SistemaFacturacionSRI.Infrastructure.Tools;
-using System.Xml;
+using Xunit;
 
 namespace Tests.Integration
 {
@@ -22,6 +29,7 @@ namespace Tests.Integration
         private readonly FirmaElectronicaService _firmaService;
         private readonly ILogger<CertificadoDigitalService> _certLogger;
         private readonly ILogger<FirmaElectronicaService> _firmaLogger;
+        private readonly Mock<ICertificadoDigitalStorageService> _certStorageMock = new();
         private readonly string _rutaCertificado;
         private readonly string _claveCertificado;
 
@@ -51,7 +59,10 @@ namespace Tests.Integration
             var optionsMock = Options.Create(options);
 
             // Crear servicios
-            _certificadoService = new CertificadoDigitalService(optionsMock, _certLogger);
+            _certStorageMock.Setup(s => s.ObtenerCertificadoActivoAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync((CertificadoDigitalActivoDto?)null);
+
+            _certificadoService = new CertificadoDigitalService(optionsMock, _certLogger, _certStorageMock.Object);
             _firmaService = new FirmaElectronicaService(_certificadoService, _firmaLogger);
         }
 

@@ -64,6 +64,7 @@ builder.Services.AddScoped<ILoteRepository, LoteRepository>();
 builder.Services.AddScoped<ILoteService, LoteService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<WebAuthService>();
+builder.Services.AddScoped<ICertificadoDigitalRepository, CertificadoDigitalRepository>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddSingleton<JwtTokenGenerator>();
@@ -233,6 +234,9 @@ builder.Services.AddAutoMapper(typeof(ProductoProfile).Assembly);
 
 builder.Services.Configure<CertificadoDigitalOptions>(
     builder.Configuration.GetSection(CertificadoDigitalOptions.SectionName));
+
+builder.Services.AddDataProtection();
+builder.Services.AddScoped<ICertificadoDigitalStorageService, CertificadoDigitalStorageService>();
 
 // ✅ CORREGIDO: Cambiar de Singleton a Scoped
 builder.Services.AddScoped<ICertificadoDigitalService, CertificadoDigitalService>();
