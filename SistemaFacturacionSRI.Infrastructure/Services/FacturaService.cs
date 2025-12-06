@@ -189,11 +189,16 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
     var puntoEmision = partesNumero[1];
     var secuencial = partesNumero[2];
 
+    var tipoEmision = string.IsNullOrWhiteSpace(configEmpresa.TipoEmision)
+        ? "1"
+        : configEmpresa.TipoEmision;
+
     var claveAcceso = _claveAccesoGenerator.GenerarClaveAcceso(
         DateTime.Now,
         "01", // Factura
         configEmpresa.RUC,
-        configEmpresa.AmbienteSRI, 
+        configEmpresa.AmbienteSRI,
+        tipoEmision,
         establecimiento,
         puntoEmision,
         secuencial

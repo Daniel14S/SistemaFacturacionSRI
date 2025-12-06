@@ -6,27 +6,27 @@ namespace SistemaFacturacionSRI.Infrastructure.Services;
 /// Generador de Clave de Acceso para comprobantes electrónicos del SRI
 /// T-035: SPRINT 3 - DÍA 2
 /// 
-/// La clave de acceso tiene 48 dígitos y sigue este formato:
-/// DDMMAAAATCTESSSSSSSSSSCNNNNNNNNN1
+/// La clave de acceso tiene 49 dígitos y sigue este formato:
+/// DDMMAAAATCRTETESSSSSSSSSSCNNNNNNNNNDV
 /// 
 /// DD = Día (2 dígitos)
 /// MM = Mes (2 dígitos)
 /// AAAA = Año (4 dígitos)
 /// TC = Tipo de Comprobante (2 dígitos: 01=Factura)
 /// RUC = RUC del emisor (13 dígitos)
-/// TE = Tipo de Emisión (1 dígito: 1=Normal, 2=Contingencia)
+/// T E = Tipo de Emisión (1 dígito: 1=Normal, 2=Contingencia)
 /// E = Establecimiento (3 dígitos: 001)
 /// PE = Punto de Emisión (3 dígitos: 001)
 /// S = Secuencial (9 dígitos: 000000001)
 /// CN = Código Numérico (8 dígitos aleatorios)
 /// DV = Dígito Verificador (1 dígito calculado con módulo 11)
 /// 
-/// Ejemplo: 2511202501123456789000110010010000000011234567801
+/// Ejemplo: 25112025011234567890011200110010010000000011234567801
 /// </summary>
 public class ClaveAccesoGenerator
 {
     /// <summary>
-    /// Genera una clave de acceso completa de 48 dígitos
+    /// Genera una clave de acceso completa de 49 dígitos
     /// </summary>
     /// <param name="fechaEmision">Fecha de emisión del comprobante</param>
     /// <param name="tipoComprobante">Tipo de comprobante (01=Factura, 04=NotaCrédito, etc.)</param>
@@ -42,13 +42,14 @@ public class ClaveAccesoGenerator
         string tipoComprobante,
         string ruc,
         string ambiente,
+        string tipoEmision,
         string establecimiento,
         string puntoEmision,
         string secuencial,
         string? codigoNumerico = null)
     {
         // Validaciones
-        ValidarParametros(tipoComprobante, ruc, ambiente, establecimiento, puntoEmision, secuencial);
+        ValidarParametros(tipoComprobante, ruc, ambiente, tipoEmision, establecimiento, puntoEmision, secuencial);
         
         // Generar código numérico si no se proporciona
         if (string.IsNullOrEmpty(codigoNumerico))
@@ -56,28 +57,29 @@ public class ClaveAccesoGenerator
             codigoNumerico = GenerarCodigoNumerico();
         }
         
-        // Construir la clave base (47 dígitos)
+        // Construir la clave base (48 dígitos)
         string claveBase = $"{fechaEmision:ddMMyyyy}" +  // 8 dígitos: DDMMAAAA
                           $"{tipoComprobante}" +          // 2 dígitos
                           $"{ruc}" +                      // 13 dígitos
                           $"{ambiente}" +                 // 1 dígito
+                  $"{tipoEmision}" +              // 1 dígito
                           $"{establecimiento}" +          // 3 dígitos
                           $"{puntoEmision}" +            // 3 dígitos
                           $"{secuencial}" +              // 9 dígitos
                           $"{codigoNumerico}";           // 8 dígitos
         
         // Validar longitud de clave base
-        if (claveBase.Length != 47)
+        if (claveBase.Length != 48)
         {
             throw new InvalidOperationException(
-                $"La clave base debe tener 47 dígitos. Longitud actual: {claveBase.Length}. " +
+            $"La clave base debe tener 48 dígitos. Longitud actual: {claveBase.Length}. " +
                 $"Clave: {claveBase}");
         }
         
         // Calcular dígito verificador
         int digitoVerificador = CalcularModulo11(claveBase);
         
-        // Retornar clave completa de 48 dígitos
+        // Retornar clave completa de 49 dígitos
         return claveBase + digitoVerificador;
     }
     
@@ -144,6 +146,7 @@ public class ClaveAccesoGenerator
         string tipoComprobante,
         string ruc,
         string ambiente,
+        string tipoEmision,
         string establecimiento,
         string puntoEmision,
         string secuencial)
@@ -173,6 +176,19 @@ public class ClaveAccesoGenerator
         {
             throw new ArgumentException(
                 $"El ambiente debe ser 1 (Pruebas) o 2 (Producción). Valor recibido: '{ambiente}'");
+        }
+
+        // Validar tipo de emisión (1 dígito)
+        if (string.IsNullOrWhiteSpace(tipoEmision) || tipoEmision.Length != 1 || !EsSoloNumeros(tipoEmision))
+        {
+            throw new ArgumentException(
+                $"El tipo de emisión debe ser 1 (Normal) o 2 (Contingencia). Valor recibido: '{tipoEmision}'");
+        }
+
+        if (tipoEmision != "1" && tipoEmision != "2")
+        {
+            throw new ArgumentException(
+                $"El tipo de emisión debe ser 1 (Normal) o 2 (Contingencia). Valor recibido: '{tipoEmision}'");
         }
         
         // Validar establecimiento (3 dígitos)
@@ -213,7 +229,7 @@ public class ClaveAccesoGenerator
     public bool ValidarClaveAcceso(string claveAcceso)
     {
         // Validar longitud
-        if (string.IsNullOrWhiteSpace(claveAcceso) || claveAcceso.Length != 48)
+        if (string.IsNullOrWhiteSpace(claveAcceso) || claveAcceso.Length != 49)
         {
             return false;
         }
@@ -236,11 +252,11 @@ public class ClaveAccesoGenerator
             return false;
         }
         
-        // Extraer la clave base (primeros 47 dígitos)
-        string claveBase = claveAcceso.Substring(0, 47);
+        // Extraer la clave base (primeros 48 dígitos)
+        string claveBase = claveAcceso.Substring(0, 48);
         
         // Extraer el dígito verificador (último dígito)
-        int digitoVerificadorRecibido = int.Parse(claveAcceso[47].ToString());
+        int digitoVerificadorRecibido = int.Parse(claveAcceso[48].ToString());
         
         // Calcular el dígito verificador esperado
         int digitoVerificadorCalculado = CalcularModulo11(claveBase);
@@ -256,7 +272,7 @@ public class ClaveAccesoGenerator
     /// <returns>Objeto con la información extraída</returns>
     public ClaveAccesoInfo ExtraerInformacion(string claveAcceso)
     {
-        if (string.IsNullOrWhiteSpace(claveAcceso) || claveAcceso.Length != 48)
+        if (string.IsNullOrWhiteSpace(claveAcceso) || claveAcceso.Length != 49)
         {
             throw new ArgumentException("La clave de acceso debe tener 48 dígitos");
         }
@@ -269,11 +285,12 @@ public class ClaveAccesoGenerator
             TipoComprobante = claveAcceso.Substring(8, 2),
             Ruc = claveAcceso.Substring(10, 13),
             Ambiente = claveAcceso.Substring(23, 1),
-            Establecimiento = claveAcceso.Substring(24, 3),
-            PuntoEmision = claveAcceso.Substring(27, 3),
-            Secuencial = claveAcceso.Substring(30, 9),
-            CodigoNumerico = claveAcceso.Substring(39, 8),
-            DigitoVerificador = claveAcceso.Substring(47, 1)
+            TipoEmision = claveAcceso.Substring(24, 1),
+            Establecimiento = claveAcceso.Substring(25, 3),
+            PuntoEmision = claveAcceso.Substring(28, 3),
+            Secuencial = claveAcceso.Substring(31, 9),
+            CodigoNumerico = claveAcceso.Substring(40, 8),
+            DigitoVerificador = claveAcceso.Substring(48, 1)
         };
     }
 }
@@ -289,6 +306,7 @@ public class ClaveAccesoInfo
     public string TipoComprobante { get; set; } = string.Empty;
     public string Ruc { get; set; } = string.Empty;
     public string Ambiente { get; set; } = string.Empty;
+    public string TipoEmision { get; set; } = string.Empty;
     public string Establecimiento { get; set; } = string.Empty;
     public string PuntoEmision { get; set; } = string.Empty;
     public string Secuencial { get; set; } = string.Empty;

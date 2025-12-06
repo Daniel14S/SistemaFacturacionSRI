@@ -53,7 +53,7 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
                 throw new ArgumentException($"La clave de acceso debe tener 49 dígitos, tiene {ClaveAcceso.Length}");
             }
 
-            if (!long.TryParse(ClaveAcceso, out _))
+            if (!ClaveAcceso.All(char.IsDigit))
             {
                 throw new ArgumentException("La clave de acceso debe contener solo dígitos");
             }
@@ -130,7 +130,7 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
                 throw new ArgumentException($"La clave de acceso debe tener 49 dígitos, tiene {ClaveAcceso.Length}");
             }
 
-            if (!long.TryParse(ClaveAcceso, out _))
+            if (!ClaveAcceso.All(char.IsDigit))
             {
                 throw new ArgumentException("La clave de acceso debe contener solo dígitos");
             }

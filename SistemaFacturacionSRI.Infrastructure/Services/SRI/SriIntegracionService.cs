@@ -7,6 +7,7 @@ using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.DTOs.SRI;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.Infrastructure.Data;
+using SistemaFacturacionSRI.Infrastructure.Services;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 {
@@ -21,19 +22,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         private readonly SriComprobanteService _sriComprobanteService;
         private readonly ISriWebServiceClient _sriClient;
         private readonly ILogger<SriIntegracionService> _logger;
+        private readonly ClaveAccesoGenerator _claveAccesoGenerator;
 
         public SriIntegracionService(
             ApplicationDbContext context,
             IFirmaElectronicaService firmaService,
             SriComprobanteService sriComprobanteService,
             ISriWebServiceClient sriClient,
-            ILogger<SriIntegracionService> logger)
+            ILogger<SriIntegracionService> logger,
+            ClaveAccesoGenerator claveAccesoGenerator)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _firmaService = firmaService ?? throw new ArgumentNullException(nameof(firmaService));
             _sriComprobanteService = sriComprobanteService ?? throw new ArgumentNullException(nameof(sriComprobanteService));
             _sriClient = sriClient ?? throw new ArgumentNullException(nameof(sriClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _claveAccesoGenerator = claveAccesoGenerator ?? throw new ArgumentNullException(nameof(claveAccesoGenerator));
         }
 
         // ============================================================
@@ -76,7 +80,17 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 resultado.AgregarEtapa("CargarFactura", true, swEtapa1.Elapsed);
                 _logger.LogInformation("✅ ETAPA 1/6 COMPLETADA - Factura cargada: {Numero}", factura.NumeroFactura);
 
-                resultado.ClaveAcceso = factura.ClaveAcceso ?? string.Empty;
+                try
+                {
+                    resultado.ClaveAcceso = await AsegurarClaveAccesoValidaAsync(factura, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    resultado.MensajeError = $"No se pudo obtener una clave de acceso válida: {ex.Message}";
+                    resultado.EstadoFinal = "ERROR_CLAVE_ACCESO";
+                    _logger.LogError(ex, "Error al regenerar/validar la clave de acceso de la factura #{FacturaId}", facturaId);
+                    return resultado;
+                }
 
                 // ═══════════════════════════════════════════════════════
                 // ETAPA 2: GENERAR XML DEL COMPROBANTE
@@ -143,8 +157,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 ResultadoOperacionSri resultadoEnvio;
                 try
                 {
-                    // ✅ CORRECCIÓN: Usar Identificacion (que puede ser RUC/Cédula)
-                    string rucEmpresa = factura.Cliente?.Identificacion ?? "9999999999999";
+                    // ✅ Usar RUC de la empresa emisora (no el del cliente)
+                    var configEmpresa = await _context.ConfiguracionEmpresa.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+                    if (configEmpresa == null || string.IsNullOrWhiteSpace(configEmpresa.RUC) || configEmpresa.RUC.Length != 13)
+                    {
+                        throw new InvalidOperationException("No se encontró un RUC válido de la empresa emisora (se requieren 13 dígitos).");
+                    }
+
+                    string rucEmpresa = configEmpresa.RUC;
                     
                     resultadoEnvio = await _sriComprobanteService.EnviarComprobanteAsync(
                         xmlFirmado,
@@ -469,6 +489,67 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 "ERROR_ENVIO" => EstadoFactura.FIRMADA,  // Mantener como firmada
                 _ => EstadoFactura.BORRADOR
             };
+        }
+
+        /// <summary>
+        /// Garantiza que la factura tenga una clave de acceso de 49 dígitos.
+        /// Si la existente es nula o de longitud incorrecta, la regenera con la configuración de la empresa.
+        /// </summary>
+        private async Task<string> AsegurarClaveAccesoValidaAsync(Domain.Entities.Factura factura, CancellationToken cancellationToken)
+        {
+            var claveActual = factura.ClaveAcceso?.Trim();
+
+            // Si existe y pasa validación completa (49 dígitos, solo números y DV correcto), la reutilizamos.
+            if (!string.IsNullOrWhiteSpace(claveActual) &&
+                claveActual.Length == 49 &&
+                _claveAccesoGenerator.ValidarClaveAcceso(claveActual))
+            {
+                if (claveActual != factura.ClaveAcceso)
+                {
+                    factura.ClaveAcceso = claveActual;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+
+                return claveActual;
+            }
+
+            var config = await _context.ConfiguracionEmpresa.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+            if (config == null)
+            {
+                throw new InvalidOperationException("No hay configuración de empresa para recalcular la clave de acceso.");
+            }
+
+            if (string.IsNullOrWhiteSpace(factura.NumeroFactura))
+            {
+                throw new InvalidOperationException("La factura no tiene número de factura para reconstruir la clave de acceso.");
+            }
+
+            var partes = factura.NumeroFactura.Split('-');
+            if (partes.Length != 3)
+            {
+                throw new InvalidOperationException($"El número de factura '{factura.NumeroFactura}' no tiene el formato esperado 'xxx-xxx-xxxxxxxxx'.");
+            }
+
+            var tipoEmision = string.IsNullOrWhiteSpace(config.TipoEmision) ? "1" : config.TipoEmision;
+
+            var claveNueva = _claveAccesoGenerator.GenerarClaveAcceso(
+                factura.FechaEmision == default ? DateTime.Now : factura.FechaEmision,
+                "01",
+                config.RUC,
+                config.AmbienteSRI,
+                tipoEmision,
+                partes[0].Trim(),
+                partes[1].Trim(),
+                partes[2].Trim());
+
+            var claveAnterior = factura.ClaveAcceso;
+            factura.ClaveAcceso = claveNueva;
+
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Clave de acceso actualizada para la factura {FacturaId}: {ClaveAnterior} -> {ClaveNueva}", factura.Id, claveAnterior, claveNueva);
+
+            return claveNueva;
         }
 
         /// <summary>

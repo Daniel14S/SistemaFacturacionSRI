@@ -19,24 +19,25 @@ public class ClaveAccesoGeneratorTests
     #region Pruebas de Generación Básica
 
     [Fact]
-    public void GenerarClaveAcceso_DebeRetornar48Digitos()
+    public void GenerarClaveAcceso_DebeRetornar49Digitos()
     {
         // Arrange
         var fecha = new DateTime(2024, 11, 27);
         var tipoComprobante = "01";
         var ruc = "1234567890001";
         var ambiente = "1";
+        var tipoEmision = "1";
         var establecimiento = "001";
         var puntoEmision = "001";
         var secuencial = "000000001";
 
         // Act
         var claveAcceso = _generator.GenerarClaveAcceso(
-            fecha, tipoComprobante, ruc, ambiente,
+            fecha, tipoComprobante, ruc, ambiente, tipoEmision,
             establecimiento, puntoEmision, secuencial);
 
         // Assert
-        Assert.Equal(48, claveAcceso.Length);
+        Assert.Equal(49, claveAcceso.Length);
         Assert.True(claveAcceso.All(char.IsDigit), "La clave debe contener solo dígitos");
     }
 
@@ -45,15 +46,15 @@ public class ClaveAccesoGeneratorTests
     {
         // Arrange
         var fecha = new DateTime(2024, 11, 27);
-        var parametros = ("01", "1234567890001", "1", "001", "001", "000000001");
+        var parametros = ("01", "1234567890001", "1", "1", "001", "001", "000000001");
 
         // Act - Generar 10 claves con los mismos parámetros
         var claves = new HashSet<string>();
         for (int i = 0; i < 10; i++)
         {
             var clave = _generator.GenerarClaveAcceso(
-                fecha, parametros.Item1, parametros.Item2, parametros.Item3,
-                parametros.Item4, parametros.Item5, parametros.Item6);
+                fecha, parametros.Item1, parametros.Item2, parametros.Item3, parametros.Item4,
+                parametros.Item5, parametros.Item6, parametros.Item7);
             claves.Add(clave);
         }
 
@@ -70,7 +71,7 @@ public class ClaveAccesoGeneratorTests
 
         // Act
         var clave = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "1",
+            fecha, "01", "1234567890001", "1", "1",
             "001", "001", "000000001", codigoNumerico);
 
         // Assert
@@ -87,7 +88,7 @@ public class ClaveAccesoGeneratorTests
         // Arrange
         var fecha = new DateTime(2024, 11, 27);
         var claveAcceso = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "1",
+            fecha, "01", "1234567890001", "1", "1",
             "001", "001", "000000001");
 
         // Act
@@ -103,13 +104,13 @@ public class ClaveAccesoGeneratorTests
         // Arrange - Generar clave válida y modificar el último dígito
         var fecha = new DateTime(2024, 11, 27);
         var claveValida = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "1",
+            fecha, "01", "1234567890001", "1", "1",
             "001", "001", "000000001");
         
         // Cambiar el último dígito
-        var ultimoDigito = int.Parse(claveValida[47].ToString());
+        var ultimoDigito = int.Parse(claveValida[48].ToString());
         var nuevoDigito = (ultimoDigito + 1) % 10;
-        var claveInvalida = claveValida.Substring(0, 47) + nuevoDigito;
+        var claveInvalida = claveValida.Substring(0, 48) + nuevoDigito;
 
         // Act
         var esValida = _generator.ValidarClaveAcceso(claveInvalida);
@@ -119,8 +120,8 @@ public class ClaveAccesoGeneratorTests
     }
 
     [Theory]
-    [InlineData("123456789012345678901234567890123456789012345678")] // 48 dígitos válidos
-    [InlineData("2711202401123456789000110010010000000012345678")]   // Sin dígito verificador
+    [InlineData("1234567890123456789012345678901234567890123456789")] // 49 dígitos válidos
+    [InlineData("2711202401123456789011100100100000000123456789")]   // Sin dígito verificador
     public void ValidarClaveAcceso_ConLongitudIncorrecta_DebeRetornarFalse(string claveInvalida)
     {
         // Act
@@ -170,7 +171,7 @@ public class ClaveAccesoGeneratorTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             _generator.GenerarClaveAcceso(
-                fecha, tipoComprobante, "1234567890001", "1",
+                fecha, tipoComprobante, "1234567890001", "1", "1",
                 "001", "001", "000000001"));
 
         Assert.Contains("tipo de comprobante", exception.Message.ToLower());
@@ -189,7 +190,7 @@ public class ClaveAccesoGeneratorTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             _generator.GenerarClaveAcceso(
-                fecha, "01", ruc, "1",
+                fecha, "01", ruc, "1", "1",
                 "001", "001", "000000001"));
 
         Assert.Contains("ruc", exception.Message.ToLower());
@@ -208,7 +209,7 @@ public class ClaveAccesoGeneratorTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             _generator.GenerarClaveAcceso(
-                fecha, "01", "1234567890001", ambiente,
+                fecha, "01", "1234567890001", ambiente, "1",
                 "001", "001", "000000001"));
 
         Assert.Contains("ambiente", exception.Message.ToLower());
@@ -227,7 +228,7 @@ public class ClaveAccesoGeneratorTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             _generator.GenerarClaveAcceso(
-                fecha, "01", "1234567890001", "1",
+                fecha, "01", "1234567890001", "1", "1",
                 establecimiento, "001", "000000001"));
 
         Assert.Contains("establecimiento", exception.Message.ToLower());
@@ -245,7 +246,7 @@ public class ClaveAccesoGeneratorTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() =>
             _generator.GenerarClaveAcceso(
-                fecha, "01", "1234567890001", "1",
+                fecha, "01", "1234567890001", "1", "1",
                 "001", "001", secuencial));
 
         Assert.Contains("secuencial", exception.Message.ToLower());
@@ -298,7 +299,7 @@ public class ClaveAccesoGeneratorTests
         var codigoNumerico = "87654321";
 
         var claveAcceso = _generator.GenerarClaveAcceso(
-            fecha, tipoComprobante, ruc, ambiente,
+            fecha, tipoComprobante, ruc, ambiente, "1",
             establecimiento, puntoEmision, secuencial, codigoNumerico);
 
         // Act
@@ -323,7 +324,7 @@ public class ClaveAccesoGeneratorTests
         // Arrange
         var fechaEsperada = new DateTime(2024, 11, 27);
         var claveAcceso = _generator.GenerarClaveAcceso(
-            fechaEsperada, "01", "1234567890001", "1",
+            fechaEsperada, "01", "1234567890001", "1", "1",
             "001", "001", "000000001");
 
         // Act
@@ -338,7 +339,7 @@ public class ClaveAccesoGeneratorTests
     {
         // Arrange
         var claveAcceso = _generator.GenerarClaveAcceso(
-            DateTime.Now, "01", "1234567890001", "1",
+            DateTime.Now, "01", "1234567890001", "1", "1",
             "001", "002", "000000123");
 
         // Act
@@ -378,12 +379,12 @@ public class ClaveAccesoGeneratorTests
 
         // Act
         var clave = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "1",
+            fecha, "01", "1234567890001", "1", "1",
             "001", "001", "000000001");
 
         // Assert
         Assert.StartsWith("31122024", clave);
-        Assert.Equal(48, clave.Length);
+        Assert.Equal(49, clave.Length);
         Assert.True(_generator.ValidarClaveAcceso(clave));
     }
 
@@ -396,7 +397,7 @@ public class ClaveAccesoGeneratorTests
 
         // Act
         var clave = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "1",
+            fecha, "01", "1234567890001", "1", "1",
             "001", "001", secuencialMaximo);
 
         // Assert
@@ -412,7 +413,7 @@ public class ClaveAccesoGeneratorTests
 
         // Act
         var clave = _generator.GenerarClaveAcceso(
-            fecha, "01", "1234567890001", "2", // Ambiente Producción
+            fecha, "01", "1234567890001", "2", "1", // Ambiente Producción
             "001", "001", "000000001");
 
         // Assert
@@ -436,7 +437,7 @@ public class ClaveAccesoGeneratorTests
         for (int i = 0; i < 1000; i++)
         {
             _generator.GenerarClaveAcceso(
-                fecha, "01", "1234567890001", "1",
+                fecha, "01", "1234567890001", "1", "1",
                 "001", "001", $"{i:D9}");
         }
 
