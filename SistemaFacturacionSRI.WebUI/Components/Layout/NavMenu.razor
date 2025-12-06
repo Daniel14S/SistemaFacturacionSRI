@@ -60,6 +60,18 @@
                     </Authorized>
                 </AuthorizeView>
 
+
+                <!-- REPORTES (Solo Admin) -->
+<AuthorizeView Roles="Administrador" Context="reportesAuth">
+    <Authorized>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="reportes">
+                <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Reportes
+            </NavLink>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
                 <!-- CONFIGURACIÓN (Solo Admin) -->
 <AuthorizeView Roles="Administrador" Context="configAuth">
     <Authorized>

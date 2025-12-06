@@ -27,6 +27,7 @@ using SistemaFacturacionSRI.Domain.Configuration;
 
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 
 
@@ -79,6 +80,9 @@ builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
 builder.Services.AddScoped<IConfiguracionEmpresaRepository, ConfiguracionEmpresaRepository>();
 builder.Services.AddScoped<IPdfGeneratorService, PdfGeneratorService>();
 builder.Services.AddScoped<IXmlGeneratorService, SistemaFacturacionSRI.Infrastructure.Services.XmlGeneratorService>();
+builder.Services.AddScoped<IReporteService, ReporteService>();
+builder.Services.AddScoped<PdfReporteService>();
+
 
 // ✅ CORREGIDO: CustomAuthenticationStateProvider como servicio único
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
