@@ -1,5 +1,6 @@
 // SistemaFacturacionSRI.Infrastructure/Services/SRI/SoapResponseParser.cs
 // T-074: Parser para respuestas SOAP XML del SRI
+// ✅ CORREGIDO: Manejo correcto del estado de recepción
 
 using System.Xml;
 using System.Xml.Linq;
@@ -26,11 +27,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         }
 
         // ============================================================
-        // T-074: PARSEO DE RESPUESTA DE RECEPCIÓN
+        // T-074: PARSEO DE RESPUESTA DE RECEPCIÓN - ✅ CORREGIDO
         // ============================================================
 
         /// <summary>
         /// T-074: Parsea la respuesta SOAP de recepción de comprobantes
+        /// ✅ CORREGIDO: El estado viene en cada comprobante, no en el nodo raíz
         /// </summary>
         public RespuestaRecepcionComprobante ParsearRespuestaRecepcion(string soapXml)
         {
@@ -49,15 +51,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
                 if (respuestaNode == null)
                 {
+                    _logger.LogError("❌ No se encontró nodo RespuestaRecepcionComprobante");
+                    _logger.LogDebug("XML recibido:\n{Xml}", soapXml);
                     throw new InvalidOperationException("No se encontró RespuestaRecepcionComprobante en el XML");
                 }
 
-                var respuesta = new RespuestaRecepcionComprobante
-                {
-                    Estado = ObtenerValorElemento(respuestaNode, "estado") ?? "DESCONOCIDO"
-                };
+                var respuesta = new RespuestaRecepcionComprobante();
 
-                // Parsear comprobantes
+                // ✅ FIX: Parsear comprobantes PRIMERO
                 var comprobantesNode = respuestaNode.Element("comprobantes");
                 if (comprobantesNode != null)
                 {
@@ -65,7 +66,32 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                     {
                         var comprobante = ParsearComprobanteRecibido(comprobanteNode);
                         respuesta.Comprobantes.Add(comprobante);
+                        
+                        _logger.LogDebug("Comprobante parseado: ClaveAcceso={Clave}, Mensajes={Count}",
+                            comprobante.ClaveAcceso, comprobante.Mensajes.Count);
                     }
+                }
+
+                // ✅ FIX: El estado se deriva del primer comprobante
+                if (respuesta.Comprobantes.Any())
+                {
+                    var primerComprobante = respuesta.Comprobantes.First();
+                    
+                    // Si tiene mensajes de error (identificador 43 o tipo ERROR)
+                    var tieneErrores = primerComprobante.Mensajes.Any(m => 
+                        m.Tipo.Equals("ERROR", StringComparison.OrdinalIgnoreCase) ||
+                        m.Identificador.StartsWith("4")); // Códigos 4x son errores
+                    
+                    respuesta.Estado = tieneErrores ? "DEVUELTA" : "RECIBIDA";
+                    
+                    _logger.LogDebug("Estado determinado: {Estado} (basado en {Count} mensajes, tieneErrores={TieneErrores})",
+                        respuesta.Estado, primerComprobante.Mensajes.Count, tieneErrores);
+                }
+                else
+                {
+                    // Si no hay comprobantes, es una respuesta extraña
+                    respuesta.Estado = "DESCONOCIDO";
+                    _logger.LogWarning("⚠️ Respuesta sin comprobantes - Estado: DESCONOCIDO");
                 }
 
                 _logger.LogDebug("Respuesta de recepción parseada: Estado={Estado}, Comprobantes={Count}",
@@ -82,6 +108,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
         /// <summary>
         /// T-074: Parsea un comprobante recibido
+        /// ✅ MEJORADO: Incluye el estado del comprobante si existe
         /// </summary>
         private ComprobanteRecibido ParsearComprobanteRecibido(XElement comprobanteNode)
         {
@@ -89,6 +116,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             {
                 ClaveAcceso = ObtenerValorElemento(comprobanteNode, "claveAcceso") ?? string.Empty
             };
+
+            // ✅ Intentar obtener estado del comprobante si existe
+            var estadoComprobante = ObtenerValorElemento(comprobanteNode, "estado");
+            if (!string.IsNullOrEmpty(estadoComprobante))
+            {
+                comprobante.Estado = estadoComprobante;
+                _logger.LogDebug("Estado encontrado en comprobante: {Estado}", estadoComprobante);
+            }
 
             // Parsear mensajes
             var mensajesNode = comprobanteNode.Element("mensajes");
@@ -98,7 +133,14 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 {
                     var mensaje = ParsearMensaje(mensajeNode);
                     comprobante.Mensajes.Add(mensaje);
+                    
+                    _logger.LogDebug("Mensaje parseado: [{Id}] {Tipo}: {Mensaje}",
+                        mensaje.Identificador, mensaje.Tipo, mensaje.Mensaje);
                 }
+            }
+            else
+            {
+                _logger.LogDebug("⚠️ Comprobante sin mensajes");
             }
 
             return comprobante;
@@ -191,21 +233,58 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         }
 
         // ============================================================
-        // T-074: PARSEO DE MENSAJES
+        // T-074: PARSEO DE MENSAJES - ✅ MEJORADO
         // ============================================================
 
         /// <summary>
         /// T-074: Parsea un mensaje del SRI
+        /// ✅ MEJORADO: Mejor manejo de campos opcionales
         /// </summary>
         private MensajeSri ParsearMensaje(XElement mensajeNode)
         {
+            var identificador = ObtenerValorElemento(mensajeNode, "identificador") ?? string.Empty;
+            var mensaje = ObtenerValorElemento(mensajeNode, "mensaje") ?? string.Empty;
+            var tipo = ObtenerValorElemento(mensajeNode, "tipo");
+            
+            // ✅ Si no hay tipo, inferirlo del identificador
+            if (string.IsNullOrEmpty(tipo))
+            {
+                tipo = InferirTipoMensaje(identificador);
+            }
+
             return new MensajeSri
             {
-                Identificador = ObtenerValorElemento(mensajeNode, "identificador") ?? string.Empty,
-                Mensaje = ObtenerValorElemento(mensajeNode, "mensaje") ?? string.Empty,
+                Identificador = identificador,
+                Mensaje = mensaje,
                 InformacionAdicional = ObtenerValorElemento(mensajeNode, "informacionAdicional"),
-                Tipo = ObtenerValorElemento(mensajeNode, "tipo") ?? "DESCONOCIDO"
+                Tipo = tipo
             };
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Infiere el tipo de mensaje según el identificador
+        /// </summary>
+        private string InferirTipoMensaje(string identificador)
+        {
+            if (string.IsNullOrEmpty(identificador))
+            {
+                return "DESCONOCIDO";
+            }
+
+            // Códigos que empiezan con 4 son errores
+            if (identificador.StartsWith("4"))
+            {
+                return "ERROR";
+            }
+
+            // Códigos que empiezan con 3 son advertencias
+            if (identificador.StartsWith("3"))
+            {
+                return "ADVERTENCIA";
+            }
+
+            // El resto son informativos
+            return "INFORMATIVO";
         }
 
         // ============================================================
@@ -220,7 +299,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             var elemento = parent.Elements()
                 .FirstOrDefault(e => e.Name.LocalName.Equals(elementName, StringComparison.OrdinalIgnoreCase));
             
-            return elemento?.Value;
+            return elemento?.Value?.Trim();
         }
 
         /// <summary>
@@ -254,6 +333,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(xml))
+                {
+                    _logger.LogWarning("XML vacío o nulo");
+                    return false;
+                }
+
                 var doc = XDocument.Parse(xml);
                 
                 // Buscar nodo Envelope
@@ -262,6 +347,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
                 if (envelope == null)
                 {
+                    _logger.LogWarning("No se encontró nodo Envelope");
                     return false;
                 }
 
@@ -269,10 +355,17 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 var body = envelope.Elements()
                     .FirstOrDefault(e => e.Name.LocalName == "Body");
 
-                return body != null;
+                if (body == null)
+                {
+                    _logger.LogWarning("No se encontró nodo Body");
+                    return false;
+                }
+
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Error validando XML SOAP");
                 return false;
             }
         }
@@ -360,6 +453,43 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             {
                 _logger.LogWarning(ex, "No se pudo formatear XML para logging");
                 _logger.LogDebug("Respuesta SOAP (sin formatear): {Xml}", soapXml);
+            }
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Método de debugging para analizar estructura del XML
+        /// </summary>
+        public void AnalizarEstructuraXml(string xml, string contexto)
+        {
+            try
+            {
+                _logger.LogDebug("═══════════════════════════════════════");
+                _logger.LogDebug("ANÁLISIS DE ESTRUCTURA XML - {Contexto}", contexto);
+                _logger.LogDebug("═══════════════════════════════════════");
+
+                var doc = XDocument.Parse(xml);
+                AnalizarNodo(doc.Root, 0);
+
+                _logger.LogDebug("═══════════════════════════════════════");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error analizando estructura XML");
+            }
+        }
+
+        private void AnalizarNodo(XElement? nodo, int nivel)
+        {
+            if (nodo == null) return;
+
+            var indent = new string(' ', nivel * 2);
+            var valor = string.IsNullOrWhiteSpace(nodo.Value) ? "" : $" = {nodo.Value.Substring(0, Math.Min(50, nodo.Value.Length))}";
+            
+            _logger.LogDebug("{Indent}<{Nombre}>{Valor}", indent, nodo.Name.LocalName, valor);
+
+            foreach (var hijo in nodo.Elements())
+            {
+                AnalizarNodo(hijo, nivel + 1);
             }
         }
     }

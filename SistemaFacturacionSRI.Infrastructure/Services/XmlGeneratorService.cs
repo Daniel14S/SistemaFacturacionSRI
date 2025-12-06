@@ -18,14 +18,12 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public XmlGeneratorService()
         {
-            // Ruta a los esquemas XSD
             _xsdBasePath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "Resources",
                 "XSD"
             );
 
-            // Ruta para guardar XMLs generados
             _xmlOutputPath = Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
                 "wwwroot",
@@ -33,7 +31,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 "xml"
             );
 
-            // Crear directorios si no existen
             if (!Directory.Exists(_xsdBasePath))
             {
                 Directory.CreateDirectory(_xsdBasePath);
@@ -44,10 +41,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 Directory.CreateDirectory(_xmlOutputPath);
             }
         }
-
-        // ============================================================
-        // MÉTODOS NUEVOS PARA T-046
-        // ============================================================
 
         /// <summary>
         /// Genera el XML de una factura según el estándar SRI v1.1.0
@@ -66,7 +59,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 var cliente = factura.Cliente ?? new ClienteFacturaDto
                 {
                     TipoIdentificacion = "07",
-                    Identificacion = "9999999999",
+                    Identificacion = "9999999999999",
                     RazonSocial = "CONSUMIDOR FINAL",
                     Direccion = "NO DEFINIDA"
                 };
@@ -79,18 +72,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                 var totalDescuento = factura.Detalles.Sum(d => d.Descuento);
                 var totalFactura = factura.Total > 0 ? factura.Total : totalSinImpuestos - totalDescuento + factura.TotalIVA;
 
+                // CORRECCIÓN CRÍTICA: Agregar el namespace del SRI
+                XNamespace ns = "";
+                
                 var xml = new XDocument(
                     new XDeclaration("1.0", "UTF-8", null),
-                    new XElement("factura",
+                    new XElement(ns + "factura",
                         new XAttribute("id", "comprobante"),
                         new XAttribute("version", "1.1.0"),
-                        ConstruirInfoTributaria(factura.ClaveAcceso, establecimiento, puntoEmision, secuencial),
-                        ConstruirInfoFactura(fechaEmision, cliente, totalSinImpuestos, totalDescuento, totalFactura, factura.Detalles),
-                        ConstruirDetalles(factura.Detalles),
-                        ConstruirInfoAdicional(factura.InfoAdicional)
+                        ConstruirInfoTributaria(ns, factura.ClaveAcceso, establecimiento, puntoEmision, secuencial),
+                        ConstruirInfoFactura(ns, fechaEmision, cliente, totalSinImpuestos, totalDescuento, totalFactura, factura.Detalles),
+                        ConstruirDetalles(ns, factura.Detalles),
+                        ConstruirInfoAdicional(ns, factura.InfoAdicional)
                     )
                 );
 
+                // Retornar XML sin saltos de línea extra
                 return xml.Declaration + Environment.NewLine + xml.ToString(SaveOptions.DisableFormatting);
             }
             catch (Exception ex)
@@ -99,28 +96,29 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             }
         }
 
-        private static XElement ConstruirInfoTributaria(string? claveAcceso, string estab, string ptoEmi, string secuencial)
+        private static XElement ConstruirInfoTributaria(XNamespace ns, string? claveAcceso, string estab, string ptoEmi, string secuencial)
         {
             var clave = string.IsNullOrWhiteSpace(claveAcceso)
-                ? new string('0', 48)
+                ? new string('0', 49)
                 : claveAcceso;
 
-            return new XElement("infoTributaria",
-                new XElement("ambiente", "1"),
-                new XElement("tipoEmision", "1"),
-                new XElement("razonSocial", "EMPRESA DE PRUEBA S.A."),
-                new XElement("nombreComercial", "EMPRESA DE PRUEBA"),
-                new XElement("ruc", "1234567890001"),
-                new XElement("claveAcceso", clave),
-                new XElement("codDoc", "01"),
-                new XElement("estab", estab),
-                new XElement("ptoEmi", ptoEmi),
-                new XElement("secuencial", secuencial),
-                new XElement("dirMatriz", "AV. PRINCIPAL 123")
+            return new XElement(ns + "infoTributaria",
+                new XElement(ns + "ambiente", "1"),
+                new XElement(ns + "tipoEmision", "1"),
+                new XElement(ns + "razonSocial", "EMPRESA DE PRUEBA S.A."),
+                new XElement(ns + "nombreComercial", "EMPRESA DE PRUEBA"),
+                new XElement(ns + "ruc", "1234567890001"),
+                new XElement(ns + "claveAcceso", clave),
+                new XElement(ns + "codDoc", "01"),
+                new XElement(ns + "estab", estab),
+                new XElement(ns + "ptoEmi", ptoEmi),
+                new XElement(ns + "secuencial", secuencial), // CORRECCIÓN: Mantener ceros a la izquierda
+                new XElement(ns + "dirMatriz", "AV. PRINCIPAL 123")
             );
         }
 
         private static XElement ConstruirInfoFactura(
+            XNamespace ns,
             DateTime fechaEmision,
             ClienteFacturaDto cliente,
             decimal totalSinImpuestos,
@@ -128,35 +126,33 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             decimal totalFactura,
             IEnumerable<DetalleFacturaDto> detalles)
         {
-            var totalesImpuestos = ConstruirTotalesImpuestos(detalles);
+            var totalesImpuestos = ConstruirTotalesImpuestos(ns, detalles);
 
-            return new XElement("infoFactura",
-                new XElement("fechaEmision", fechaEmision.ToString("dd/MM/yyyy")),
-                new XElement("dirEstablecimiento", "AV. PRINCIPAL 123"),
-                new XElement("contribuyenteEspecial", "000"),
-                new XElement("obligadoContabilidad", "SI"),
-                new XElement("tipoIdentificacionComprador", cliente.TipoIdentificacion),
-                new XElement("razonSocialComprador", cliente.RazonSocial),
-                new XElement("identificacionComprador", cliente.Identificacion),
-                new XElement("direccionComprador", cliente.Direccion ?? "NO DEFINIDA"),
-                new XElement("totalSinImpuestos", FormatearDecimal(totalSinImpuestos)),
-                new XElement("totalDescuento", FormatearDecimal(totalDescuento)),
-                new XElement("totalConImpuestos",
-                    totalesImpuestos
-                ),
-                new XElement("propina", FormatearDecimal(0)),
-                new XElement("importeTotal", FormatearDecimal(totalFactura)),
-                new XElement("moneda", "DOLAR"),
-                new XElement("pagos",
-                    new XElement("pago",
-                        new XElement("formaPago", "01"),
-                        new XElement("total", FormatearDecimal(totalFactura))
+            return new XElement(ns + "infoFactura",
+                new XElement(ns + "fechaEmision", fechaEmision.ToString("dd/MM/yyyy")),
+                new XElement(ns + "dirEstablecimiento", "AV. PRINCIPAL 123"),
+                new XElement(ns + "contribuyenteEspecial", "000"),
+                new XElement(ns + "obligadoContabilidad", "SI"),
+                new XElement(ns + "tipoIdentificacionComprador", cliente.TipoIdentificacion),
+                new XElement(ns + "razonSocialComprador", cliente.RazonSocial),
+                new XElement(ns + "identificacionComprador", cliente.Identificacion),
+                new XElement(ns + "direccionComprador", cliente.Direccion ?? "NO DEFINIDA"),
+                new XElement(ns + "totalSinImpuestos", FormatearDecimal(totalSinImpuestos)),
+                new XElement(ns + "totalDescuento", FormatearDecimal(totalDescuento)),
+                new XElement(ns + "totalConImpuestos", totalesImpuestos),
+                new XElement(ns + "propina", FormatearDecimal(0)),
+                new XElement(ns + "importeTotal", FormatearDecimal(totalFactura)),
+                new XElement(ns + "moneda", "DOLAR"),
+                new XElement(ns + "pagos",
+                    new XElement(ns + "pago",
+                        new XElement(ns + "formaPago", "01"),
+                        new XElement(ns + "total", FormatearDecimal(totalFactura))
                     )
                 )
             );
         }
 
-        private static IEnumerable<XElement> ConstruirTotalesImpuestos(IEnumerable<DetalleFacturaDto> detalles)
+        private static IEnumerable<XElement> ConstruirTotalesImpuestos(XNamespace ns, IEnumerable<DetalleFacturaDto> detalles)
         {
             var grupos = detalles
                 .GroupBy(d => d.CodigoPorcentajeIVA)
@@ -170,46 +166,46 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
             if (!grupos.Any())
             {
-                yield return new XElement("totalImpuesto",
-                    new XElement("codigo", 2),
-                    new XElement("codigoPorcentaje", 0),
-                    new XElement("baseImponible", FormatearDecimal(0)),
-                    new XElement("valor", FormatearDecimal(0))
+                yield return new XElement(ns + "totalImpuesto",
+                    new XElement(ns + "codigo", "2"),
+                    new XElement(ns + "codigoPorcentaje", "0"),
+                    new XElement(ns + "baseImponible", FormatearDecimal(0)),
+                    new XElement(ns + "valor", FormatearDecimal(0))
                 );
             }
 
             foreach (var impuesto in grupos)
             {
-                yield return new XElement("totalImpuesto",
-                    new XElement("codigo", 2),
-                    new XElement("codigoPorcentaje", impuesto.CodigoPorcentaje),
-                    new XElement("baseImponible", FormatearDecimal(impuesto.Base)),
-                    new XElement("valor", FormatearDecimal(impuesto.Valor))
+                yield return new XElement(ns + "totalImpuesto",
+                    new XElement(ns + "codigo", "2"),
+                    new XElement(ns + "codigoPorcentaje", impuesto.CodigoPorcentaje),
+                    new XElement(ns + "baseImponible", FormatearDecimal(impuesto.Base)),
+                    new XElement(ns + "valor", FormatearDecimal(impuesto.Valor))
                 );
             }
         }
 
-        private static XElement ConstruirDetalles(IEnumerable<DetalleFacturaDto> detalles)
+        private static XElement ConstruirDetalles(XNamespace ns, IEnumerable<DetalleFacturaDto> detalles)
         {
-            return new XElement("detalles",
+            return new XElement(ns + "detalles",
                 detalles.Select(detalle =>
-                    new XElement("detalle",
-                        new XElement("codigoPrincipal", detalle.CodigoPrincipal),
+                    new XElement(ns + "detalle",
+                        new XElement(ns + "codigoPrincipal", detalle.CodigoPrincipal),
                         detalle.CodigoAuxiliar != null
-                            ? new XElement("codigoAuxiliar", detalle.CodigoAuxiliar)
+                            ? new XElement(ns + "codigoAuxiliar", detalle.CodigoAuxiliar)
                             : null,
-                        new XElement("descripcion", detalle.Descripcion),
-                        new XElement("cantidad", FormatearCantidad(detalle.Cantidad)),
-                        new XElement("precioUnitario", FormatearDecimal(detalle.PrecioUnitario)),
-                        new XElement("descuento", FormatearDecimal(detalle.Descuento)),
-                        new XElement("precioTotalSinImpuesto", FormatearDecimal(detalle.PrecioTotalSinImpuesto)),
-                        new XElement("impuestos",
-                            new XElement("impuesto",
-                                new XElement("codigo", 2),
-                                new XElement("codigoPorcentaje", detalle.CodigoPorcentajeIVA),
-                                new XElement("tarifa", FormatearDecimal(detalle.Tarifa * 100)),
-                                new XElement("baseImponible", FormatearDecimal(detalle.BaseImponible)),
-                                new XElement("valor", FormatearDecimal(detalle.Valor))
+                        new XElement(ns + "descripcion", detalle.Descripcion),
+                        new XElement(ns + "cantidad", FormatearCantidad(detalle.Cantidad)),
+                        new XElement(ns + "precioUnitario", FormatearDecimal(detalle.PrecioUnitario)),
+                        new XElement(ns + "descuento", FormatearDecimal(detalle.Descuento)),
+                        new XElement(ns + "precioTotalSinImpuesto", FormatearDecimal(detalle.PrecioTotalSinImpuesto)),
+                        new XElement(ns + "impuestos",
+                            new XElement(ns + "impuesto",
+                                new XElement(ns + "codigo", "2"),
+                                new XElement(ns + "codigoPorcentaje", detalle.CodigoPorcentajeIVA),
+                                new XElement(ns + "tarifa", FormatearDecimal(detalle.Tarifa)),
+                                new XElement(ns + "baseImponible", FormatearDecimal(detalle.BaseImponible)),
+                                new XElement(ns + "valor", FormatearDecimal(detalle.Valor))
                             )
                         )
                     )
@@ -217,16 +213,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             );
         }
 
-        private static XElement? ConstruirInfoAdicional(List<InfoAdicionalDto>? infoAdicional)
+        private static XElement? ConstruirInfoAdicional(XNamespace ns, List<InfoAdicionalDto>? infoAdicional)
         {
             if (infoAdicional == null || !infoAdicional.Any())
             {
                 return null;
             }
 
-            return new XElement("infoAdicional",
+            return new XElement(ns + "infoAdicional",
                 infoAdicional.Select(campo =>
-                    new XElement("campoAdicional",
+                    new XElement(ns + "campoAdicional",
                         new XAttribute("nombre", campo.Nombre),
                         campo.Valor))
             );
@@ -242,7 +238,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
                     return (
                         partes[0].PadLeft(3, '0'),
                         partes[1].PadLeft(3, '0'),
-                        partes[2].PadLeft(9, '0'));
+                        partes[2].PadLeft(9, '0'));  // MANTENER formato de 9 dígitos
                 }
             }
 
@@ -251,7 +247,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         private static string FormatearDecimal(decimal valor) => valor.ToString("0.00", CultureInfo.InvariantCulture);
 
-        private static string FormatearCantidad(decimal valor) => valor.ToString("0.00", CultureInfo.InvariantCulture);
+        private static string FormatearCantidad(decimal valor) => valor.ToString("0.000000", CultureInfo.InvariantCulture);
 
         /// <summary>
         /// Valida un XML contra el esquema XSD del SRI
@@ -436,23 +432,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         /// <summary>
         /// T-064: Guarda el XML firmado en el sistema de archivos
-        /// Los XMLs firmados se guardan en una subcarpeta "firmados"
         /// </summary>
-        /// <param name="xmlFirmado">Contenido del XML firmado</param>
-        /// <param name="claveAcceso">Clave de acceso de 49 dígitos</param>
-        /// <returns>Ruta relativa donde se guardó el archivo</returns>
         public async Task<string> GuardarXmlFirmadoEnArchivo(string xmlFirmado, string claveAcceso)
         {
             try
             {
-                // Validar que el XML tenga firma
-                if (!xmlFirmado.Contains("<ds:Signature") && !xmlFirmado.Contains("<Signature"))
-                {
-                    // MODIFICACIÓN PARA SIMULACIÓN:
-                    // Si no hay firma, no lanzamos excepción para permitir el flujo de prueba sin certificado
-                    // throw new InvalidOperationException("El XML proporcionado no contiene una firma digital válida.");
-                }
-
                 // Crear directorio para XMLs firmados si no existe
                 var directorioFirmados = Path.Combine(_xmlOutputPath, "firmados");
                 if (!Directory.Exists(directorioFirmados))
@@ -467,7 +451,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
                 return Path.Combine("comprobantes", "xml", "firmados", nombreArchivo);
             }
-            catch (Exception ex) when (ex is not InvalidOperationException)
+            catch (Exception ex)
             {
                 throw new InvalidOperationException(
                     $"Error al guardar XML firmado en archivo: {ex.Message}",
@@ -482,19 +466,16 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<string> GenerarXmlFacturaAsync(int facturaId)
         {
-            // TODO: Implementar en tareas posteriores
             throw new NotImplementedException("Método pendiente de implementación en tareas futuras");
         }
 
         public async Task<FacturaXML> GenerarObjetoFacturaXmlAsync(int facturaId)
         {
-            // TODO: Implementar en tareas posteriores
             throw new NotImplementedException("Método pendiente de implementación en tareas futuras");
         }
 
         public async Task<(bool EsValido, List<string> Errores)> ValidarXmlContraEsquemaAsync(string xmlContent)
         {
-            // Usar el nuevo método de validación
             var resultado = await ValidarXmlContraEsquema(xmlContent);
             var errores = resultado.Errores.Select(e => e.ToString()).ToList();
             return (resultado.EsValido, errores);
@@ -502,7 +483,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<string> GuardarXmlEnArchivoAsync(string xmlContent, string claveAcceso)
         {
-            // Usar el nuevo método
             return await GuardarXmlEnArchivo(xmlContent, claveAcceso);
         }
 
@@ -544,7 +524,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
 
         public async Task<(string XmlContent, string RutaArchivo)> GenerarYGuardarXmlAsync(int facturaId)
         {
-            // TODO: Implementar en tareas posteriores
             throw new NotImplementedException("Método pendiente de implementación en tareas futuras");
         }
     }

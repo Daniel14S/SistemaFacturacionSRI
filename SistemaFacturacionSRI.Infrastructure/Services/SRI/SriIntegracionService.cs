@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.DTOs.SRI;
+using SistemaFacturacionSRI.Domain.DTOs.Factura;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.Infrastructure.Data;
 using SistemaFacturacionSRI.Infrastructure.Services;
@@ -21,6 +22,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         private readonly IFirmaElectronicaService _firmaService;
         private readonly SriComprobanteService _sriComprobanteService;
         private readonly ISriWebServiceClient _sriClient;
+        private readonly IXmlGeneratorService _xmlGeneratorService; // ✅ AGREGADO
         private readonly ILogger<SriIntegracionService> _logger;
         private readonly ClaveAccesoGenerator _claveAccesoGenerator;
 
@@ -29,6 +31,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             IFirmaElectronicaService firmaService,
             SriComprobanteService sriComprobanteService,
             ISriWebServiceClient sriClient,
+            IXmlGeneratorService xmlGeneratorService, // ✅ AGREGADO
             ILogger<SriIntegracionService> logger,
             ClaveAccesoGenerator claveAccesoGenerator)
         {
@@ -36,8 +39,97 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             _firmaService = firmaService ?? throw new ArgumentNullException(nameof(firmaService));
             _sriComprobanteService = sriComprobanteService ?? throw new ArgumentNullException(nameof(sriComprobanteService));
             _sriClient = sriClient ?? throw new ArgumentNullException(nameof(sriClient));
+            _xmlGeneratorService = xmlGeneratorService ?? throw new ArgumentNullException(nameof(xmlGeneratorService)); // ✅ AGREGADO
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _claveAccesoGenerator = claveAccesoGenerator ?? throw new ArgumentNullException(nameof(claveAccesoGenerator));
+        }
+
+        // ... [resto del código hasta GenerarXmlFactura] ...
+
+        /// <summary>
+        /// ✅ CORREGIDO: Usa XmlGeneratorService en lugar de XML hardcodeado
+        /// </summary>
+        private string GenerarXmlFactura(Domain.Entities.Factura factura)
+        {
+            try
+            {
+                // Mapear entidad de BD a DTO
+                var facturaDto = MapearFacturaADto(factura);
+                
+                // Usar el servicio corregido que genera XML correcto
+                return _xmlGeneratorService.GenerarXmlFactura(facturaDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar XML para factura {FacturaId}", factura.Id);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Mapea la entidad Factura de BD al DTO necesario para generar XML
+        /// </summary>
+        private FacturaDto MapearFacturaADto(Domain.Entities.Factura factura)
+        {
+            var facturaDto = new FacturaDto
+            {
+                NumeroFactura = factura.NumeroFactura,
+                ClaveAcceso = factura.ClaveAcceso,
+                FechaEmision = factura.FechaEmision == default ? DateTime.Now : factura.FechaEmision,
+                Total = factura.ImporteTotal,
+                TotalIVA = factura.IVA15,
+                
+                // Cliente
+                Cliente = factura.Cliente != null ? new ClienteFacturaDto
+                {
+                    TipoIdentificacion = ObtenerCodigoTipoIdentificacion(factura.Cliente.TipoIdentificacionId),
+                    Identificacion = factura.Cliente.Identificacion,
+                    RazonSocial = factura.Cliente.NombreCompleto(),
+                    Direccion = factura.Cliente.Direccion ?? "NO DEFINIDA",
+                    Telefono = factura.Cliente.Telefono,
+                    Email = factura.Cliente.Email
+                } : null,
+
+                // Detalles
+                Detalles = factura.Detalles?.Select(d => new DetalleFacturaDto
+                {
+                    CodigoPrincipal = d.CodigoPrincipal,
+                    CodigoAuxiliar = d.CodigoAuxiliar,
+                    Descripcion = d.Descripcion,
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario,
+                    Descuento = d.Descuento,
+                    PrecioTotalSinImpuesto = d.PrecioTotalSinImpuesto,
+                    
+                    // Impuestos
+                    CodigoPorcentajeIVA = d.CodigoPorcentajeIVA,
+                    Tarifa = d.Tarifa,
+                    BaseImponible = d.BaseImponible,
+                    Valor = d.Valor
+                }).ToList() ?? new List<DetalleFacturaDto>(),
+
+                // Información adicional (si existe)
+                InfoAdicional = new List<InfoAdicionalDto>()
+            };
+
+            return facturaDto;
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Obtiene el código SRI del tipo de identificación
+        /// </summary>
+        private string ObtenerCodigoTipoIdentificacion(int tipoIdentificacionId)
+        {
+            // Mapeo de IDs de BD a códigos SRI
+            return tipoIdentificacionId switch
+            {
+                1 => "04", // RUC
+                2 => "05", // Cédula
+                3 => "06", // Pasaporte
+                4 => "07", // Consumidor Final
+                5 => "08", // Identificación del exterior
+                _ => "07"  // Por defecto: Consumidor Final
+            };
         }
 
         // ============================================================
@@ -550,62 +642,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             _logger.LogInformation("Clave de acceso actualizada para la factura {FacturaId}: {ClaveAnterior} -> {ClaveNueva}", factura.Id, claveAnterior, claveNueva);
 
             return claveNueva;
-        }
-
-        /// <summary>
-        /// Genera XML de la factura según esquema SRI
-        /// TODO: Implementar generación real según esquema XSD del SRI
-        /// </summary>
-        private string GenerarXmlFactura(Domain.Entities.Factura factura)
-        {
-            // Por ahora retorna un XML de ejemplo
-            // En la implementación real, deberías generar el XML según el esquema oficial del SRI
-            return $@"<?xml version=""1.0"" encoding=""UTF-8""?>
-<factura id=""comprobante"" version=""1.0.0"">
-    <infoTributaria>
-        <ambiente>{(int)factura.Ambiente}</ambiente>
-        <tipoEmision>{(int)factura.TipoEmision}</tipoEmision>
-        <razonSocial>{factura.Cliente?.NombreCompleto() ?? "Consumidor Final"}</razonSocial>
-        <nombreComercial>Mi Empresa</nombreComercial>
-        <ruc>{factura.Cliente?.Identificacion ?? "9999999999999"}</ruc>
-        <claveAcceso>{factura.ClaveAcceso}</claveAcceso>
-        <codDoc>01</codDoc>
-        <estab>001</estab>
-        <ptoEmi>001</ptoEmi>
-        <secuencial>{factura.NumeroFactura}</secuencial>
-        <dirMatriz>Matriz Principal</dirMatriz>
-    </infoTributaria>
-    <infoFactura>
-        <fechaEmision>{factura.FechaEmision:dd/MM/yyyy}</fechaEmision>
-        <dirEstablecimiento>Sucursal 001</dirEstablecimiento>
-        <obligadoContabilidad>SI</obligadoContabilidad>
-        <tipoIdentificacionComprador>{factura.Cliente?.TipoIdentificacionId ?? 7}</tipoIdentificacionComprador>
-        <razonSocialComprador>{factura.Cliente?.NombreCompleto() ?? "CONSUMIDOR FINAL"}</razonSocialComprador>
-        <identificacionComprador>{factura.Cliente?.Identificacion ?? "9999999999999"}</identificacionComprador>
-        <totalSinImpuestos>{(factura.Subtotal0 + factura.Subtotal15):F2}</totalSinImpuestos>
-        <totalDescuento>{factura.Descuento:F2}</totalDescuento>
-        <totalConImpuestos>
-            <totalImpuesto>
-                <codigo>2</codigo>
-                <codigoPorcentaje>2</codigoPorcentaje>
-                <baseImponible>{factura.Subtotal15:F2}</baseImponible>
-                <valor>{factura.IVA15:F2}</valor>
-            </totalImpuesto>
-            <totalImpuesto>
-                <codigo>2</codigo>
-                <codigoPorcentaje>0</codigoPorcentaje>
-                <baseImponible>{factura.Subtotal0:F2}</baseImponible>
-                <valor>0.00</valor>
-            </totalImpuesto>
-        </totalConImpuestos>
-        <propina>{factura.Propina:F2}</propina>
-        <importeTotal>{factura.ImporteTotal:F2}</importeTotal>
-        <moneda>DOLAR</moneda>
-    </infoFactura>
-    <detalles>
-        {GenerarDetallesXml(factura)}
-    </detalles>
-</factura>";
         }
 
         /// <summary>

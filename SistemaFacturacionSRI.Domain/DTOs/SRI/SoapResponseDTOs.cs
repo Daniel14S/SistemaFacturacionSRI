@@ -1,5 +1,6 @@
 // SistemaFacturacionSRI.Domain/DTOs/SRI/SoapResponseDTOs.cs
 // T-073: DTOs para responses SOAP del SRI
+// ✅ ACTUALIZADO: Agregado campo Estado en ComprobanteRecibido
 
 namespace SistemaFacturacionSRI.Domain.DTOs.SRI
 {
@@ -91,6 +92,7 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
 
     /// <summary>
     /// T-073: Información de un comprobante recibido
+    /// ✅ ACTUALIZADO: Agregado campo Estado
     /// </summary>
     public class ComprobanteRecibido
     {
@@ -98,6 +100,12 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
         /// Clave de acceso del comprobante (49 dígitos)
         /// </summary>
         public string ClaveAcceso { get; set; } = string.Empty;
+
+        /// <summary>
+        /// ✅ NUEVO: Estado del comprobante individual (si el SRI lo incluye)
+        /// Valores posibles: RECIBIDA, DEVUELTA
+        /// </summary>
+        public string Estado { get; set; } = string.Empty;
 
         /// <summary>
         /// Mensajes asociados al comprobante
@@ -108,13 +116,40 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
         /// Indica si tiene mensajes de error
         /// </summary>
         public bool TieneErrores => Mensajes.Any(m => 
-            m.Tipo.Equals("ERROR", StringComparison.OrdinalIgnoreCase));
+            m.Tipo.Equals("ERROR", StringComparison.OrdinalIgnoreCase) ||
+            m.Identificador.StartsWith("4")); // Códigos 4x son errores
 
         /// <summary>
         /// Obtiene el primer mensaje de error (si existe)
         /// </summary>
         public MensajeSri? PrimerError => Mensajes
             .FirstOrDefault(m => m.Tipo.Equals("ERROR", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// ✅ NUEVO: Obtiene todos los mensajes de error
+        /// </summary>
+        public List<MensajeSri> ObtenerErrores()
+        {
+            return Mensajes
+                .Where(m => m.Tipo.Equals("ERROR", StringComparison.OrdinalIgnoreCase) ||
+                           m.Identificador.StartsWith("4"))
+                .ToList();
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Obtiene resumen de mensajes
+        /// </summary>
+        public string ObtenerResumenMensajes()
+        {
+            if (!Mensajes.Any())
+                return "Sin mensajes";
+
+            var errores = Mensajes.Count(m => m.EsError || m.Identificador.StartsWith("4"));
+            var advertencias = Mensajes.Count(m => m.EsAdvertencia || m.Identificador.StartsWith("3"));
+            var informativos = Mensajes.Count - errores - advertencias;
+
+            return $"Errores: {errores}, Advertencias: {advertencias}, Informativos: {informativos}";
+        }
     }
 
     /// <summary>

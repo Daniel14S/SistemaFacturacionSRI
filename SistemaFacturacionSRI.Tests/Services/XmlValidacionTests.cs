@@ -292,7 +292,7 @@ namespace Tests.Services
                         Descuento = 0.00m,
                         PrecioTotalSinImpuesto = 100.00m,
                         BaseImponible = 100.00m,
-                        CodigoPorcentajeIVA = 15,
+                        CodigoPorcentajeIVA = 2,
                         Tarifa = 0.15m,
                         Valor = 15.00m,
                         ValorTotal = 115.00m

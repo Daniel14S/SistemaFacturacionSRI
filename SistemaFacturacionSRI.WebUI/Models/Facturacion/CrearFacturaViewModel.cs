@@ -106,7 +106,7 @@ namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
             {
                 Cantidad = 1,
                 Descuento = 0,
-                CodigoPorcentajeIVA = 15 // Por defecto 15%
+                CodigoPorcentajeIVA = 2 // Por defecto 15%
             });
         }
         
