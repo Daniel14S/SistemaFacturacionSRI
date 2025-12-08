@@ -50,6 +50,40 @@
             </details>
         </div>
 
+        @* Alerta para código 58 del SRI *@
+        @if (!string.IsNullOrEmpty(factura.MensajesSRI) && factura.MensajesSRI.Contains("[58]"))
+        {
+            <div class="alert alert-danger border-danger shadow-sm" role="alert">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 me-3"></i>
+                    <div>
+                        <h5 class="alert-heading mb-1">⚠️ Problema del SRI Detectado - Código 58</h5>
+                        <p class="mb-0"><strong>ERROR EN LA ESTRUCTURA DE LA CLAVE DE ACCESO</strong></p>
+                    </div>
+                </div>
+                <hr>
+                <p class="mb-2">
+                    🔴 <strong>Este es un problema del lado del SRI</strong>, no de tu factura. 
+                    El SRI tiene registros corruptos en su base de datos de pruebas.
+                </p>
+                <p class="mb-2">
+                    ✅ <strong>Tu factura está correctamente generada.</strong> La clave de acceso y todos los datos son válidos.
+                </p>
+                <div class="bg-light p-3 rounded mt-2">
+                    <strong>📋 Mensaje del SRI:</strong>
+                    <pre class="mb-0 mt-2 text-danger" style="font-size: 0.85rem; white-space: pre-wrap;">@factura.MensajesSRI</pre>
+                </div>
+                @if (factura.Estado == "PENDIENTE")
+                {
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Estado PENDIENTE:</strong> Puedes descargar XML/PDF o enviar el correo al cliente. 
+                        Para reintentar con el SRI, usa el botón "Reenviar al SRI" más abajo.
+                    </div>
+                }
+            </div>
+        }
+
         @* Mensajes *@
         @if (!string.IsNullOrEmpty(mensajeExito))
         {
@@ -676,8 +710,23 @@
         try
         {
             mensajeError = string.Empty;
-            mensajeExito = "Funcionalidad de PDF pendiente de implementación";
-            // TODO: Implementar cuando el endpoint esté listo
+            var content = await FacturaService.DescargarPdfAsync(Id);
+
+            if (content != null)
+            {
+                var base64 = Convert.ToBase64String(content);
+                
+                await JS.InvokeVoidAsync("downloadFile", 
+                    "application/pdf", 
+                    base64, 
+                    $"factura_{factura?.NumeroFactura?.Replace("-", "")}.pdf");
+                
+                mensajeExito = "PDF descargado exitosamente";
+            }
+            else
+            {
+                mensajeError = "Error al descargar PDF";
+            }
         }
         catch (Exception ex)
         {

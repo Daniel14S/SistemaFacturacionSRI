@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<factura id="comprobante" version="2.1.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>EMPRESA DE PRUEBA S.A.</razonSocial>
+    <nombreComercial>EMPRESA DE PRUEBA</nombreComercial>
+    <ruc>1804183794001</ruc>
+    <claveAcceso>0812202501180418379400111001001000000013798568716</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000013</secuencial>
+    <dirMatriz>AV. PRINCIPAL 123</dirMatriz>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>08/12/2025</fechaEmision>
+    <dirEstablecimiento>AV. PRINCIPAL 123</dirEstablecimiento>
+    <tipoIdentificacionComprador>05</tipoIdentificacionComprador>
+    <razonSocialComprador>Patricio Tisalema</razonSocialComprador>
+    <identificacionComprador>1805260898</identificacionComprador>
+    <totalSinImpuestos>1.10</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>1.10</baseImponible>
+        <valor>0.17</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>1.27</importeTotal>
+    <moneda>DOLAR</moneda>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>PROD-001</codigoPrincipal>
+      <descripcion>Cafe Oro</descripcion>
+      <cantidad>1.0000</cantidad>
+      <precioUnitario>1.100000</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>1.10</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15</tarifa>
+          <baseImponible>1.10</baseImponible>
+          <valor>0.17</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+</factura>
