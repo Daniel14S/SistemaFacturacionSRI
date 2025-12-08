@@ -296,6 +296,93 @@ public async Task<byte[]?> DescargarPdfAsync(int id)
     }
 }
 
+    /// <summary>
+    /// Envía la factura por correo al cliente (sin importar estado SRI)
+    /// </summary>
+    public async Task<EnviarCorreoResponseDto?> EnviarCorreoClienteAsync(int id)
+    {
+        try
+        {
+            _logger.LogInformation("Enviando correo de factura ID: {Id}", id);
+            
+            var response = await _httpClient.PostAsync($"/api/factura/{id}/enviar-correo", null);
 
-    
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<EnviarCorreoResponseDto>();
+                _logger.LogInformation("Correo de factura {Id} enviado exitosamente a {Destinatario}", 
+                    id, result?.Destinatario);
+                return result;
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "Error al enviar correo de factura {Id}: {StatusCode} - {Error}", 
+                id, 
+                response.StatusCode,
+                errorContent);
+            
+            return new EnviarCorreoResponseDto
+            {
+                Success = false,
+                Message = $"Error al enviar correo: {errorContent}",
+                FacturaId = id
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Excepción al enviar correo de factura {Id}", id);
+            return new EnviarCorreoResponseDto
+            {
+                Success = false,
+                Message = $"Excepción: {ex.Message}",
+                FacturaId = id
+            };
+        }
+    }
+
+    /// <summary>
+    /// Cambia el estado de una factura DEVUELTA o NO_AUTORIZADA a PENDIENTE
+    /// </summary>
+    public async Task<CambiarEstadoPendienteResponseDto?> CambiarEstadoPendienteAsync(int id)
+    {
+        try
+        {
+            _logger.LogInformation("Cambiando estado a PENDIENTE para factura ID: {Id}", id);
+            
+            var response = await _httpClient.PostAsync($"/api/factura/{id}/cambiar-estado-pendiente", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<CambiarEstadoPendienteResponseDto>();
+                _logger.LogInformation("Estado cambiado exitosamente para factura {Id}: {EstadoAnterior} → {EstadoActual}", 
+                    id, result?.EstadoAnterior, result?.EstadoActual);
+                return result;
+            }
+
+            var errorContent = await response.Content.ReadAsStringAsync();
+            _logger.LogError(
+                "Error al cambiar estado de factura {Id}: {StatusCode} - {Error}", 
+                id, 
+                response.StatusCode,
+                errorContent);
+            
+            return new CambiarEstadoPendienteResponseDto
+            {
+                Success = false,
+                Message = $"Error al cambiar estado: {errorContent}",
+                FacturaId = id
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Excepción al cambiar estado de factura {Id}", id);
+            return new CambiarEstadoPendienteResponseDto
+            {
+                Success = false,
+                Message = $"Excepción: {ex.Message}",
+                FacturaId = id
+            };
+        }
+    }
 }

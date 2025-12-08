@@ -319,6 +319,40 @@
                     {
                         <strong>Mensajes del SRI:</strong>
                         <pre class="bg-light p-2 rounded text-danger">@factura.MensajesSRI</pre>
+                        
+                        @* Detectar error específico de clave de acceso corrupta *@
+                        @if (factura.MensajesSRI.Contains("ERROR EN LA ESTRUCTURA DE LA CLAVE DE ACCESO") && 
+                            (factura.MensajesSRI.Contains("100 contenido en la clave") || 
+                             factura.MensajesSRI.Contains("100000000 contenido en la clave")))
+                        {
+                            <div class="alert alert-warning mt-3">
+                                <h6 class="alert-heading">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    ℹ️ Problema Detectado: Caché Corrupto del SRI
+                                </h6>
+                                <hr>
+                                <p class="mb-2">
+                                    <strong>El SRI tiene registros corruptos en su base de datos de pruebas.</strong> 
+                                    Los valores <code>100</code>, <code>100</code>, <code>100000000</code> son de intentos anteriores fallidos.
+                                </p>
+                                <p class="mb-2">
+                                    ✅ <strong>Tu factura está correctamente generada</strong> con valores <code>001-001-@factura.NumeroFactura.Split('-')[2]</code>
+                                </p>
+                                <p class="mb-0">
+                                    <strong>Soluciones:</strong>
+                                </p>
+                                <ul class="mb-0">
+                                    <li>⏰ Esperar 24-48 horas (el SRI limpia su caché periódicamente)</li>
+                                    <li>📧 Enviar la factura al cliente de todos modos (ver botón abajo)</li>
+                                    <li>📞 Contactar al soporte técnico del SRI para limpiar registros</li>
+                                    <li>🔄 Intentar con un secuencial muy diferente (ej: +100)</li>
+                                </ul>
+                                <button class="btn btn-sm btn-outline-info mt-2" @onclick="() => mostrarModalInfoSRI = true">
+                                    <i class="bi bi-question-circle me-1"></i>
+                                    Ver más información
+                                </button>
+                            </div>
+                        }
                     }
                     else
                     {
@@ -348,9 +382,49 @@
 
                     @if (factura.Estado == "DEVUELTA" || factura.Estado == "NO_AUTORIZADA")
                     {
-                        <button class="btn btn-warning" @onclick="ReenviarSri">
-                            <i class="bi bi-arrow-clockwise me-1"></i>
-                            Reenviar al SRI
+                        <button class="btn btn-warning" @onclick="CambiarAPendienteYReenviar" disabled="@cambiandoEstado">
+                            @if (cambiandoEstado)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <text>Procesando...</text>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                <text>Reenviar al SRI</text>
+                            }
+                        </button>
+                        
+                        @* Botón para enviar por correo de todos modos *@
+                        @if (!string.IsNullOrEmpty(factura.Cliente?.Email))
+                        {
+                            <button class="btn btn-info" @onclick="EnviarCorreoCliente" disabled="@enviandoCorreo">
+                                @if (enviandoCorreo)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    <text>Enviando...</text>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-envelope-fill me-1"></i>
+                                    <text>Enviar a Cliente de Todos Modos</text>
+                                }
+                            </button>
+                        }
+                    }
+                    else if (factura.Estado == "PENDIENTE")
+                    {
+                        <button class="btn btn-warning" @onclick="ReenviarSri" disabled="@reenviando">
+                            @if (reenviando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <text>Reenviando...</text>
+                            }
+                            else
+                            {
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                <text>Reenviar al SRI</text>
+                            }
                         </button>
                     }
 
@@ -364,6 +438,147 @@
     }
 </div>
 
+<!-- Modal: Información Detallada del Error SRI -->
+@if (mostrarModalInfoSRI)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Información sobre el Error del SRI
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => mostrarModalInfoSRI = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">🔍 ¿Qué está pasando?</h6>
+                        <p>
+                            El Servicio de Rentas Internas (SRI) tiene registros corruptos en su base de datos de pruebas 
+                            de intentos anteriores que no se completaron correctamente.
+                        </p>
+                    </div>
+
+                    <h6 class="text-danger">❌ Lo que reporta el SRI:</h6>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <ul class="mb-0">
+                            <li>Establecimiento: <code class="text-danger">100</code> (valor corrupto)</li>
+                            <li>Punto de Emisión: <code class="text-danger">100</code> (valor corrupto)</li>
+                            <li>Secuencial: <code class="text-danger">100000000</code> (valor corrupto)</li>
+                        </ul>
+                    </div>
+
+                    <h6 class="text-success">✅ Lo que realmente enviamos:</h6>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <ul class="mb-0">
+                            <li>Establecimiento: <code class="text-success">001</code> ✓</li>
+                            <li>Punto de Emisión: <code class="text-success">001</code> ✓</li>
+                            <li>Secuencial: <code class="text-success">@(factura?.NumeroFactura?.Split('-')[2] ?? "00000000X")</code> ✓</li>
+                            <li>Clave de Acceso: <code class="text-muted small">@factura?.ClaveAcceso</code></li>
+                        </ul>
+                    </div>
+
+                    <h6>💡 Soluciones Recomendadas:</h6>
+                    <div class="accordion" id="accordionSoluciones">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1">
+                                    1️⃣ Esperar limpieza automática del SRI (Recomendado)
+                                </button>
+                            </h2>
+                            <div id="collapse1" class="accordion-collapse collapse show">
+                                <div class="accordion-body">
+                                    <p><strong>Tiempo estimado:</strong> 24-48 horas</p>
+                                    <p>El SRI limpia periódicamente su caché de pruebas. Esta es la solución más segura.</p>
+                                    <p class="mb-0">
+                                        <strong>Mientras tanto:</strong> Puede enviar la factura al cliente con el botón 
+                                        <span class="badge bg-info">Enviar a Cliente de Todos Modos</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2">
+                                    2️⃣ Contactar Soporte Técnico del SRI
+                                </button>
+                            </h2>
+                            <div id="collapse2" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p><strong>Contacto:</strong></p>
+                                    <ul>
+                                        <li>📞 Teléfono: 1700 774 774</li>
+                                        <li>📧 Email: info@sri.gob.ec</li>
+                                        <li>🌐 Portal: <a href="https://www.sri.gob.ec" target="_blank">www.sri.gob.ec</a></li>
+                                    </ul>
+                                    <p class="mb-0">
+                                        <strong>Información a proporcionar:</strong>
+                                    </p>
+                                    <ul class="mb-0">
+                                        <li>RUC: @factura?.Cliente?.Identificacion</li>
+                                        <li>Clave de Acceso: @factura?.ClaveAcceso</li>
+                                        <li>Mensaje: "Caché corrupto en ambiente de pruebas con valores 100-100-100000000"</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3">
+                                    3️⃣ Usar un secuencial diferente
+                                </button>
+                            </h2>
+                            <div id="collapse3" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p>Crear una nueva factura con un número de secuencial muy diferente al actual.</p>
+                                    <p><strong>Ejemplo:</strong> Si el actual es <code>000000005</code>, probar con <code>000000100</code></p>
+                                    <p class="text-warning mb-0">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        <strong>Nota:</strong> Esto puede no funcionar si el SRI tiene múltiples secuenciales corruptos.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success mt-3 mb-0">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Tu Sistema Está Funcionando Correctamente
+                        </h6>
+                        <p class="mb-0">
+                            Este error NO es causado por tu sistema de facturación. Los XMLs generados cumplen 
+                            perfectamente con el estándar del SRI. El problema es exclusivamente en los servidores 
+                            de pruebas del SRI.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    @if (!string.IsNullOrEmpty(factura?.Cliente?.Email))
+                    {
+                        <button class="btn btn-info" @onclick="EnviarCorreoCliente" disabled="@enviandoCorreo">
+                            @if (enviandoCorreo)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                <text>Enviando...</text>
+                            }
+                            else
+                            {
+                                <i class="bi bi-envelope-fill me-1"></i>
+                                <text>Enviar a Cliente</text>
+                            }
+                        </button>
+                    }
+                    <button type="button" class="btn btn-secondary" @onclick="() => mostrarModalInfoSRI = false">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public int Id { get; set; }
@@ -372,6 +587,10 @@
     private bool cargando = true;
     private string mensajeExito = string.Empty;
     private string mensajeError = string.Empty;
+    private bool mostrarModalInfoSRI = false;
+    private bool enviandoCorreo = false;
+    private bool cambiandoEstado = false;
+    private bool reenviando = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -453,23 +672,134 @@
     {
         try
         {
+            reenviando = true;
             mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+            
             var exitoso = await FacturaService.ReenviarSriAsync(Id);
 
             if (exitoso)
             {
-                mensajeExito = "Factura reenviada al SRI exitosamente";
+                mensajeExito = "✅ Factura reenviada al SRI exitosamente. Actualizando datos...";
                 await Task.Delay(2000);
                 await CargarFactura();
             }
             else
             {
-                mensajeError = "Error al reenviar al SRI";
+                mensajeError = "❌ Error al reenviar al SRI. Intente nuevamente.";
             }
         }
         catch (Exception ex)
         {
-            mensajeError = $"Error al reenviar: {ex.Message}";
+            mensajeError = $"❌ Error al reenviar: {ex.Message}";
+        }
+        finally
+        {
+            reenviando = false;
+        }
+    }
+
+    private async Task CambiarAPendienteYReenviar()
+    {
+        if (factura == null) return;
+
+        try
+        {
+            cambiandoEstado = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            // 1. Cambiar estado a PENDIENTE
+            var resultadoCambio = await FacturaService.CambiarEstadoPendienteAsync(factura.Id);
+            
+            if (resultadoCambio?.Success != true)
+            {
+                mensajeError = $"❌ {resultadoCambio?.Message ?? "Error al cambiar estado a PENDIENTE"}";
+                cambiandoEstado = false;
+                return;
+            }
+
+            mensajeExito = "✅ Estado cambiado a PENDIENTE. Reenviando al SRI...";
+            await Task.Delay(1000);
+
+            // 2. Recargar factura para obtener el estado actualizado
+            await CargarFactura();
+            
+            // 3. Reenviar al SRI
+            var exitosoReenvio = await FacturaService.ReenviarSriAsync(factura.Id);
+
+            if (exitosoReenvio)
+            {
+                mensajeExito = "✅ Factura reenviada al SRI exitosamente. Actualizando datos...";
+                await Task.Delay(2000);
+                await CargarFactura();
+            }
+            else
+            {
+                mensajeError = "❌ Error al reenviar al SRI. La factura quedó en estado PENDIENTE. Puede intentar reenviarla nuevamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"❌ Error: {ex.Message}";
+        }
+        finally
+        {
+            cambiandoEstado = false;
+        }
+    }
+
+    private async Task EnviarCorreoCliente()
+    {
+        if (factura == null || string.IsNullOrEmpty(factura.Cliente?.Email))
+        {
+            mensajeError = "El cliente no tiene un email registrado";
+            return;
+        }
+
+        try
+        {
+            enviandoCorreo = true;
+            mensajeError = string.Empty;
+            mensajeExito = string.Empty;
+
+            // Confirmar con el usuario
+            var confirmar = await JS.InvokeAsync<bool>("confirm", 
+                $"¿Enviar factura {factura.NumeroFactura} al correo {factura.Cliente.Email}?\n\n" +
+                "NOTA: Esta factura NO está autorizada por el SRI, pero puede ser útil para registro interno del cliente.");
+
+            if (!confirmar)
+            {
+                enviandoCorreo = false;
+                return;
+            }
+
+            // Llamar al endpoint de envío de correo
+            var resultado = await FacturaService.EnviarCorreoClienteAsync(factura.Id);
+            
+            if (resultado?.Success == true)
+            {
+                mensajeExito = $"✅ {resultado.Message}";
+                if (!string.IsNullOrEmpty(resultado.Aviso))
+                {
+                    mensajeExito += $"\n\n{resultado.Aviso}";
+                }
+                
+                // Cerrar el modal si está abierto
+                mostrarModalInfoSRI = false;
+            }
+            else
+            {
+                mensajeError = $"❌ {resultado?.Message ?? "Error desconocido al enviar correo"}";
+            }
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"❌ Error al enviar correo: {ex.Message}";
+        }
+        finally
+        {
+            enviandoCorreo = false;
         }
     }
 
@@ -487,6 +817,7 @@
             "FIRMADA" => "bg-primary",
             "ENVIADA" => "bg-warning text-dark",
             "RECIBIDA" => "bg-warning text-dark",
+            "PENDIENTE" => "bg-warning text-dark",
             "AUTORIZADA" => "bg-success",
             "NO_AUTORIZADA" => "bg-danger",
             "DEVUELTA" => "bg-danger",

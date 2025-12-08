@@ -784,7 +784,17 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             string? mensajeError,
             CancellationToken cancellationToken)
         {
-            factura.Estado = estado;
+            // Si el estado es DEVUELTA o NO_AUTORIZADA, cambiar a PENDIENTE para permitir reenvío
+            if (estado == EstadoFactura.DEVUELTA || estado == EstadoFactura.NO_AUTORIZADA)
+            {
+                _logger.LogInformation("  → Cambiando estado de {EstadoOriginal} a PENDIENTE para permitir reenvío", estado);
+                factura.Estado = EstadoFactura.PENDIENTE;
+            }
+            else
+            {
+                factura.Estado = estado;
+            }
+            
             factura.NumeroAutorizacion = numeroAutorizacion;
             factura.FechaHoraAutorizacion = fechaAutorizacion;
             factura.MensajesSRI = mensajeError;
@@ -792,7 +802,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
             await _context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogDebug("  → Estado actualizado en BD: {Estado}", estado);
+            _logger.LogDebug("  → Estado actualizado en BD: {Estado}", factura.Estado);
         }
 
         private EstadoFactura MapearEstadoStringAEnum(string estado)
@@ -806,7 +816,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 "ENVIADA" => EstadoFactura.ENVIADA,
                 "ERROR_FIRMA" => EstadoFactura.BORRADOR,
                 "ERROR_ENVIO" => EstadoFactura.FIRMADA,
-                _ => EstadoFactura.BORRADOR
+                "ERROR_CONSULTA" => EstadoFactura.PENDIENTE, // Error al consultar → PENDIENTE para reintentar
+                _ => EstadoFactura.PENDIENTE // Estados desconocidos → PENDIENTE para permitir reenvío
             };
         }
 

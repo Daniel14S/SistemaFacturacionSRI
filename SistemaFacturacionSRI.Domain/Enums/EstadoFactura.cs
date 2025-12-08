@@ -48,6 +48,11 @@ namespace SistemaFacturacionSRI.Domain.Enums
         /// <summary>
         /// Factura anulada manualmente
         /// </summary>
-        ANULADA = 8
+        ANULADA = 8,
+
+        /// <summary>
+        /// Factura pendiente de reenvío al SRI (tras cambio de estado desde DEVUELTA o NO_AUTORIZADA)
+        /// </summary>
+        PENDIENTE = 9
     }
 }
