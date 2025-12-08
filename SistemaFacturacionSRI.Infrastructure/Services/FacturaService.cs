@@ -1,10 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SistemaFacturacionSRI.Domain.DTOs.Common;
 using SistemaFacturacionSRI.Domain.DTOs.Factura;
-using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Entities;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
+using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Infrastructure.Data;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services
@@ -20,7 +21,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
         private readonly IFirmaElectronicaService? _firmaElectronicaService;
         private readonly IFacturaRepository? _facturaRepository;
         private readonly ClaveAccesoGenerator _claveAccesoGenerator;
-        
+        private readonly ILogger<FacturaService> _logger;
+
+
         private static readonly IReadOnlyDictionary<EstadoFactura, EstadoFactura[]> _transicionesPermitidas =
             new Dictionary<EstadoFactura, EstadoFactura[]>
             {
@@ -52,7 +55,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             IXmlGeneratorService xmlGeneratorService,
             IFirmaElectronicaService firmaElectronicaService,
             IFacturaRepository facturaRepository,
-            ClaveAccesoGenerator claveAccesoGenerator)
+            ClaveAccesoGenerator claveAccesoGenerator,
+            ILogger<FacturaService> logger)
         {
             _context = context;
             _secuenciaService = secuenciaService;
@@ -60,6 +64,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             _firmaElectronicaService = firmaElectronicaService;
             _facturaRepository = facturaRepository;
             _claveAccesoGenerator = claveAccesoGenerator;
+            _logger = logger;
         }
 
         // ==================== CREAR FACTURA ====================
@@ -176,50 +181,125 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
         throw new InvalidOperationException($"Error al generar secuencia de factura: {ex.Message}", ex);
     }
 
-    // Obtener configuración de empresa para RUC y Ambiente
-    var configEmpresa = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync(cancellationToken);
-    if (configEmpresa == null)
-    {
-        throw new InvalidOperationException("No se ha configurado la empresa emisora. Configure los datos de la empresa antes de emitir facturas.");
-    }
+        var configEmpresa = await _context.ConfiguracionEmpresa.FirstOrDefaultAsync(cancellationToken);
+            if (configEmpresa == null)
+            {
+                throw new InvalidOperationException(
+                    "No se ha configurado la empresa emisora. Configure los datos de la empresa antes de emitir facturas.");
+            }
 
-    // Generar Clave de Acceso
-    var partesNumero = numeroFactura.Split('-');
-    var establecimiento = partesNumero[0];
-    var puntoEmision = partesNumero[1];
-    var secuencial = partesNumero[2];
+            // ✅ CRÍTICO: Validar RUC
+            if (string.IsNullOrWhiteSpace(configEmpresa.RUC) || configEmpresa.RUC.Length != 13)
+            {
+                throw new InvalidOperationException(
+                    $"El RUC de la empresa es inválido. Debe tener 13 dígitos. RUC actual: '{configEmpresa.RUC}' (longitud: {configEmpresa.RUC?.Length ?? 0})");
+            }
 
-    var tipoEmision = string.IsNullOrWhiteSpace(configEmpresa.TipoEmision)
-        ? "1"
-        : configEmpresa.TipoEmision;
+            // ✅ Limpiar RUC (remover espacios o guiones)
+            var rucLimpio = new string(configEmpresa.RUC.Where(char.IsDigit).ToArray());
 
-    var claveAcceso = _claveAccesoGenerator.GenerarClaveAcceso(
-        DateTime.Now,
-        "01", // Factura
-        configEmpresa.RUC,
-        configEmpresa.AmbienteSRI,
-        tipoEmision,
-        establecimiento,
-        puntoEmision,
-        secuencial
-    );
+            if (rucLimpio.Length != 13)
+            {
+                throw new InvalidOperationException(
+                    $"El RUC después de limpieza tiene longitud incorrecta: '{rucLimpio}' (longitud: {rucLimpio.Length})");
+            }
 
-    // 5. Crear entidad Factura
-    var factura = new Factura
-    {
-        NumeroFactura = numeroFactura,
-        ClaveAcceso = claveAcceso,
-        ClienteId = dto.ClienteId,
-        UsuarioId = usuarioId,
-        FechaEmision = DateTime.UtcNow,
-        Ambiente = configEmpresa.AmbienteSRI == "2" ? Ambiente.PRODUCCION : Ambiente.PRUEBAS,
-        TipoEmision = TipoEmision.NORMAL,
-        Estado = EstadoFactura.BORRADOR,
-        Observaciones = dto.Observaciones
-    };
+            // ✅ CRÍTICO: Extraer correctamente las partes del número de factura
+            var partesNumero = numeroFactura.Split('-');
+            if (partesNumero.Length != 3)
+            {
+                throw new InvalidOperationException(
+                    $"El número de factura '{numeroFactura}' no tiene el formato esperado 'xxx-xxx-xxxxxxxxx'");
+            }
 
-    // 6. Crear detalles y calcular totales
-    var detalles = new List<DetalleFactura>();
+            // ✅ Asegurar formato con padding correcto
+            var establecimiento = partesNumero[0].Trim().PadLeft(3, '0');
+            var puntoEmision = partesNumero[1].Trim().PadLeft(3, '0');
+            var secuencial = partesNumero[2].Trim().PadLeft(9, '0');
+
+            // ✅ CRÍTICO: Validar y usar tipo de emisión correcto
+            var tipoEmision = string.IsNullOrWhiteSpace(configEmpresa.TipoEmision)
+                ? "1"
+                : configEmpresa.TipoEmision.Trim();
+
+            // ✅ Validar que sea 1 o 2
+            if (tipoEmision != "1" && tipoEmision != "2")
+            {
+                throw new InvalidOperationException(
+                    $"El tipo de emisión debe ser '1' (Normal) o '2' (Indisponibilidad). Valor actual: '{tipoEmision}'");
+            }
+
+            // ✅ Validar ambiente SRI
+            var ambiente = configEmpresa.AmbienteSRI?.Trim() ?? "1";
+
+            if (ambiente != "1" && ambiente != "2")
+            {
+                throw new InvalidOperationException(
+                    $"El ambiente SRI debe ser '1' (Pruebas) o '2' (Producción). Valor actual: '{ambiente}'");
+            }
+
+            // ✅ Generar Clave de Acceso con datos correctos
+            _logger?.LogInformation("\n═══════════════════════════════════════════════════");
+            _logger?.LogInformation("🔑 GENERANDO CLAVE DE ACCESO");
+            _logger?.LogInformation("═══════════════════════════════════════════════════");
+            _logger?.LogInformation("  Fecha:          {Fecha}", DateTime.Now.ToString("dd/MM/yyyy"));
+            _logger?.LogInformation("  Tipo Comp:      {TipoComprobante}", "01");
+            _logger?.LogInformation("  RUC:            {Ruc}", rucLimpio);
+            _logger?.LogInformation("  Ambiente:       {Ambiente} ({Desc})", ambiente, ambiente == "1" ? "Pruebas" : "Producción");
+            _logger?.LogInformation("  Tipo Emisión:   {TipoEmision} ({Desc})", tipoEmision, tipoEmision == "1" ? "Normal" : "Contingencia");
+            _logger?.LogInformation("  Establecim:     {Establecimiento}", establecimiento);
+            _logger?.LogInformation("  Punto Emis:     {PuntoEmision}", puntoEmision);
+            _logger?.LogInformation("  Secuencial:     {Secuencial}", secuencial);
+            _logger?.LogInformation("  Número Factura: {NumeroFactura}", numeroFactura);
+            _logger?.LogInformation("═══════════════════════════════════════════════════");
+
+            // ✅ Generación de la clave de acceso con PARÁMETROS EN ORDEN CORRECTO
+            var claveAcceso = _claveAccesoGenerator.GenerarClaveAcceso(
+                fechaEmision: DateTime.Now,
+                tipoComprobante: "01",
+                ruc: rucLimpio,
+                ambiente: ambiente,
+                tipoEmision: tipoEmision,
+                establecimiento: establecimiento,
+                puntoEmision: puntoEmision,
+                secuencial: secuencial,
+                codigoNumerico: null  // Se genera automáticamente
+            );
+
+            // ✅ Validación de la clave generada
+            if (string.IsNullOrWhiteSpace(claveAcceso) || claveAcceso.Length != 49)
+            {
+                _logger?.LogError("❌ La clave de acceso generada tiene longitud incorrecta: {Longitud} (debe ser 49)", claveAcceso?.Length ?? 0);
+                throw new InvalidOperationException($"La clave de acceso generada tiene longitud incorrecta: {claveAcceso?.Length ?? 0} (debe ser 49)");
+            }
+
+            if (!_claveAccesoGenerator.ValidarClaveAcceso(claveAcceso))
+            {
+                _logger?.LogError("❌ La clave de acceso generada NO pasa la validación del dígito verificador");
+                _logger?.LogError("   Clave: {ClaveAcceso}", claveAcceso);
+                throw new InvalidOperationException($"La clave de acceso generada es inválida: {claveAcceso}");
+            }
+
+            _logger?.LogInformation("✅ Clave de acceso generada y validada correctamente");
+            _logger?.LogInformation("   Clave: {ClaveAcceso}", claveAcceso);
+            _logger?.LogInformation("═══════════════════════════════════════════════════\n");
+
+
+            // 5. Crear entidad Factura
+            var factura = new Factura
+            {
+                NumeroFactura = numeroFactura,
+                ClaveAcceso = claveAcceso,
+                ClienteId = dto.ClienteId,
+                UsuarioId = usuarioId,
+                FechaEmision = DateTime.UtcNow,
+                Ambiente = configEmpresa.AmbienteSRI == "2" ? Ambiente.PRODUCCION : Ambiente.PRUEBAS,
+                TipoEmision = TipoEmision.NORMAL,
+                Estado = EstadoFactura.BORRADOR,
+                Observaciones = dto.Observaciones
+            };
+            // 6. Crear detalles y calcular totales
+            var detalles = new List<DetalleFactura>();
         var subtotales = new Dictionary<TipoIVA, decimal>
         {
             { TipoIVA.IVA_0, 0 },
@@ -229,7 +309,17 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
     decimal descuentoTotal = 0;
     decimal ivaTotal = 0;
 
-    foreach (var detalleDto in dto.Detalles)
+            Console.WriteLine("🔑 Clave de acceso generada:");
+            Console.WriteLine($"  → Número Factura: {numeroFactura}");
+            Console.WriteLine($"  → Establecimiento: {establecimiento}");
+            Console.WriteLine($"  → Punto Emisión: {puntoEmision}");
+            Console.WriteLine($"  → Secuencial: {secuencial}");
+            Console.WriteLine($"  → Tipo Emisión: {tipoEmision}");
+            Console.WriteLine($"  → Ambiente: {configEmpresa.AmbienteSRI}");
+            Console.WriteLine($"  → Clave Completa: {claveAcceso}");
+
+
+            foreach (var detalleDto in dto.Detalles)
     {
         var productoDetalle = productos.First(p => p.Id == detalleDto.ProductoId);
 
@@ -303,7 +393,11 @@ public async Task<FacturaDto> CrearFacturaAsync(CrearFacturaDto dto, int usuario
     return MapearAFacturaDto(facturaCompleta!);
 }
 
-        public async Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
+        
+        
+        
+        
+   public async Task<PagedResultDto<FacturaDto>> ListarFacturasAsync(FiltroFacturaDto filtro, CancellationToken cancellationToken = default)
         {
             if (filtro == null)
             {

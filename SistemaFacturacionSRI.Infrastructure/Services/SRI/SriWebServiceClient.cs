@@ -1,9 +1,13 @@
 // SistemaFacturacionSRI.Infrastructure/Services/SRI/SriWebServiceClient.cs
-// VERSIÓN CON DEBUGGING MEJORADO
+// T-076: Construcción de requests SOAP
+// T-077: Envío HTTP al SRI
+// ✨ MEJORADO: Logging detallado y diagnóstico completo
 
 using System.Diagnostics;
 using System.Net;
 using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SistemaFacturacionSRI.Domain.Configuration;
@@ -12,6 +16,10 @@ using SistemaFacturacionSRI.Domain.Interfaces.Services;
 
 namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 {
+    /// <summary>
+    /// T-076, T-077: Cliente para consumir WebServices SOAP del SRI
+    /// ✨ Con logging detallado y diagnóstico completo
+    /// </summary>
     public class SriWebServiceClient : ISriWebServiceClient
     {
         private readonly HttpClient _httpClient;
@@ -33,10 +41,6 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             _parser = parser ?? throw new ArgumentNullException(nameof(parser));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            // 🔍 AGREGAR: Crear directorio de debug
-            _debugPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SRI_Debug");
-            Directory.CreateDirectory(_debugPath);
-
             _options.Validar();
             ConfigurarHttpClient();
         }
@@ -48,8 +52,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             _httpClient.DefaultRequestHeaders.Add("User-Agent", _options.UserAgent);
             _httpClient.DefaultRequestHeaders.Add("Accept", "text/xml, application/xml");
 
-            _logger.LogDebug("HttpClient configurado: Timeout={Timeout}s, UserAgent={UserAgent}",
-                _options.TimeoutSegundos, _options.UserAgent);
+            _logger.LogInformation("╔══════════════════════════════════════════════════╗");
+            _logger.LogInformation("║   CONFIGURACIÓN HTTP CLIENT                      ║");
+            _logger.LogInformation("╚══════════════════════════════════════════════════╝");
+            _logger.LogInformation("  → Timeout: {Timeout}s", _options.TimeoutSegundos);
+            _logger.LogInformation("  → User-Agent: {UserAgent}", _options.UserAgent);
         }
 
         public async Task<RespuestaRecepcionComprobante> EnviarComprobanteAsync(
@@ -65,7 +72,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 _logger.LogInformation("═══════════════════════════════════════");
                 _logger.LogInformation("ENVIANDO COMPROBANTE AL SRI");
                 _logger.LogInformation("═══════════════════════════════════════");
-                _logger.LogInformation("Clave Acceso: {ClaveAcceso}", claveAcceso);
+                _logger.LogInformation("Clave Acceso: {ClaveAcceso}", request.ClaveAcceso);
                 _logger.LogInformation("URL: {Url}", _options.UrlRecepcion);
 
                 request.Validar();
@@ -80,7 +87,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
                 if (_options.LogSoapDetallado)
                 {
-                    _logger.LogDebug("Request SOAP:\n{Soap}", soapRequest);
+                    _logger.LogDebug("\n[SOAP REQUEST COMPLETO]");
+                    _logger.LogDebug("{Soap}", soapRequest);
                 }
 
                 // Enviar HTTP POST
@@ -145,6 +153,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
                 if (respuesta.FueDevuelto)
                 {
+                    _logger.LogWarning("  ✗ Comprobante DEVUELTO por el SRI");
                     var errores = respuesta.ObtenerErrores();
                     _logger.LogError("❌ COMPROBANTE DEVUELTO - {Count} errores", errores.Count);
                     foreach (var error in errores)
@@ -174,13 +183,30 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                                  $"\nInnerException: {ex.InnerException?.Message}";
                 await File.WriteAllTextAsync(errorFile, errorContent);
                 
-                _logger.LogError(ex, "❌ Error al enviar comprobante. Tiempo: {Tiempo}ms", 
-                    stopwatch.ElapsedMilliseconds);
+                _logger.LogError("\n╔══════════════════════════════════════════════════╗");
+                _logger.LogError("║       ERROR AL ENVIAR COMPROBANTE                ║");
+                _logger.LogError("╚══════════════════════════════════════════════════╝");
+                _logger.LogError("  → Tipo: {Tipo}", ex.GetType().Name);
+                _logger.LogError("  → Mensaje: {Mensaje}", ex.Message);
+                _logger.LogError("  → Tiempo: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
                 _logger.LogError("Error guardado en: {File}", errorFile);
+
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("  → Inner Exception: {Inner}", ex.InnerException.Message);
+                }
+
                 throw;
             }
         }
 
+        // ============================================================
+        // T-076, T-077: CONSULTAR AUTORIZACIÓN
+        // ============================================================
+
+        /// <summary>
+        /// T-076, T-077: Consulta la autorización de un comprobante
+        /// </summary>
         public async Task<RespuestaAutorizacionComprobante> ConsultarAutorizacionAsync(
             AutorizacionComprobanteRequest request,
             CancellationToken cancellationToken = default)
@@ -208,7 +234,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
 
                 if (_options.LogSoapDetallado)
                 {
-                    _logger.LogDebug("Request SOAP:\n{Soap}", soapRequest);
+                    _logger.LogDebug("\n[SOAP REQUEST - AUTORIZACIÓN]");
+                    _logger.LogDebug("  {Soap}", soapRequest);
                 }
 
                 var responseXml = await EnviarSoapRequestAsync(
@@ -233,33 +260,48 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 var autorizacion = respuesta.PrimeraAutorizacion;
                 var estado = autorizacion?.Estado ?? "SIN AUTORIZACION";
 
-                _logger.LogInformation("═══════════════════════════════════════");
-                _logger.LogInformation("✅ RESPUESTA AUTORIZACIÓN RECIBIDA");
-                _logger.LogInformation("Estado: {Estado}", estado);
-                _logger.LogInformation("Tiempo: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
-                _logger.LogInformation("═══════════════════════════════════════");
+                _logger.LogInformation("\n╔══════════════════════════════════════════════════╗");
+                _logger.LogInformation("║     RESPUESTA AUTORIZACIÓN RECIBIDA              ║");
+                _logger.LogInformation("╚══════════════════════════════════════════════════╝");
+                _logger.LogInformation("  → Estado: {Estado}", estado);
+                _logger.LogInformation("  → Tiempo: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
 
                 if (autorizacion != null)
                 {
                     if (autorizacion.EstaAutorizado)
                     {
-                        _logger.LogInformation("🎉 Comprobante AUTORIZADO");
-                        _logger.LogInformation("Número Autorización: {Numero}", 
-                            autorizacion.NumeroAutorizacion);
-                        _logger.LogInformation("Fecha: {Fecha}", autorizacion.FechaAutorizacion);
+                        _logger.LogInformation("  🎉 Comprobante AUTORIZADO");
+                        _logger.LogInformation("  → Número Autorización: {Numero}", autorizacion.NumeroAutorizacion);
+                        _logger.LogInformation("  → Fecha: {Fecha}", autorizacion.FechaAutorizacion);
+                        _logger.LogInformation("  → Ambiente: {Ambiente}", autorizacion.Ambiente);
                     }
                     else if (autorizacion.EnProcesamiento)
                     {
-                        _logger.LogInformation("⏳ Comprobante EN PROCESAMIENTO");
+                        _logger.LogInformation("  ⏳ Comprobante EN PROCESAMIENTO");
+                        _logger.LogInformation("  → El SRI aún está procesando el comprobante");
                     }
                     else if (autorizacion.EstaNoAutorizado)
                     {
-                        _logger.LogWarning("❌ Comprobante NO AUTORIZADO");
+                        _logger.LogWarning("  ❌ Comprobante NO AUTORIZADO");
                         foreach (var mensaje in autorizacion.Mensajes)
                         {
-                            _logger.LogWarning("Mensaje SRI: {Mensaje}", mensaje);
+                            _logger.LogWarning("  → Mensaje SRI: {Mensaje}", mensaje);
                         }
                     }
+
+                    // Log de mensajes adicionales
+                    if (autorizacion.Mensajes.Any())
+                    {
+                        _logger.LogInformation("\n  Mensajes del SRI:");
+                        foreach (var mensaje in autorizacion.Mensajes)
+                        {
+                            _logger.LogInformation("  • {Mensaje}", mensaje);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("  ⚠️ No se recibió información de autorización");
                 }
 
                 return respuesta;
@@ -267,8 +309,18 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             catch (Exception ex)
             {
                 stopwatch.Stop();
-                _logger.LogError(ex, "❌ Error al consultar autorización. Tiempo: {Tiempo}ms",
-                    stopwatch.ElapsedMilliseconds);
+                _logger.LogError("\n╔══════════════════════════════════════════════════╗");
+                _logger.LogError("║     ERROR AL CONSULTAR AUTORIZACIÓN              ║");
+                _logger.LogError("╚══════════════════════════════════════════════════╝");
+                _logger.LogError("  → Tipo: {Tipo}", ex.GetType().Name);
+                _logger.LogError("  → Mensaje: {Mensaje}", ex.Message);
+                _logger.LogError("  → Tiempo: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
+
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("  → Inner Exception: {Inner}", ex.InnerException.Message);
+                }
+
                 throw;
             }
         }
@@ -279,9 +331,13 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             string operacion,
             CancellationToken cancellationToken)
         {
+            var stopwatch = Stopwatch.StartNew();
+
             try
             {
-                _logger.LogDebug("Enviando request SOAP a: {Url}", url);
+                _logger.LogDebug("\n[HTTP-{Operacion}] Preparando envío...", operacion);
+                _logger.LogDebug("  → URL: {Url}", url);
+                _logger.LogDebug("  → Tamaño SOAP: {Size} bytes", soapXml.Length);
 
                 var content = new StringContent(soapXml, Encoding.UTF8, "text/xml");
                 content.Headers.ContentType!.CharSet = "utf-8";
@@ -290,6 +346,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 {
                     content.Headers.Add("SOAPAction", "");
                 }
+
+                _logger.LogDebug("  → Headers configurados:");
+                _logger.LogDebug("     Content-Type: text/xml; charset=utf-8");
+                _logger.LogDebug("     SOAPAction: \"\"");
 
                 var response = await _httpClient.PostAsync(url, content, cancellationToken);
                 var responseXml = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -307,7 +367,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                         throw new HttpRequestException(
                             $"Error SOAP del SRI: {errorMsg} (HTTP {response.StatusCode})");
                     }
-                    
+
                     response.EnsureSuccessStatusCode();
                 }
 
@@ -318,17 +378,42 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                         "La respuesta del SRI no es un XML SOAP válido");
                 }
 
+                _logger.LogDebug("  ✓ Respuesta SOAP válida");
+
                 return responseXml;
             }
             catch (TaskCanceledException ex)
             {
-                _logger.LogError(ex, "Timeout al comunicarse con el SRI");
+                stopwatch.Stop();
+                _logger.LogError("\n  ✗ TIMEOUT después de {Timeout}s", _httpClient.Timeout.TotalSeconds);
+                _logger.LogError("  → Operación: {Operacion}", operacion);
+                _logger.LogError("  → Tiempo transcurrido: {Ms}ms", stopwatch.ElapsedMilliseconds);
+                _logger.LogError("  → Mensaje: {Message}", ex.Message);
+
                 throw new TimeoutException(
                     $"Timeout al comunicarse con el SRI después de {_options.TimeoutSegundos}s", ex);
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "Error de red al comunicarse con el SRI");
+                stopwatch.Stop();
+                _logger.LogError("\n  ✗ ERROR HTTP al comunicarse con el SRI");
+                _logger.LogError("  → Operación: {Operacion}", operacion);
+                _logger.LogError("  → Tiempo: {Ms}ms", stopwatch.ElapsedMilliseconds);
+                _logger.LogError("  → StatusCode: {StatusCode}", ex.StatusCode);
+                _logger.LogError("  → Mensaje: {Message}", ex.Message);
+
+                // Log de excepciones internas
+                var innerEx = ex.InnerException;
+                int nivel = 1;
+                while (innerEx != null)
+                {
+                    _logger.LogError("  → Inner Exception (nivel {Nivel}): {Type}",
+                        nivel, innerEx.GetType().Name);
+                    _logger.LogError("     Mensaje: {Message}", innerEx.Message);
+                    innerEx = innerEx.InnerException;
+                    nivel++;
+                }
+
                 throw new InvalidOperationException(
                     "Error de red al comunicarse con el SRI. Verifique conectividad.", ex);
             }
@@ -338,23 +423,36 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         {
             try
             {
-                _logger.LogDebug("Verificando conectividad con el SRI...");
+                _logger.LogInformation("\n╔══════════════════════════════════════════════════╗");
+                _logger.LogInformation("║     VERIFICANDO CONECTIVIDAD CON EL SRI          ║");
+                _logger.LogInformation("╚══════════════════════════════════════════════════╝");
+                _logger.LogInformation("  → URL Recepción: {Url}", _options.UrlRecepcion);
 
                 var request = new HttpRequestMessage(HttpMethod.Head, _options.UrlRecepcion);
-                var response = await _httpClient.SendAsync(request, 
+                var response = await _httpClient.SendAsync(request,
                     HttpCompletionOption.ResponseHeadersRead);
 
                 var conectado = response.IsSuccessStatusCode || 
                                 response.StatusCode == HttpStatusCode.MethodNotAllowed;
 
-                _logger.LogDebug("Conectividad con SRI: {Estado}", 
-                    conectado ? "✅ OK" : "❌ No disponible");
+                if (conectado)
+                {
+                    _logger.LogInformation("  ✅ Conectividad OK");
+                    _logger.LogInformation("  → HTTP Status: {Status}", response.StatusCode);
+                }
+                else
+                {
+                    _logger.LogWarning("  ❌ No disponible");
+                    _logger.LogWarning("  → HTTP Status: {Status}", response.StatusCode);
+                }
 
                 return conectado;
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "No se pudo verificar conectividad con el SRI");
+                _logger.LogWarning("\n  ⚠️ No se pudo verificar conectividad");
+                _logger.LogWarning("  → Tipo: {Type}", ex.GetType().Name);
+                _logger.LogWarning("  → Mensaje: {Message}", ex.Message);
                 return false;
             }
         }
@@ -363,38 +461,57 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         {
             var estado = new EstadoServiciosSri();
 
+            _logger.LogInformation("\n╔══════════════════════════════════════════════════╗");
+            _logger.LogInformation("║     VERIFICANDO ESTADO DE SERVICIOS SRI          ║");
+            _logger.LogInformation("╚══════════════════════════════════════════════════╝");
+
             try
             {
                 var swRecepcion = Stopwatch.StartNew();
+                _logger.LogInformation("\n[1/2] Verificando Servicio de Recepción...");
+
                 try
                 {
                     var requestRecepcion = new HttpRequestMessage(
                         HttpMethod.Head, _options.UrlRecepcion);
                     var responseRecepcion = await _httpClient.SendAsync(
                         requestRecepcion, HttpCompletionOption.ResponseHeadersRead);
-                    
+
                     estado.RecepcionDisponible = responseRecepcion.IsSuccessStatusCode ||
                         responseRecepcion.StatusCode == HttpStatusCode.MethodNotAllowed;
                     estado.TiempoRespuestaRecepcionMs = swRecepcion.ElapsedMilliseconds;
+
+                    _logger.LogInformation("  → Estado: {Estado}",
+                        estado.RecepcionDisponible ? "✅ Disponible" : "❌ No disponible");
+                    _logger.LogInformation("  → Tiempo: {Ms}ms", estado.TiempoRespuestaRecepcionMs);
+                    _logger.LogInformation("  → HTTP Status: {Status}", responseRecepcion.StatusCode);
                 }
                 catch (Exception ex)
                 {
                     estado.RecepcionDisponible = false;
                     estado.UltimoError = ex.Message;
+                    _logger.LogWarning("  → Error: {Message}", ex.Message);
                 }
                 swRecepcion.Stop();
 
                 var swAutorizacion = Stopwatch.StartNew();
+                _logger.LogInformation("\n[2/2] Verificando Servicio de Autorización...");
+
                 try
                 {
                     var requestAutorizacion = new HttpRequestMessage(
                         HttpMethod.Head, _options.UrlAutorizacion);
                     var responseAutorizacion = await _httpClient.SendAsync(
                         requestAutorizacion, HttpCompletionOption.ResponseHeadersRead);
-                    
+
                     estado.AutorizacionDisponible = responseAutorizacion.IsSuccessStatusCode ||
                         responseAutorizacion.StatusCode == HttpStatusCode.MethodNotAllowed;
                     estado.TiempoRespuestaAutorizacionMs = swAutorizacion.ElapsedMilliseconds;
+
+                    _logger.LogInformation("  → Estado: {Estado}",
+                        estado.AutorizacionDisponible ? "✅ Disponible" : "❌ No disponible");
+                    _logger.LogInformation("  → Tiempo: {Ms}ms", estado.TiempoRespuestaAutorizacionMs);
+                    _logger.LogInformation("  → HTTP Status: {Status}", responseAutorizacion.StatusCode);
                 }
                 catch (Exception ex)
                 {
@@ -403,18 +520,26 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                     {
                         estado.UltimoError = ex.Message;
                     }
+                    _logger.LogWarning("  → Error: {Message}", ex.Message);
                 }
                 swAutorizacion.Stop();
 
-                _logger.LogInformation("Estado servicios SRI: Recepción={Recepcion}, Autorización={Autorizacion}",
+                _logger.LogInformation("\n╔══════════════════════════════════════════════════╗");
+                _logger.LogInformation("║     RESUMEN ESTADO SERVICIOS                     ║");
+                _logger.LogInformation("╚══════════════════════════════════════════════════╝");
+                _logger.LogInformation("  Recepción:     {Estado} ({Ms}ms)",
                     estado.RecepcionDisponible ? "✅" : "❌",
-                    estado.AutorizacionDisponible ? "✅" : "❌");
+                    estado.TiempoRespuestaRecepcionMs);
+                _logger.LogInformation("  Autorización:  {Estado} ({Ms}ms)",
+                    estado.AutorizacionDisponible ? "✅" : "❌",
+                    estado.TiempoRespuestaAutorizacionMs);
 
                 return estado;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener estado de servicios SRI");
+                _logger.LogError("\n  ❌ Error al obtener estado de servicios");
+                _logger.LogError("  → Mensaje: {Message}", ex.Message);
                 estado.UltimoError = ex.Message;
                 return estado;
             }

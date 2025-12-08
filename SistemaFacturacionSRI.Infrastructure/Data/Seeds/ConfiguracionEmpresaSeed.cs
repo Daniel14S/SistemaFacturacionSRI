@@ -11,7 +11,7 @@ public static class ConfiguracionEmpresaSeed
             new ConfiguracionEmpresa
             {
                 Id = 1,
-                RUC = "1234567890001",
+                RUC = "1804183794001",
                 RazonSocial = "EMPRESA DEMO FACTURACIÓN ELECTRÓNICA S.A.",
                 NombreComercial = "DEMO FACTURACIÓN",
                 DirMatriz = "Av. Principal 123 y Secundaria, Edificio Central",

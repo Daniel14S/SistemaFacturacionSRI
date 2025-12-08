@@ -39,6 +39,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services
             }
         }
 
+        public string ObtenerPassword()
+        {
+            return _options.ClaveCertificado;
+        }
+
         /// <summary>
         /// Carga el certificado desde la configuración (thread-safe)
         /// </summary>

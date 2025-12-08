@@ -719,7 +719,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                             NombreComercial = "DEMO FACTURACIÓN",
                             ObligadoContabilidad = true,
                             PuntoEmision = "001",
-                            RUC = "1234567890001",
+                            RUC = "1804183794001",
                             RazonSocial = "EMPRESA DEMO FACTURACIÓN ELECTRÓNICA S.A.",
                             Telefono = "03-2345678",
                             TipoEmision = "1",

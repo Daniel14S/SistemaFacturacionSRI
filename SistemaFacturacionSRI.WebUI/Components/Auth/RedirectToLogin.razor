@@ -1,9 +1,18 @@
 @inject NavigationManager Navigation
+
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
-        var loginUrl = $"/login?returnUrl={Uri.EscapeDataString(returnUrl)}";
+        if (!firstRender)
+            return;
+
+        var currentUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+
+        if (currentUrl.StartsWith("login", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var loginUrl = $"/login?returnUrl={Uri.EscapeDataString(currentUrl)}";
+
         Navigation.NavigateTo(loginUrl, forceLoad: true);
     }
 }

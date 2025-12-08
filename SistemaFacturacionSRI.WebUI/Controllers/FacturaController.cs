@@ -29,6 +29,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         private readonly ISriIntegracionService _sriIntegracionService;
         private readonly IEmailFacturaService _emailFacturaService;
         private readonly ILogger<FacturaController> _logger;
+        private readonly IXmlGeneratorService _xmlGeneratorService;
 
         public FacturaController(
             IFacturaService facturaService,
@@ -36,7 +37,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             IWebHostEnvironment environment,
             ISriIntegracionService sriIntegracionService,
             IEmailFacturaService emailFacturaService,
-            ILogger<FacturaController> logger)
+            ILogger<FacturaController> logger,
+            IXmlGeneratorService xmlGeneratorService)
         {
             _facturaService = facturaService;
             _pdfGeneratorService = pdfGeneratorService;
@@ -44,6 +46,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             _sriIntegracionService = sriIntegracionService;
             _emailFacturaService = emailFacturaService;
             _logger = logger;
+            _xmlGeneratorService = xmlGeneratorService;
+
         }
 
         // ==================== MÉTODOS AUXILIARES ====================
@@ -85,153 +89,221 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
 
         // ==================== ENDPOINTS ====================
 
-       /// <summary>
-/// T-027: POST /api/factura
-/// Crea una nueva factura en estado BORRADOR
-/// PERMISOS: Administrador ✅ | Vendedor ✅
-/// IMPLEMENTA: T-020 de Pedro (Lógica completa de creación)
-/// </summary>
-[HttpPost]
-[Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
-[ProducesResponseType(typeof(FacturaDto), StatusCodes.Status201Created)]
-[ProducesResponseType(StatusCodes.Status400BadRequest)]
-[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFacturaDto dto)
-{
-    try
-    {
-        // 1. Validación inicial de modelo
-        if (dto == null)
-        {
-            return BadRequest(new { message = "Los datos de la factura son requeridos" });
-        }
 
-        if (!ModelState.IsValid)
+        /// <summary>
+        /// T-027: POST /api/factura
+        /// Crea una nueva factura en estado BORRADOR
+        /// PERMISOS: Administrador ✅ | Vendedor ✅
+        /// </summary>
+        [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+        [ProducesResponseType(typeof(FacturaDto), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<FacturaDto>> CrearFactura([FromBody] CrearFacturaDto dto)
         {
-            return BadRequest(new
+            try
             {
-                message = "Datos inválidos",
-                errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-            });
-        }
+                _logger.LogInformation("═══════════════════════════════════════════════════════════");
+                _logger.LogInformation("🆕 INICIANDO CREACIÓN DE FACTURA");
+                _logger.LogInformation("═══════════════════════════════════════════════════════════");
 
-        // 2. Validaciones adicionales de negocio
-        if (dto.Detalles == null || !dto.Detalles.Any())
-        {
-            return BadRequest(new 
-            { 
-                message = "La factura debe tener al menos un producto" 
-            });
-        }
-
-        // Validar cantidades positivas
-        var detallesInvalidos = dto.Detalles
-            .Where(d => d.Cantidad <= 0 || d.PrecioUnitario <= 0)
-            .ToList();
-
-        if (detallesInvalidos.Any())
-        {
-            return BadRequest(new
-            {
-                message = "Todos los productos deben tener cantidad y precio mayor a cero",
-                detallesInvalidos = detallesInvalidos.Select(d => new
+                // 1. Validación inicial de modelo
+                if (dto == null)
                 {
-                    d.ProductoId,
-                    d.Cantidad,
-                    d.PrecioUnitario
-                })
-            });
-        }
-
-        // 3. Obtener usuario autenticado
-        int usuarioId = ObtenerUsuarioId();
-
-        _logger.LogInformation(
-            "Iniciando creación de factura. Usuario: {UsuarioId}, Cliente: {ClienteId}, Productos: {CantidadProductos}",
-            usuarioId, dto.ClienteId, dto.Detalles.Count);
-
-        // 4. Llamar al servicio de creación (T-020 de Pedro)
-        var factura = await _facturaService.CrearFacturaAsync(dto, usuarioId);
-
-        _logger.LogInformation(
-            "Factura creada exitosamente. ID: {FacturaId}, Número: {NumeroFactura}, Total: {Total}",
-            factura.Id, factura.NumeroFactura, factura.Total);
-
-        // Enviar correo con PDF y XML (no bloquea la creación)
-        try
-        {
-            await _emailFacturaService.EnviarFacturaAsync(factura.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "No se pudo enviar el correo de factura {FacturaId}", factura.Id);
-        }
-
-        // 5. Retornar resultado 201 Created con Location header
-        return CreatedAtAction(
-            nameof(ObtenerFacturaPorId),
-            new { id = factura.Id },
-            new
-            {
-                message = "Factura creada exitosamente",
-                factura = factura,
-                enlaces = new
-                {
-                    verDetalle = $"/api/factura/{factura.Id}",
-                    descargarXml = $"/api/factura/{factura.Id}/xml",
-                    enviarSri = $"/api/factura/{factura.Id}/enviar-sri"
+                    _logger.LogWarning("❌ Datos de factura nulos");
+                    return BadRequest(new { message = "Los datos de la factura son requeridos" });
                 }
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("❌ Modelo inválido: {Errores}",
+                        string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+
+                    return BadRequest(new
+                    {
+                        message = "Datos inválidos",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                    });
+                }
+
+                // 2. Validaciones adicionales de negocio
+                if (dto.Detalles == null || !dto.Detalles.Any())
+                {
+                    _logger.LogWarning("❌ Factura sin detalles");
+                    return BadRequest(new
+                    {
+                        message = "La factura debe tener al menos un producto"
+                    });
+                }
+
+                _logger.LogInformation("📋 Detalles recibidos: {CantidadDetalles}", dto.Detalles.Count);
+
+                // Validar cantidades positivas
+                var detallesInvalidos = dto.Detalles
+                    .Where(d => d.Cantidad <= 0 || d.PrecioUnitario <= 0)
+                    .ToList();
+
+                if (detallesInvalidos.Any())
+                {
+                    _logger.LogWarning("❌ Detalles con cantidades o precios inválidos: {Cantidad}", detallesInvalidos.Count);
+
+                    return BadRequest(new
+                    {
+                        message = "Todos los productos deben tener cantidad y precio mayor a cero",
+                        detallesInvalidos = detallesInvalidos.Select(d => new
+                        {
+                            d.ProductoId,
+                            d.Cantidad,
+                            d.PrecioUnitario
+                        })
+                    });
+                }
+
+                // 3. Obtener usuario autenticado
+                int usuarioId = ObtenerUsuarioId();
+
+                _logger.LogInformation("👤 Usuario autenticado: {UsuarioId}", usuarioId);
+                _logger.LogInformation("👥 Cliente seleccionado: {ClienteId}", dto.ClienteId);
+                _logger.LogInformation("📦 Cantidad de productos: {CantidadProductos}", dto.Detalles.Count);
+
+                // 4. Llamar al servicio de creación (T-020 de Pedro)
+                _logger.LogInformation("🔄 Llamando a FacturaService.CrearFacturaAsync...");
+                var factura = await _facturaService.CrearFacturaAsync(dto, usuarioId);
+
+                _logger.LogInformation("✅ Factura creada exitosamente en BD");
+                _logger.LogInformation("   - ID: {FacturaId}", factura.Id);
+                _logger.LogInformation("   - Número: {NumeroFactura}", factura.NumeroFactura);
+                _logger.LogInformation("   - Clave Acceso: {ClaveAcceso}", factura.ClaveAcceso);
+                _logger.LogInformation("   - Total: ${Total:F2}", factura.Total);
+                _logger.LogInformation("   - Estado: {Estado}", factura.Estado);
+
+                // 5. Generar XML del comprobante inmediatamente después de crear la factura
+                // En CrearFactura(), REEMPLAZAR la sección de validación (líneas 188-210):
+
+                // 5. Generar XML del comprobante inmediatamente después de crear la factura
+                try
+                {
+                    _logger.LogInformation("📄 Generando XML para factura {FacturaId}...", factura.Id);
+
+                    // Generar XML
+                    var xmlContent = await _xmlGeneratorService.GenerarXmlFacturaAsync(factura.Id);
+
+                    _logger.LogInformation("✅ XML generado correctamente");
+                    _logger.LogInformation("   - Tamaño: {Tamaño} caracteres", xmlContent.Length);
+
+                    // ⚠️ VALIDACIÓN XSD DESHABILITADA TEMPORALMENTE
+                    // TODO: Agregar archivo XSD en Resources/XSD/factura_v2.1.0.xsd
+                    /*
+                    _logger.LogInformation("🔍 Validando XML contra esquema XSD...");
+                    var (esValido, errores) = await _xmlGeneratorService.ValidarXmlContraEsquemaAsync(xmlContent);
+
+                    if (!esValido)
+                    {
+                        _logger.LogError("❌ XML no válido según esquema XSD");
+                        foreach (var error in errores)
+                        {
+                            _logger.LogError("   - {Error}", error);
+                        }
+                        throw new InvalidOperationException("XML no válido: " + string.Join(", ", errores));
+                    }
+
+                    _logger.LogInformation("✅ XML válido según esquema XSD");
+                    */
+                    _logger.LogWarning("⚠️ Validación XSD omitida - agregar archivo factura_v2.1.0.xsd para habilitar");
+
+                    // Guardar XML en archivo
+                    _logger.LogInformation("💾 Guardando XML en archivo...");
+                    var xmlPath = await _xmlGeneratorService.GuardarXmlEnArchivoAsync(xmlContent, factura.ClaveAcceso);
+
+                    _logger.LogInformation("✅ XML guardado exitosamente");
+                    _logger.LogInformation("   - Ruta: {XmlPath}", xmlPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Error al generar XML para la factura {FacturaId}", factura.Id);
+                    return StatusCode(StatusCodes.Status500InternalServerError, new
+                    {
+                        message = "Error al generar el archivo XML",
+                        tipo = "XmlGenerationError",
+                        detalles = ex.Message
+                    });
+                }
+
+                _logger.LogInformation("═══════════════════════════════════════════════════════════");
+                _logger.LogInformation("🎉 FACTURA Y XML CREADOS EXITOSAMENTE - ID: {FacturaId}", factura.Id);
+                _logger.LogInformation("═══════════════════════════════════════════════════════════");
+
+                // 6. Retornar resultado 201 Created con Location header
+                return CreatedAtAction(
+                    nameof(ObtenerFacturaPorId),
+                    new { id = factura.Id },
+                    new
+                    {
+                        message = "Factura y XML creados exitosamente",
+                        factura = factura,
+                        enlaces = new
+                        {
+                            verDetalle = $"/api/factura/{factura.Id}",
+                            descargarXml = $"/api/factura/{factura.Id}/xml",
+                            firmarFactura = $"/api/factura/{factura.Id}/firmar",
+                            enviarSri = $"/api/factura/{factura.Id}/enviar-sri"
+                        }
+                    }
+                );
             }
-        );
-    }
-    catch (ArgumentException ex)
-    {
-        _logger.LogWarning(ex, "Error de validación al crear factura");
-        return BadRequest(new 
-        { 
-            message = ex.Message,
-            tipo = "ValidationError"
-        });
-    }
-    catch (InvalidOperationException ex)
-    {
-        // Errores de negocio (cliente inactivo, producto sin stock, etc.)
-        _logger.LogWarning(ex, "Error de negocio al crear factura");
-        return BadRequest(new 
-        { 
-            message = ex.Message,
-            tipo = "BusinessRuleError"
-        });
-    }
-    catch (KeyNotFoundException ex)
-    {
-        // Cliente o producto no encontrado
-        _logger.LogWarning(ex, "Recurso no encontrado al crear factura");
-        return NotFound(new 
-        { 
-            message = ex.Message,
-            tipo = "NotFoundError"
-        });
-    }
-    catch (UnauthorizedAccessException ex)
-    {
-        _logger.LogWarning(ex, "Acceso no autorizado al crear factura");
-        return Unauthorized(new { message = ex.Message });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error interno al crear factura. Usuario: {UsuarioId}, Cliente: {ClienteId}", 
-            ObtenerUsuarioId(), dto.ClienteId);
-        
-        return StatusCode(StatusCodes.Status500InternalServerError, new
-        {
-            message = "Error interno del servidor al crear la factura",
-            tipo = "InternalError"
-        });
-    }
-}
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "❌ Error de validación al crear factura");
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    tipo = "ValidationError"
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Errores de negocio (cliente inactivo, producto sin stock, etc.)
+                _logger.LogWarning(ex, "❌ Error de negocio al crear factura");
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    tipo = "BusinessRuleError"
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Cliente o producto no encontrado
+                _logger.LogWarning(ex, "❌ Recurso no encontrado al crear factura");
+                return NotFound(new
+                {
+                    message = ex.Message,
+                    tipo = "NotFoundError"
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "❌ Acceso no autorizado al crear factura");
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "💥 ERROR CRÍTICO al crear factura");
+                _logger.LogError("   Usuario: {UsuarioId}, Cliente: {ClienteId}",
+                    ObtenerUsuarioId(), dto.ClienteId);
+                _logger.LogError("   Tipo excepción: {TipoExcepcion}", ex.GetType().Name);
+                _logger.LogError("   Mensaje: {Mensaje}", ex.Message);
+                _logger.LogError("   InnerException: {InnerException}", ex.InnerException?.Message);
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Error interno del servidor al crear la factura",
+                    tipo = "InternalError"
+                });
+            }
+        }
 
         /// <summary>
         /// T-028: GET /api/factura

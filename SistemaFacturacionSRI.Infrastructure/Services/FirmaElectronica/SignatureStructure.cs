@@ -1,5 +1,5 @@
 // SistemaFacturacionSRI.Infrastructure/Services/FirmaElectronica/SignatureStructureBuilder.cs
-// ACTUALIZADO T-062: Integración con SignedPropertiesBuilder
+// FIX CRÍTICO: Asegurar que usamos el mismo XmlDocument
 
 using System.Xml;
 using System.Security.Cryptography.X509Certificates;
@@ -9,6 +9,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica
     /// <summary>
     /// T-058: Construcción de la estructura de firma XADES-BES
     /// T-062: Actualizado para usar SignedPropertiesBuilder
+    /// FIX: Garantizar uso del mismo XmlDocument
     /// </summary>
     public class SignatureStructureBuilder
     {
@@ -22,8 +23,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica
 
         public SignatureStructureBuilder(XmlDocument documento)
         {
-            _doc = documento;
+            _doc = documento ?? throw new ArgumentNullException(nameof(documento));
             _signedPropsBuilder = new SignedPropertiesBuilder(documento);
+
+            // DIAGNÓSTICO: Log del HashCode para verificar que es el mismo documento
+            Console.WriteLine($"[DIAG] SignatureStructureBuilder creado con doc HashCode: {_doc.GetHashCode()}");
         }
 
         /// <summary>
@@ -38,19 +42,22 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica
             DateTime fechaFirma,
             string idNodoFirmar = "comprobante")
         {
-            // Crear nodo raíz Signature
+            // CRÍTICO: Usar _doc para crear TODOS los elementos
+            Console.WriteLine($"[DIAG] CrearNodoSignature usando doc HashCode: {_doc.GetHashCode()}");
+
+            // Crear nodo raíz Signature USANDO _doc
             var signature = _doc.CreateElement("ds", "Signature", NS_DS);
             signature.SetAttribute("Id", "Signature");
             signature.SetAttribute("xmlns:etsi", NS_ETSI);
 
             // 1. Crear Object con SignedProperties primero (lo necesitamos para el digest)
             var objectNode = _signedPropsBuilder.CrearObject(certificado, fechaFirma);
-            
+
             // 2. Extraer SignedProperties para calcular su digest
             var nsmgr = new XmlNamespaceManager(_doc.NameTable);
             nsmgr.AddNamespace("etsi", NS_ETSI);
             var signedProps = objectNode.SelectSingleNode("//etsi:SignedProperties", nsmgr) as XmlElement;
-            
+
             if (signedProps == null)
             {
                 throw new InvalidOperationException("No se pudo crear SignedProperties");
@@ -74,6 +81,10 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica
             // 7. Agregar Object (con SignedProperties)
             signature.AppendChild(objectNode);
 
+            // VERIFICACIÓN: El nodo pertenece al documento correcto
+            Console.WriteLine($"[DIAG] Signature.OwnerDocument HashCode: {signature.OwnerDocument?.GetHashCode()}");
+            Console.WriteLine($"[DIAG] ¿Mismo documento? {signature.OwnerDocument == _doc}");
+
             return signature;
         }
 
@@ -82,8 +93,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.FirmaElectronica
         /// T-062: Actualizado para incluir digest real de SignedProperties
         /// </summary>
         private XmlElement CrearSignedInfo(
-            string digestValue, 
-            string digestSignedProps, 
+            string digestValue,
+            string digestSignedProps,
             string idNodoFirmar)
         {
             var signedInfo = _doc.CreateElement("ds", "SignedInfo", NS_DS);
