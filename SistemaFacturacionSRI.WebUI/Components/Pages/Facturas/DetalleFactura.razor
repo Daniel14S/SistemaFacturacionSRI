@@ -404,19 +404,39 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2 justify-content-center">
-                    <button class="btn btn-primary" 
-                            @onclick="DescargarXml"
-                            disabled="@string.IsNullOrEmpty(factura.XmlPath)">
-                        <i class="bi bi-file-earmark-code me-1"></i>
-                        Descargar XML
-                    </button>
+                    <!-- Botones para XML -->
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-primary" 
+                                @onclick="VerXml"
+                                disabled="@string.IsNullOrEmpty(factura.XmlPath)"
+                                title="Ver XML en una nueva pestaña">
+                            <i class="bi bi-eye me-1"></i>
+                            Ver XML
+                        </button>
+                        <button class="btn btn-outline-primary" 
+                                @onclick="DescargarXml"
+                                disabled="@string.IsNullOrEmpty(factura.XmlPath)"
+                                title="Descargar archivo XML">
+                            <i class="bi bi-download me-1"></i>
+                        </button>
+                    </div>
 
-                    <button class="btn btn-danger" 
-                            @onclick="DescargarPdf"
-                            disabled="@string.IsNullOrEmpty(factura.PdfPath)">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>
-                        Descargar PDF
-                    </button>
+                    <!-- Botones para PDF -->
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-danger" 
+                                @onclick="VerPdf"
+                                disabled="@string.IsNullOrEmpty(factura.PdfPath)"
+                                title="Ver PDF en una nueva pestaña">
+                            <i class="bi bi-eye me-1"></i>
+                            Ver PDF
+                        </button>
+                        <button class="btn btn-outline-danger" 
+                                @onclick="DescargarPdf"
+                                disabled="@string.IsNullOrEmpty(factura.PdfPath)"
+                                title="Descargar archivo PDF">
+                            <i class="bi bi-download me-1"></i>
+                        </button>
+                    </div>
 
                     @if (factura.Estado == "DEVUELTA" || factura.Estado == "NO_AUTORIZADA")
                     {
@@ -870,6 +890,46 @@
         finally
         {
             enviandoCorreo = false;
+        }
+    }
+
+    private async Task VerXml()
+    {
+        if (factura == null || string.IsNullOrEmpty(factura.XmlPath))
+        {
+            mensajeError = "No hay archivo XML disponible";
+            return;
+        }
+
+        try
+        {
+            // Abrir el XML en una nueva pestaña del navegador
+            var url = $"/api/factura/{factura.Id}/xml";
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al abrir XML: {ex.Message}";
+        }
+    }
+
+    private async Task VerPdf()
+    {
+        if (factura == null || string.IsNullOrEmpty(factura.PdfPath))
+        {
+            mensajeError = "No hay archivo PDF disponible";
+            return;
+        }
+
+        try
+        {
+            // Abrir el PDF en una nueva pestaña del navegador
+            var url = $"/api/factura/{factura.Id}/pdf";
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al abrir PDF: {ex.Message}";
         }
     }
 

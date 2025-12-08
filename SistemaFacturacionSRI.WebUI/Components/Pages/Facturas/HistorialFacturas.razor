@@ -151,11 +151,17 @@
                                                 title="Ver detalle">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-primary" 
-                                                @onclick="() => DescargarXml(factura.Id)"
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                @onclick="() => VerXml(factura.Id)"
                                                 disabled="@string.IsNullOrEmpty(factura.XmlPath)"
-                                                title="Descargar XML">
-                                            <i class="bi bi-file-earmark-code"></i>
+                                                title="Ver XML">
+                                            <i class="bi bi-filetype-xml"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                @onclick="() => VerPdf(factura.Id)"
+                                                disabled="@string.IsNullOrEmpty(factura.PdfPath)"
+                                                title="Ver PDF">
+                                            <i class="bi bi-filetype-pdf"></i>
                                         </button>
                                         @if (factura.Estado == "DEVUELTA" || factura.Estado == "NO_AUTORIZADA")
                                         {
@@ -224,10 +230,15 @@
                                 <i class="bi bi-eye me-1"></i>Ver Detalle
                             </button>
                             <div class="btn-group" role="group">
-                                <button class="btn btn-primary btn-sm" 
-                                        @onclick="() => DescargarXml(factura.Id)"
+                                <button class="btn btn-outline-primary btn-sm" 
+                                        @onclick="() => VerXml(factura.Id)"
                                         disabled="@string.IsNullOrEmpty(factura.XmlPath)">
-                                    <i class="bi bi-file-earmark-code me-1"></i>XML
+                                    <i class="bi bi-filetype-xml me-1"></i>Ver XML
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        @onclick="() => VerPdf(factura.Id)"
+                                        disabled="@string.IsNullOrEmpty(factura.PdfPath)">
+                                    <i class="bi bi-filetype-pdf me-1"></i>Ver PDF
                                 </button>
                                 @if (factura.Estado == "DEVUELTA" || factura.Estado == "NO_AUTORIZADA")
                                 {
@@ -515,6 +526,32 @@
             anulando = false;
             facturaAAnular = null;
             motivoAnulacion = string.Empty;
+        }
+    }
+
+    private async Task VerXml(int facturaId)
+    {
+        try
+        {
+            var url = $"/api/factura/{facturaId}/xml";
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al abrir XML: {ex.Message}";
+        }
+    }
+
+    private async Task VerPdf(int facturaId)
+    {
+        try
+        {
+            var url = $"/api/factura/{facturaId}/pdf";
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error al abrir PDF: {ex.Message}";
         }
     }
 

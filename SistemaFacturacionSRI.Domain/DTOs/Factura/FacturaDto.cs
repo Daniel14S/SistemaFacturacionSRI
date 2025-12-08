@@ -127,6 +127,18 @@ public class FacturaDto
     /// </summary>
     public string? PdfPath { get; set; }
     
+    // ==================== CONTROL DE ENVÍO ====================
+    
+    /// <summary>
+    /// Indica si el correo ya fue enviado al cliente
+    /// </summary>
+    public bool CorreoEnviado { get; set; }
+    
+    /// <summary>
+    /// Fecha y hora del primer envío de correo
+    /// </summary>
+    public DateTime? FechaEnvioCorreo { get; set; }
+    
     // ==================== AUTORIZACIÓN SRI ====================
     
     /// <summary>
