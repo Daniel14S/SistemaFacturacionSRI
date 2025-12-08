@@ -72,20 +72,23 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
         /// <summary>
         /// Genera el XML SOAP para enviar al SRI
         /// </summary>
+        /// <summary>
+        /// Genera el XML SOAP para enviar al SRI (Base64 - formato requerido)
+        /// </summary>
         public string GenerarSoapXml()
         {
-            // Escapar el XML para evitar problemas con caracteres especiales
-            var xmlEscapado = System.Security.SecurityElement.Escape(XmlComprobante);
+            // ✅ CRÍTICO: El SRI requiere el XML en Base64, NO en CDATA
+            string xmlBase64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(XmlComprobante));
 
             return $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" 
                   xmlns:ec=""http://ec.gob.sri.ws.recepcion"">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <ec:validarComprobante>
-         <xml><![CDATA[{XmlComprobante}]]></xml>
-      </ec:validarComprobante>
-   </soapenv:Body>
+    <soapenv:Header/>
+    <soapenv:Body>
+        <ec:validarComprobante>
+            <xml>{xmlBase64}</xml>
+        </ec:validarComprobante>
+    </soapenv:Body>
 </soapenv:Envelope>";
         }
     }
@@ -144,17 +147,20 @@ namespace SistemaFacturacionSRI.Domain.DTOs.SRI
         /// <summary>
         /// Genera el XML SOAP para consultar autorización
         /// </summary>
+        /// <summary>
+        /// Genera el XML SOAP para consultar autorización
+        /// </summary>
         public string GenerarSoapXml()
         {
             return $@"<?xml version=""1.0"" encoding=""UTF-8""?>
 <soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" 
                   xmlns:ec=""http://ec.gob.sri.ws.autorizacion"">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <ec:autorizacionComprobante>
-         <claveAccesoComprobante>{ClaveAcceso}</claveAccesoComprobante>
-      </ec:autorizacionComprobante>
-   </soapenv:Body>
+    <soapenv:Header/>
+    <soapenv:Body>
+        <ec:autorizacionComprobante>
+            <claveAccesoComprobante>{ClaveAcceso}</claveAccesoComprobante>
+        </ec:autorizacionComprobante>
+    </soapenv:Body>
 </soapenv:Envelope>";
         }
     }

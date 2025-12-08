@@ -16,6 +16,10 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         X509Certificate2 CargarCertificado();
 
         /// <summary>
+        /// Obtiene el password del certificado para operaciones de exportación
+        /// </summary>
+        string ObtenerPassword();
+        /// <summary>
         /// Carga el certificado desde una ruta específica
         /// </summary>
         /// <param name="rutaCertificado">Ruta al archivo .p12/.pfx</param>

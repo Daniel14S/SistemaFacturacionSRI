@@ -41,6 +41,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
         /// T-078: Envía un comprobante firmado al SRI para recepción
         /// Incluye lógica de reintentos automática
         /// </summary>
+        // SriComprobanteService.cs - VERSIÓN MEJORADA CON DIAGNÓSTICO COMPLETO
+
         public async Task<ResultadoOperacionSri> EnviarComprobanteAsync(
             string xmlFirmado,
             string claveAcceso,
@@ -48,102 +50,248 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
             CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
-            var intentos = 0;
-            Exception? ultimaExcepcion = null;
+            var resultado = new ResultadoOperacionSri { ClaveAcceso = claveAcceso };
 
             _logger.LogInformation("═══════════════════════════════════════════════════════");
             _logger.LogInformation("T-078: INICIANDO ENVÍO DE COMPROBANTE AL SRI");
             _logger.LogInformation("═══════════════════════════════════════════════════════");
             _logger.LogInformation("Clave Acceso: {ClaveAcceso}", claveAcceso);
-            _logger.LogInformation("RUC Emisor: {Ruc}", rucEmisor);
+            _logger.LogInformation("RUC Emisor: {RucEmisor}", rucEmisor);
             _logger.LogInformation("Reintentos máximos: {Max}", _options.ReintentoMaximo);
 
-            // T-080: Lógica de reintentos
-            for (intentos = 1; intentos <= _options.ReintentoMaximo; intentos++)
+            // ✅ VALIDACIÓN CRÍTICA: Verificar que el XML tenga firma
+            _logger.LogDebug("Verificando presencia de firma electrónica en XML...");
+
+            if (!xmlFirmado.Contains("<Signature") && !xmlFirmado.Contains("ds:Signature"))
+            {
+                _logger.LogError("❌❌❌ XML NO CONTIENE ELEMENTO <Signature> ❌❌❌");
+                _logger.LogError("Tamaño del XML: {Size} caracteres", xmlFirmado.Length);
+                _logger.LogError("Primeros 500 caracteres:");
+                _logger.LogError("{Xml}", xmlFirmado.Substring(0, Math.Min(500, xmlFirmado.Length)));
+                _logger.LogError("Últimos 500 caracteres:");
+                var inicio = Math.Max(0, xmlFirmado.Length - 500);
+                _logger.LogError("{Xml}", xmlFirmado.Substring(inicio));
+
+                resultado.Exitoso = false;
+                resultado.Estado = "ERROR_SIN_FIRMA";
+                resultado.MensajeError = "El XML no contiene firma electrónica. No se puede enviar al SRI.";
+                resultado.NumeroIntentos = 1;
+                resultado.TiempoTranscurrido = stopwatch.Elapsed;
+                return resultado;
+            }
+
+            if (!xmlFirmado.Contains("SignatureValue") && !xmlFirmado.Contains("ds:SignatureValue"))
+            {
+                _logger.LogError("❌❌❌ XML NO CONTIENE <SignatureValue> ❌❌❌");
+                _logger.LogError("Hay elemento <Signature> pero sin <SignatureValue>");
+
+                resultado.Exitoso = false;
+                resultado.Estado = "ERROR_FIRMA_INCOMPLETA";
+                resultado.MensajeError = "El XML tiene <Signature> pero sin <SignatureValue>. Firma incompleta.";
+                resultado.NumeroIntentos = 1;
+                resultado.TiempoTranscurrido = stopwatch.Elapsed;
+                return resultado;
+            }
+
+            _logger.LogInformation("✅ XML contiene firma electrónica válida");
+            _logger.LogDebug("  → Tamaño XML: {Size} bytes", xmlFirmado.Length);
+
+            var intentoActual = 1;
+            var maxIntentos = _options.ReintentoMaximo;
+            Exception? ultimaExcepcion = null;
+
+            while (intentoActual <= maxIntentos && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    _logger.LogInformation("📤 Intento {Intento}/{Max} - Enviando comprobante...",
-                        intentos, _options.ReintentoMaximo);
+                    _logger.LogInformation("\n🔄 Intento {Actual}/{Max} - Enviando comprobante...",
+                        intentoActual, maxIntentos);
 
-                    // Crear request
                     var request = new RecepcionComprobanteRequest
                     {
-                        XmlComprobante = xmlFirmado,
                         ClaveAcceso = claveAcceso,
                         RucEmisor = rucEmisor,
+                        XmlComprobante = xmlFirmado,
                         FechaEmision = DateTime.Now
                     };
 
-                    // Enviar al SRI
                     var respuesta = await _sriClient.EnviarComprobanteAsync(request, cancellationToken);
 
-                    stopwatch.Stop();
+                    resultado.NumeroIntentos = intentoActual;
 
-                    // Procesar respuesta
+                    // ════════════════════════════════════════════════════════
+                    // ANÁLISIS DETALLADO DE LA RESPUESTA
+                    // ════════════════════════════════════════════════════════
+
+                    _logger.LogDebug("\n[ANÁLISIS RESPUESTA]");
+                    _logger.LogDebug("  Estado raw: '{Estado}'", respuesta.Estado ?? "null");
+                    _logger.LogDebug("  FueRecibido: {Recibido}", respuesta.FueRecibido);
+                    _logger.LogDebug("  FueDevuelto: {Devuelto}", respuesta.FueDevuelto);
+                    _logger.LogDebug("  Comprobantes: {Count}", respuesta.Comprobantes.Count);
+
+                    // CASO 1: RECIBIDO ✅
                     if (respuesta.FueRecibido)
                     {
-                        _logger.LogInformation("✅ Comprobante RECIBIDO por el SRI");
-                        _logger.LogInformation("Estado: {Estado}", respuesta.Estado);
-                        _logger.LogInformation("Tiempo total: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
+                        stopwatch.Stop();
+
+                        _logger.LogInformation("\n✅✅✅ Comprobante RECIBIDO por el SRI ✅✅✅");
+                        _logger.LogInformation("  → Estado: {Estado}", respuesta.Estado);
+                        _logger.LogInformation("  → Tiempo: {Ms}ms", stopwatch.ElapsedMilliseconds);
 
                         var informativos = respuesta.ObtenerInformativos();
                         foreach (var info in informativos)
                         {
-                            _logger.LogInformation("ℹ️  {Mensaje}", info.Mensaje);
+                            _logger.LogInformation("  ℹ️  {Mensaje}", info.Mensaje);
                         }
 
-                        return new ResultadoOperacionSri
-                        {
-                            Exitoso = true,
-                            ClaveAcceso = claveAcceso,
-                            Estado = EstadosComprobanteSri.RECIBIDA,
-                            NumeroAutorizacion = string.Empty, // Se obtiene después
-                            FechaAutorizacion = DateTime.Now,
-                            XmlAutorizado = xmlFirmado,
-                            Mensajes = respuesta.Comprobantes.SelectMany(c => c.Mensajes).ToList(),
-                            NumeroIntentos = intentos,
-                            TiempoTranscurrido = stopwatch.Elapsed
-                        };
+                        resultado.Exitoso = true;
+                        resultado.Estado = EstadosComprobanteSri.RECIBIDA;
+                        resultado.TiempoTranscurrido = stopwatch.Elapsed;
+                        resultado.Mensajes = respuesta.Comprobantes
+    .SelectMany(c => c.Mensajes)
+    .ToList(); // Esto mantendrá los objetos de tipo MensajeSri
+
+
+
+                        return resultado;
                     }
+
+                    // CASO 2: DEVUELTO ❌
                     else if (respuesta.FueDevuelto)
                     {
-                        _logger.LogWarning("❌ Comprobante DEVUELTO por el SRI");
-                        _logger.LogWarning("Estado: {Estado}", respuesta.Estado);
-
-                        var errores = respuesta.ObtenerErrores();
-                        var mensajesError = errores.Select(e => $"[{e.Identificador}] {e.Mensaje}").ToList();
-
-                        foreach (var error in errores)
-                        {
-                            _logger.LogError("Error SRI: [{Codigo}] {Mensaje}",
-                                error.Identificador, error.Mensaje);
-                        }
-
                         stopwatch.Stop();
 
-                        // No reintentar en errores de validación
-                        return new ResultadoOperacionSri
+                        _logger.LogWarning("\n❌❌❌ Comprobante DEVUELTO por el SRI ❌❌❌");
+                        _logger.LogWarning("  → Estado: {Estado}", respuesta.Estado);
+                        _logger.LogWarning("  → Tiempo: {Ms}ms", stopwatch.ElapsedMilliseconds);
+
+                        var errores = respuesta.ObtenerErrores();
+
+                        _logger.LogWarning("\n  Errores reportados por el SRI:");
+                        foreach (var error in errores)
                         {
-                            Exitoso = false,
-                            ClaveAcceso = claveAcceso,
-                            Estado = EstadosComprobanteSri.DEVUELTA,
-                            MensajeError = string.Join("; ", mensajesError),
-                            Mensajes = respuesta.Comprobantes.SelectMany(c => c.Mensajes).ToList(),
-                            NumeroIntentos = intentos,
-                            TiempoTranscurrido = stopwatch.Elapsed
-                        };
+                            var mensajeCompleto = $"[{error.Identificador}] {error.Mensaje}";
+                            if (!string.IsNullOrEmpty(error.InformacionAdicional))
+                            {
+                                mensajeCompleto += $" - {error.InformacionAdicional}";
+                            }
+
+                            _logger.LogWarning("    • {Mensaje}", mensajeCompleto);
+                          
+                        }
+
+                        resultado.Exitoso = false;
+                        resultado.Estado = EstadosComprobanteSri.DEVUELTA;
+                        resultado.MensajeError = string.Join("; ", resultado.Mensajes);
+                        resultado.TiempoTranscurrido = stopwatch.Elapsed;
+
+                        // No reintentar en errores de validación
+                        return resultado;
+                    }
+
+                    // CASO 3: DESCONOCIDO o VACÍO ⚠️
+                    else if (respuesta.Estado == "DESCONOCIDO" || string.IsNullOrEmpty(respuesta.Estado))
+                    {
+                        _logger.LogWarning("\n⚠️⚠️⚠️ Respuesta DESCONOCIDA del SRI ⚠️⚠️⚠️");
+                        _logger.LogWarning("  → Intento: {Intento}/{Max}", intentoActual, maxIntentos);
+                        _logger.LogWarning("  → Estado: '{Estado}'", respuesta.Estado ?? "null");
+
+                        // Analizar si hay mensajes en los comprobantes
+                        if (respuesta.Comprobantes.Any())
+                        {
+                            _logger.LogWarning("  → Comprobantes en respuesta: {Count}", respuesta.Comprobantes.Count);
+
+                            foreach (var comp in respuesta.Comprobantes)
+                            {
+                                _logger.LogDebug("    Comprobante:");
+                                _logger.LogDebug("      ClaveAcceso: {Clave}", comp.ClaveAcceso);
+                                _logger.LogDebug("      Mensajes: {Count}", comp.Mensajes.Count);
+
+                                foreach (var msg in comp.Mensajes)
+                                {
+                                    var mensajeCompleto = $"[{msg.Identificador}] {msg.Tipo}: {msg.Mensaje}";
+                                    if (!string.IsNullOrEmpty(msg.InformacionAdicional))
+                                    {
+                                        mensajeCompleto += $" - {msg.InformacionAdicional}";
+                                    }
+
+                                    _logger.LogWarning("        {Mensaje}", mensajeCompleto);
+                               
+                                }
+                            }
+
+                            // Si hay mensajes de ERROR, tratarlo como DEVUELTA
+                            var hayErrores = respuesta.Comprobantes
+                                .SelectMany(c => c.Mensajes)
+                                .Any(m => m.Tipo?.ToUpperInvariant() == "ERROR");
+
+                            if (hayErrores)
+                            {
+                                stopwatch.Stop();
+
+                                _logger.LogWarning("\n❌ Hay mensajes de ERROR - Tratando como DEVUELTA");
+
+                                resultado.Exitoso = false;
+                                resultado.Estado = EstadosComprobanteSri.DEVUELTA;
+                                resultado.MensajeError = string.Join("; ", resultado.Mensajes);
+                                resultado.TiempoTranscurrido = stopwatch.Elapsed;
+
+                                return resultado;
+                            }
+                        }
+
+                        // Si es el último intento, marcar como ERROR
+                        if (intentoActual >= maxIntentos)
+                        {
+                            stopwatch.Stop();
+
+                            _logger.LogError("\n❌ FALLO: Estado DESCONOCIDO después de {Intentos} intentos", maxIntentos);
+
+                            resultado.Exitoso = false;
+                            resultado.Estado = "ERROR_SRI_DESCONOCIDO";
+                            resultado.MensajeError = resultado.Mensajes.Any()
+                                ? string.Join("; ", resultado.Mensajes)
+                                : $"El SRI respondió con estado DESCONOCIDO después de {maxIntentos} intentos. " +
+                                  "Esto puede indicar un problema temporal del SRI.";
+                            resultado.TiempoTranscurrido = stopwatch.Elapsed;
+
+                            return resultado;
+                        }
+
+                        // Esperar antes del siguiente intento
+                        var delaySegundos = _options.CalcularDelay(intentoActual) / 1000;
+                        _logger.LogInformation("⏳ Esperando {Delay}s antes del siguiente intento...", delaySegundos);
+                        await Task.Delay(_options.CalcularDelay(intentoActual), cancellationToken);
+                    }
+
+                    // CASO 4: Otro estado no manejado
+                    else
+                    {
+                        _logger.LogWarning("\n⚠️ Estado inesperado: '{Estado}'", respuesta.Estado);
+
+                        if (intentoActual >= maxIntentos)
+                        {
+                            stopwatch.Stop();
+
+                            resultado.Exitoso = false;
+                            resultado.Estado = respuesta.Estado;
+                            resultado.MensajeError = $"Estado inesperado del SRI: {respuesta.Estado}";
+                            resultado.TiempoTranscurrido = stopwatch.Elapsed;
+
+                            return resultado;
+                        }
+
+                        await Task.Delay(_options.CalcularDelay(intentoActual), cancellationToken);
                     }
                 }
                 catch (TimeoutException ex)
                 {
                     ultimaExcepcion = ex;
-                    _logger.LogWarning(ex, "⏱️  Timeout en intento {Intento}/{Max}",
-                        intentos, _options.ReintentoMaximo);
+                    _logger.LogWarning(ex, "⏱️  Timeout en intento {Intento}/{Max}", intentoActual, maxIntentos);
 
-                    if (intentos < _options.ReintentoMaximo)
+                    if (intentoActual < maxIntentos)
                     {
-                        var delay = _options.CalcularDelay(intentos);
+                        var delay = _options.CalcularDelay(intentoActual);
                         _logger.LogInformation("⏳ Esperando {Delay}ms antes del siguiente intento...", delay);
                         await Task.Delay(delay, cancellationToken);
                     }
@@ -151,12 +299,11 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 catch (HttpRequestException ex)
                 {
                     ultimaExcepcion = ex;
-                    _logger.LogWarning(ex, "🌐 Error de red en intento {Intento}/{Max}",
-                        intentos, _options.ReintentoMaximo);
+                    _logger.LogWarning(ex, "🌐 Error de red en intento {Intento}/{Max}", intentoActual, maxIntentos);
 
-                    if (intentos < _options.ReintentoMaximo)
+                    if (intentoActual < maxIntentos)
                     {
-                        var delay = _options.CalcularDelay(intentos);
+                        var delay = _options.CalcularDelay(intentoActual);
                         _logger.LogInformation("⏳ Esperando {Delay}ms antes del siguiente intento...", delay);
                         await Task.Delay(delay, cancellationToken);
                     }
@@ -164,29 +311,39 @@ namespace SistemaFacturacionSRI.Infrastructure.Services.SRI
                 catch (Exception ex)
                 {
                     ultimaExcepcion = ex;
-                    _logger.LogError(ex, "❌ Error inesperado en intento {Intento}/{Max}",
-                        intentos, _options.ReintentoMaximo);
+                    _logger.LogError(ex, "❌ Error inesperado en intento {Intento}/{Max}: {Tipo}",
+                        intentoActual, maxIntentos, ex.GetType().Name);
 
                     // No reintentar en errores desconocidos
                     break;
                 }
+
+                intentoActual++;
             }
 
-            // Si llegamos aquí, fallaron todos los intentos
+            // Si llegamos aquí, se agotaron los intentos
             stopwatch.Stop();
-            _logger.LogError("❌ FALLO DESPUÉS DE {Intentos} INTENTOS", intentos);
-            _logger.LogError("Tiempo total: {Tiempo}ms", stopwatch.ElapsedMilliseconds);
 
-            return new ResultadoOperacionSri
+            _logger.LogError("\n═══════════════════════════════════════════════════════");
+            _logger.LogError("❌ FALLO DESPUÉS DE {Intentos} INTENTOS", resultado.NumeroIntentos);
+            _logger.LogError("═══════════════════════════════════════════════════════");
+            _logger.LogError("Tiempo total: {Tiempo:F2}s", stopwatch.Elapsed.TotalSeconds);
+
+            if (ultimaExcepcion != null)
             {
-                Exitoso = false,
-                ClaveAcceso = claveAcceso,
-                Estado = "ERROR",
-                MensajeError = $"Error al enviar comprobante después de {intentos} intentos: {ultimaExcepcion?.Message}",
-                NumeroIntentos = intentos,
-                TiempoTranscurrido = stopwatch.Elapsed
-            };
+                _logger.LogError("Último error: {Mensaje}", ultimaExcepcion.Message);
+            }
+
+            resultado.Exitoso = false;
+            resultado.Estado = "ERROR_MAX_INTENTOS";
+            resultado.MensajeError = resultado.MensajeError ??
+                $"Error al enviar comprobante después de {resultado.NumeroIntentos} intentos" +
+                (ultimaExcepcion != null ? $": {ultimaExcepcion.Message}" : "");
+            resultado.TiempoTranscurrido = stopwatch.Elapsed;
+
+            return resultado;
         }
+
 
         // ============================================================
         // T-079: CONSULTAR AUTORIZACIÓN

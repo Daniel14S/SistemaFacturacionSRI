@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<factura id="comprobante" version="2.1.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>EMPRESA DE PRUEBA S.A.</razonSocial>
+    <nombreComercial>EMPRESA DE PRUEBA</nombreComercial>
+    <ruc>1804183794001</ruc>
+    <claveAcceso>0812202501180418379400111001001000000001618235066</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000000001</secuencial>
+    <dirMatriz>AV. PRINCIPAL 123</dirMatriz>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>08/12/2025</fechaEmision>
+    <dirEstablecimiento>AV. PRINCIPAL 123</dirEstablecimiento>
+    <tipoIdentificacionComprador>05</tipoIdentificacionComprador>
+    <razonSocialComprador>Anthony Israel Punina</razonSocialComprador>
+    <identificacionComprador>2222222222</identificacionComprador>
+    <totalSinImpuestos>0.51</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>4</codigoPorcentaje>
+        <baseImponible>0.51</baseImponible>
+        <valor>0.08</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>0.59</importeTotal>
+    <moneda>DOLAR</moneda>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>PROD-001</codigoPrincipal>
+      <descripcion>MANZANAS </descripcion>
+      <cantidad>1.0000</cantidad>
+      <precioUnitario>0.510000</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>0.51</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>4</codigoPorcentaje>
+          <tarifa>15</tarifa>
+          <baseImponible>0.51</baseImponible>
+          <valor>0.08</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+</factura>
