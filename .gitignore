@@ -439,3 +439,5 @@ passwords.txt
 !README.md
 !.gitignore
 
+SistemaFacturacionSRI.WebUI/wwwroot/comprobantes/xml/0812202501180418379400111001001000000014810836221.xml
+SistemaFacturacionSRI.WebUI/wwwroot/comprobantes/xml/firmados/0812202501180418379400111001001000000014810836221_firmado.xml

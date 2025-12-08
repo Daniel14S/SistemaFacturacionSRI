@@ -16,38 +16,480 @@
 
 <PageTitle>Crear Factura - Sistema de Facturación</PageTitle>
 
-<!-- ==================== HEADER ==================== -->
+<style>
+    .pos-container {
+        display: flex;
+        height: calc(100vh - 100px);
+        gap: 0;
+        margin: -15px;
+        overflow: hidden;
+    }
 
-<div class="row mb-4">
-    <div class="col">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h3 class="mb-1">
-                    <i class="bi bi-file-earmark-plus text-primary me-2"></i>
-                    Nueva Factura Electrónica
-                </h3>
-                <p class="text-muted mb-0">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Complete los datos del cliente y agregue los productos
-                </p>
+    .pos-left-panel {
+        flex: 0 0 65%;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto;
+    }
+
+    .pos-search-bar {
+        display: flex;
+        gap: 10px;
+    }
+
+    .pos-search-bar input {
+        flex-grow: 1;
+        padding: 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+
+    .pos-products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 15px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+
+    .pos-product-card {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .pos-product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-color: var(--bs-primary);
+    }
+
+    .pos-product-icon {
+        font-size: 2.5rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .pos-product-name {
+        display: block;
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+
+    .pos-product-price {
+        color: var(--bs-primary);
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+
+    .pos-product-stock {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 5px;
+    }
+
+    .pos-right-panel {
+        flex: 0 0 35%;
+        background-color: white;
+        border-left: 2px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+    }
+
+    .pos-cart-header {
+        padding: 20px;
+        background: linear-gradient(135deg, var(--bs-primary) 0%, #1e40af 100%);
+        color: white;
+        font-size: 1.3rem;
+        font-weight: bold;
+    }
+
+    .pos-cart-items {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 20px;
+    }
+
+    .pos-cart-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .pos-cart-item-info {
+        flex-grow: 1;
+    }
+
+    .pos-cart-item-name {
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .pos-cart-item-price {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .pos-cart-item-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .pos-qty-btn {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: 1px solid #e2e8f0;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .pos-qty-btn:hover {
+        background: #f8fafc;
+    }
+
+    .pos-qty-display {
+        min-width: 40px;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    .pos-cart-footer {
+        padding: 20px;
+        background-color: #f8fafc;
+        border-top: 2px solid #e2e8f0;
+    }
+
+    .pos-client-info {
+        margin-bottom: 15px;
+    }
+
+    .pos-client-info label {
+        display: block;
+        font-size: 0.9rem;
+        color: #64748b;
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+
+    .pos-client-info input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.95rem;
+    }
+
+    .pos-totals-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        color: #475569;
+    }
+
+    .pos-total-final {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #1e293b;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 2px solid #e2e8f0;
+    }
+
+    .pos-btn-cobrar {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.2s;
+    }
+
+    .pos-btn-cobrar:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .pos-btn-cobrar:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .pos-empty-cart {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+    }
+
+    .pos-btn-delete {
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .pos-btn-delete:hover {
+        background: #dc2626;
+    }
+
+    .pos-selected-client {
+        background: #f0f9ff;
+        border: 2px solid #3b82f6;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+
+    .pos-selected-client-name {
+        font-weight: 600;
+        color: #1e40af;
+        margin-bottom: 4px;
+    }
+
+    .pos-selected-client-id {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .pos-btn-change-client {
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        margin-top: 8px;
+    }
+</style>
+
+@if (cargandoInicial)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+        <p class="text-muted mt-3">Cargando información inicial...</p>
+    </div>
+}
+else
+{
+    <div class="pos-container">
+        <!-- ==================== PANEL IZQUIERDO: PRODUCTOS ==================== -->
+        <div class="pos-left-panel">
+            <!-- Barra de búsqueda de productos -->
+            <div class="pos-search-bar">
+                <input type="text" 
+                       placeholder="🔍 Buscar producto por nombre o código..."
+                       value="@terminoBusquedaProducto"
+                       @oninput="@(e => { terminoBusquedaProducto = e.Value?.ToString() ?? string.Empty; FiltrarProductos(); })"
+                       class="form-control" />
+                @if (!string.IsNullOrWhiteSpace(terminoBusquedaProducto))
+                {
+                    <button class="btn btn-outline-secondary" @onclick="LimpiarBusquedaProducto">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
             </div>
-            <div>
-                <button class="btn btn-outline-secondary" @onclick="Cancelar">
+
+            <!-- Grid de productos -->
+            <div class="pos-products-grid">
+                @if (productosFiltrados.Any())
+                {
+                    @foreach (var producto in productosFiltrados)
+                    {
+                        <div class="pos-product-card" @onclick="() => AgregarProductoAlCarrito(producto.Id)">
+                            <span class="pos-product-icon">📦</span>
+                            <span class="pos-product-name">@producto.Nombre</span>
+                            <span class="pos-product-price">$@producto.Precio?.ToString("N2")</span>
+                            <small class="pos-product-stock">Stock: @producto.Stock</small>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;">
+                        <i class="bi bi-inbox" style="font-size: 3rem; display: block; margin-bottom: 10px;"></i>
+                        @if (string.IsNullOrWhiteSpace(terminoBusquedaProducto))
+                        {
+                            <p>No hay productos disponibles</p>
+                        }
+                        else
+                        {
+                            <p>No se encontraron productos con "<strong>@terminoBusquedaProducto</strong>"</p>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ==================== PANEL DERECHO: CARRITO ==================== -->
+        <div class="pos-right-panel">
+            <!-- Header del carrito -->
+            <div class="pos-cart-header">
+                <i class="bi bi-cart3 me-2"></i>Carrito de Compra
+            </div>
+
+            <!-- Items del carrito -->
+            <div class="pos-cart-items">
+                @if (modelo.Detalles.Any(d => d.ProductoId > 0))
+                {
+                    @foreach (var detalle in modelo.Detalles.Where(d => d.ProductoId > 0))
+                    {
+                        var index = modelo.Detalles.IndexOf(detalle);
+                        <div class="pos-cart-item">
+                            <div class="pos-cart-item-info">
+                                <div class="pos-cart-item-name">@detalle.ProductoNombre</div>
+                                <div class="pos-cart-item-price">$@detalle.PrecioUnitario.ToString("N2") x @((int)detalle.Cantidad)</div>
+                            </div>
+                            <div class="pos-cart-item-actions">
+                                <button type="button" class="pos-qty-btn" @onclick="() => DisminuirCantidad(index)">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <span class="pos-qty-display">@((int)detalle.Cantidad)</span>
+                                <button type="button" class="pos-qty-btn" @onclick="() => AumentarCantidad(index)">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                                <button type="button" class="pos-btn-delete" @onclick="() => EliminarDetalle(index)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="pos-empty-cart">
+                        <i class="bi bi-cart-x" style="font-size: 4rem; display: block; margin-bottom: 15px;"></i>
+                        <p>El carrito está vacío</p>
+                        <small>Selecciona productos del panel izquierdo</small>
+                    </div>
+                }
+            </div>
+
+            <!-- Footer: Cliente y Totales -->
+            <div class="pos-cart-footer">
+                <!-- Información del Cliente -->
+                <div class="pos-client-info">
+                    <label>Cliente:</label>
+                    @if (clienteSeleccionado == null)
+                    {
+                        <div class="input-group">
+                            <input type="text"
+                                   class="form-control"
+                                   placeholder="Buscar cliente por nombre o RUC/Cédula..."
+                                   @bind="terminoBusquedaCliente"
+                                   @oninput="BuscarClientesIncremental" />
+                            @if (!string.IsNullOrWhiteSpace(terminoBusquedaCliente))
+                            {
+                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="LimpiarBusquedaCliente">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            }
+                        </div>
+
+                        <!-- Resultados de búsqueda de clientes -->
+                        @if (clientesBuscados.Any())
+                        {
+                            <div class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
+                                @foreach (var cliente in clientesBuscados)
+                                {
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action text-start"
+                                            style="font-size: 0.9rem; padding: 8px 12px;"
+                                            @onclick="() => SeleccionarCliente(cliente)">
+                                        <strong>@cliente.NombreCompleto</strong><br />
+                                        <small class="text-muted">@cliente.TipoIdentificacion: @cliente.Identificacion</small>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="pos-selected-client">
+                            <div class="pos-selected-client-name">
+                                <i class="bi bi-person-check-fill me-2"></i>@clienteSeleccionado.NombreCompleto
+                            </div>
+                            <div class="pos-selected-client-id">
+                                @clienteSeleccionado.TipoIdentificacion: @clienteSeleccionado.Identificacion
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm pos-btn-change-client" @onclick="DeseleccionarCliente">
+                                <i class="bi bi-arrow-left-right me-1"></i>Cambiar cliente
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                <!-- Totales -->
+                <div class="pos-totals-row">
+                    <span>Subtotal:</span>
+                    <span>$@modelo.Subtotal15.ToString("N2")</span>
+                </div>
+                <div class="pos-totals-row">
+                    <span>IVA (15%):</span>
+                    <span>$@modelo.TotalIVA.ToString("N2")</span>
+                </div>
+                <div class="pos-totals-row pos-total-final">
+                    <span>Total:</span>
+                    <span>$@modelo.Total.ToString("N2")</span>
+                </div>
+
+                <!-- Botones de acción -->
+                <button type="button" 
+                        class="pos-btn-cobrar" 
+                        @onclick="GenerarYEnviarSri"
+                        disabled="@(guardando || clienteSeleccionado == null || !modelo.Detalles.Any(d => d.ProductoId > 0))">
+                    @if (guardando)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <span>Procesando...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-receipt me-2"></i>
+                        <span>GENERAR FACTURA</span>
+                    }
+                </button>
+
+                <button type="button" 
+                        class="btn btn-outline-secondary w-100 mt-2" 
+                        @onclick="Cancelar"
+                        disabled="@guardando">
                     <i class="bi bi-x-circle me-2"></i>Cancelar
                 </button>
             </div>
         </div>
     </div>
-</div>
 
-@if (cargandoInicial)
-{ <div class="text-center py-5"> <div class="spinner-border text-primary" role="status"> <span class="visually-hidden">Cargando...</span> </div> <p class="text-muted mt-3">Cargando información inicial...</p> </div>
-}
-else
-{ <EditForm Model="@modelo" OnValidSubmit="GuardarBorrador" FormName="crearFacturaForm"> <DataAnnotationsValidator />
-
-```
-    <!-- ==================== CARD CLIENTE ==================== -->
+    <EditForm Model="@modelo" OnValidSubmit="GuardarBorrador" FormName="crearFacturaForm" style="display:none;">
+        <DataAnnotationsValidator />
+        <!-- Este formulario se mantiene oculto solo para validación -->
     <div class="card mb-4 shadow-sm">
         <div class="card-header bg-primary text-white">
             <h5 class="mb-0">
@@ -361,7 +803,7 @@ else
                                         <select class="form-select form-select-sm"
                                                 disabled="@(detalle.ProductoId == 0)"
                                                 value="@detalle.CodigoPorcentajeIVA"
-                                                @onchange="@(e => { detalle.CodigoPorcentajeIVA = int.Parse(e.Value?.ToString() ?? "15"); RecalcularDetalle(index); })">
+                                                @onchange="@(e => { detalle.CodigoPorcentajeIVA = int.Parse(e.Value?.ToString() ?? "4"); RecalcularDetalle(index); })">
                                             <option value="0">0%</option>
                                             <option value="15">15%</option>
                                         </select>
@@ -512,10 +954,12 @@ private CrearFacturaViewModel modelo = new();
 private ClienteListDto? clienteSeleccionado;
 private List<ClienteListDto> clientesBuscados = new();
 private List<ProductoDto> productosDisponibles = new();
+private List<ProductoDto> productosFiltrados = new();
 private bool cargandoInicial = true;
 private bool guardando = false;
 private bool buscandoClientes = false;
 private string terminoBusquedaCliente = string.Empty;
+private string terminoBusquedaProducto = string.Empty;
 private System.Threading.Timer? debounceTimer;
 
 
@@ -532,6 +976,7 @@ private async Task CargarDatosIniciales()
     {
         productosDisponibles = await ProductoService.ObtenerTodosAsync();
         productosDisponibles = productosDisponibles.Where(p => p.Activo && p.Stock > 0).ToList();
+        productosFiltrados = productosDisponibles;
     }
     catch (Exception ex)
     {
@@ -540,6 +985,115 @@ private async Task CargarDatosIniciales()
     finally
     {
         cargandoInicial = false;
+    }
+}
+
+// ==================== BÚSQUEDA Y GESTIÓN DE PRODUCTOS ====================
+private void FiltrarProductos()
+{
+    if (string.IsNullOrWhiteSpace(terminoBusquedaProducto))
+    {
+        productosFiltrados = productosDisponibles;
+    }
+    else
+    {
+        var terminoLimpio = terminoBusquedaProducto.Replace("-", "").Replace(" ", "").ToLower();
+        productosFiltrados = productosDisponibles
+            .Where(p => 
+                p.Codigo.Contains(terminoBusquedaProducto, StringComparison.OrdinalIgnoreCase) ||
+                p.Codigo.Replace("-", "").Replace(" ", "").Contains(terminoLimpio, StringComparison.OrdinalIgnoreCase) ||
+                p.Nombre.Contains(terminoBusquedaProducto, StringComparison.OrdinalIgnoreCase)
+            )
+            .OrderBy(p => p.Nombre)
+            .ToList();
+    }
+}
+
+private void LimpiarBusquedaProducto()
+{
+    terminoBusquedaProducto = string.Empty;
+    productosFiltrados = productosDisponibles;
+}
+
+private void AgregarProductoAlCarrito(int productoId)
+{
+    var producto = productosDisponibles.FirstOrDefault(p => p.Id == productoId);
+    if (producto == null) return;
+
+    if (producto.Stock <= 0)
+    {
+        Toast.ShowWarning($"El producto '{producto.Nombre}' no tiene stock disponible");
+        return;
+    }
+
+    // Buscar si ya existe en el carrito
+    var detalleExistente = modelo.Detalles.FirstOrDefault(d => d.ProductoId == productoId);
+    
+    if (detalleExistente != null)
+    {
+        // Aumentar cantidad si ya existe
+        if (detalleExistente.Cantidad < producto.Stock)
+        {
+            detalleExistente.Cantidad++;
+            RecalcularDetalle(modelo.Detalles.IndexOf(detalleExistente));
+            Toast.ShowSuccess($"Cantidad actualizada: {producto.Nombre}");
+        }
+        else
+        {
+            Toast.ShowWarning($"No hay más stock disponible para {producto.Nombre}");
+        }
+    }
+    else
+    {
+        // Agregar nuevo detalle
+        var nuevoDetalle = new DetalleFacturaViewModel
+        {
+            ProductoId = producto.Id,
+            ProductoNombre = producto.Nombre,
+            ProductoCodigo = producto.Codigo,
+            ProductoPrecio = producto.Precio ?? 0m,
+            PrecioUnitario = producto.Precio ?? 0m,
+            ProductoStock = producto.Stock,
+            Cantidad = 1,
+            CodigoPorcentajeIVA = 4, // IVA 15%
+            Descuento = 0
+        };
+
+        modelo.Detalles.Add(nuevoDetalle);
+        RecalcularDetalle(modelo.Detalles.Count - 1);
+        Toast.ShowSuccess($"Producto agregado: {producto.Nombre}");
+    }
+}
+
+private void AumentarCantidad(int index)
+{
+    if (index < 0 || index >= modelo.Detalles.Count) return;
+    var detalle = modelo.Detalles[index];
+    
+    if (detalle.ProductoStock > 0 && detalle.Cantidad >= detalle.ProductoStock)
+    {
+        Toast.ShowWarning($"No hay más stock disponible ({detalle.ProductoStock})");
+        return;
+    }
+
+    detalle.Cantidad++;
+    RecalcularDetalle(index);
+}
+
+private void DisminuirCantidad(int index)
+{
+    if (index < 0 || index >= modelo.Detalles.Count) return;
+    var detalle = modelo.Detalles[index];
+    
+    if (detalle.Cantidad > 1)
+    {
+        detalle.Cantidad--;
+        RecalcularDetalle(index);
+    }
+    else
+    {
+        // Si la cantidad es 1, eliminar el producto
+        EliminarDetalle(index);
     }
 }
 
@@ -745,7 +1299,7 @@ private void SeleccionarProducto(int index, int productoId)
     detalle.PrecioUnitario = producto.Precio ?? 0m;
     detalle.ProductoStock = producto.Stock;
     detalle.Cantidad = 1;
-    detalle.CodigoPorcentajeIVA = 15;
+    detalle.CodigoPorcentajeIVA = 4; // Código SRI para IVA 15%
 
     // 🆕 Limpia resultados para ocultar la lista
     detalle.ResultadosBusqueda.Clear();

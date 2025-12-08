@@ -191,8 +191,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Data
             });
             
             ConfiguracionEmpresaSeed.Seed(modelBuilder);
-            SecuenciaFacturaSeed.Seed(modelBuilder);
-            FacturaSeed.Seed(modelBuilder);
+            // Seeds deshabilitados - se crearán manualmente
+            // SecuenciaFacturaSeed.Seed(modelBuilder);
+            // FacturaSeed.Seed(modelBuilder);
         }
 
         /// <summary>

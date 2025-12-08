@@ -996,19 +996,20 @@ public async Task<IActionResult> EnviarAlSri(int id)
             });
         }
 
-        // Solo se pueden enviar facturas FIRMADA, DEVUELTA o NO_AUTORIZADA
+        // Solo se pueden enviar facturas FIRMADA, DEVUELTA, NO_AUTORIZADA o PENDIENTE
         var estadosPermitidos = new[] 
         { 
             EstadoFactura.FIRMADA, 
             EstadoFactura.DEVUELTA, 
-            EstadoFactura.NO_AUTORIZADA 
+            EstadoFactura.NO_AUTORIZADA,
+            EstadoFactura.PENDIENTE
         };
 
         if (!estadosPermitidos.Contains(estadoActual))
         {
             return BadRequest(new
             {
-                message = $"Solo se pueden enviar facturas FIRMADA, DEVUELTA o NO_AUTORIZADA. Estado actual: {factura.Estado}",
+                message = $"Solo se pueden enviar facturas FIRMADA, DEVUELTA, NO_AUTORIZADA o PENDIENTE. Estado actual: {factura.Estado}",
                 estadoActual = factura.Estado,
                 estadosPermitidos = estadosPermitidos.Select(e => e.ToString()),
                 sugerencia = estadoActual == EstadoFactura.BORRADOR 
@@ -1101,11 +1102,198 @@ public async Task<IActionResult> EnviarAlSri(int id)
     }
 }
 
+/// <summary>
+/// POST /api/factura/{id}/enviar-correo
+    /// Envía la factura por correo al cliente (sin importar el estado SRI)
+    /// PERMISOS: Administrador ✅ | Vendedor ✅ (solo sus facturas)
+    /// </summary>
+    [HttpPost("{id}/enviar-correo")]
+    [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> EnviarCorreoCliente(int id)
+    {
+        try
+        {
+            _logger.LogInformation("📧 Iniciando envío de correo para factura {FacturaId}", id);
 
+            // 1. Verificar que la factura existe
+            var factura = await _facturaService.ObtenerPorIdAsync(id);
+            if (factura == null)
+            {
+                _logger.LogWarning("❌ Factura {FacturaId} no encontrada", id);
+                return NotFound(new { message = $"Factura {id} no encontrada" });
+            }
+
+            // 2. Validar permisos: Vendedor solo puede enviar sus propias facturas
+            if (!EsAdministrador())
+            {
+                var usuarioId = ObtenerUsuarioId();
+                if (factura.UsuarioId != usuarioId)
+                {
+                    _logger.LogWarning("❌ Usuario {UsuarioId} intentó enviar factura {FacturaId} que no le pertenece", 
+                        usuarioId, id);
+                    return Forbid();
+                }
+            }
+
+            // 3. Verificar que el cliente tiene email
+            if (string.IsNullOrEmpty(factura.Cliente?.Email))
+            {
+                _logger.LogWarning("❌ Cliente de factura {FacturaId} no tiene email registrado", id);
+                return BadRequest(new 
+                { 
+                    message = "El cliente no tiene un email registrado",
+                    tipo = "EmailNotFound"
+                });
+            }
+
+            // 4. Enviar correo usando el servicio existente
+            await _emailFacturaService.EnviarFacturaAsync(id);
+
+            _logger.LogInformation("✅ Correo enviado exitosamente para factura {FacturaId} a {Email}", 
+                id, factura.Cliente.Email);
+
+            // 5. Construir respuesta
+            var avisoEstado = factura.Estado != "AUTORIZADA" 
+                ? "⚠️ NOTA: Esta factura NO está autorizada por el SRI. Se envió para registro interno del cliente."
+                : "✅ Factura autorizada enviada al cliente.";
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Correo enviado exitosamente a {factura.Cliente.Email}",
+                facturaId = id,
+                numeroFactura = factura.NumeroFactura,
+                destinatario = factura.Cliente.Email,
+                estadoFactura = factura.Estado,
+                aviso = avisoEstado
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "❌ Factura {FacturaId} no encontrada al enviar correo", id);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error al enviar correo de factura {FacturaId}", id);
+            return BadRequest(new 
+            { 
+                message = ex.Message,
+                tipo = "EmailSendError"
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "❌ Acceso no autorizado al enviar correo de factura {FacturaId}", id);
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error crítico al enviar correo de factura {FacturaId}", id);
+            
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Error interno del servidor al enviar el correo",
+                tipo = "InternalError",
+                detalles = ex.Message
+            });
+        }
     }
 
+    /// <summary>
+    /// POST /api/factura/{id}/cambiar-estado-pendiente
+    /// Cambia el estado de una factura DEVUELTA o NO_AUTORIZADA a PENDIENTE para permitir reenvío
+    /// PERMISOS: Administrador ✅ | Vendedor ✅ (solo sus facturas)
+    /// </summary>
+    [HttpPost("{id}/cambiar-estado-pendiente")]
+    [Authorize(Policy = AuthorizationPolicies.AdminOrVendedor)]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> CambiarEstadoPendiente(int id)
+    {
+        try
+        {
+            _logger.LogInformation("🔄 Cambiando estado a PENDIENTE para factura {FacturaId}", id);
 
-    
+            // 1. Verificar que la factura existe
+            var factura = await _facturaService.ObtenerPorIdAsync(id);
+            if (factura == null)
+            {
+                _logger.LogWarning("❌ Factura {FacturaId} no encontrada", id);
+                return NotFound(new { message = $"Factura {id} no encontrada" });
+            }
 
-    
+            // 2. Validar permisos: Vendedor solo puede modificar sus propias facturas
+            if (!EsAdministrador())
+            {
+                var usuarioId = ObtenerUsuarioId();
+                if (factura.UsuarioId != usuarioId)
+                {
+                    _logger.LogWarning("❌ Usuario {UsuarioId} intentó modificar factura {FacturaId} que no le pertenece", 
+                        usuarioId, id);
+                    return Forbid();
+                }
+            }
+
+            // 3. Validar que el estado actual es DEVUELTA o NO_AUTORIZADA
+            if (factura.Estado != "DEVUELTA" && factura.Estado != "NO_AUTORIZADA")
+            {
+                _logger.LogWarning("❌ Factura {FacturaId} tiene estado {Estado}, solo se puede cambiar desde DEVUELTA o NO_AUTORIZADA", 
+                    id, factura.Estado);
+                return BadRequest(new 
+                { 
+                    message = $"Solo se puede cambiar a PENDIENTE desde estado DEVUELTA o NO_AUTORIZADA. Estado actual: {factura.Estado}",
+                    estadoActual = factura.Estado
+                });
+            }
+
+            // 4. Cambiar el estado usando el servicio de factura
+            await _facturaService.ActualizarEstadoAsync(id, EstadoFactura.PENDIENTE);
+
+            _logger.LogInformation("✅ Estado cambiado a PENDIENTE para factura {FacturaId}", id);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Estado cambiado a PENDIENTE exitosamente",
+                facturaId = id,
+                numeroFactura = factura.NumeroFactura,
+                estadoAnterior = factura.Estado,
+                estadoActual = "PENDIENTE",
+                aviso = "Ahora puede reenviar la factura al SRI o descargar XML/PDF"
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "❌ Factura {FacturaId} no encontrada", id);
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "❌ Error al cambiar estado de factura {FacturaId}", id);
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "❌ Acceso no autorizado al cambiar estado de factura {FacturaId}", id);
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ Error crítico al cambiar estado de factura {FacturaId}", id);
+            
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                message = "Error interno del servidor al cambiar el estado",
+                tipo = "InternalError",
+                detalles = ex.Message
+            });
+        }
+    }
+    }
 }

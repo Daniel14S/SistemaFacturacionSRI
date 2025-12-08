@@ -74,7 +74,7 @@ public class CrearDetalleFacturaDto
     /// 0 = 0% (IVA_0), 15 = 15% (IVA_15)
     /// </summary>
     [Required(ErrorMessage = "Debe especificar el código de IVA")]
-    public int CodigoPorcentajeIVA { get; set; } = 15; // ✅ Por defecto 15%
+    public int CodigoPorcentajeIVA { get; set; } = 4; // ✅ Por defecto IVA 15% (código SRI: 4)
 
     /// <summary>
     /// ID del lote específico a usar (opcional, si no se especifica se usa FIFO)

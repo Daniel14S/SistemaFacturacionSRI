@@ -11,12 +11,16 @@ namespace SistemaFacturacionSRI.Domain.Enums
         /// Ejemplo: IVA_15.ObtenerPorcentaje() retorna 0.15
         /// </summary>
         /// <param name="tipoIVA">El tipo de IVA</param>
-        /// <returns>Porcentaje en formato decimal (0.12 para 12%)</returns>
+        /// <returns>Porcentaje en formato decimal (0.15 para 15%)</returns>
         public static decimal ObtenerPorcentaje(this TipoIVA tipoIVA)
         {
-            // Convertimos el valor del enum a decimal y dividimos entre 100
-            // Ejemplo: 15 / 100 = 0.15
-            return (decimal)tipoIVA / 100;
+            // ✅ Mapeo de códigos SRI a porcentajes decimales
+            return tipoIVA switch
+            {
+                TipoIVA.IVA_0 => 0.00m,   // Código 0 = 0%
+                TipoIVA.IVA_15 => 0.15m,  // Código 4 = 15% vigente
+                _ => throw new ArgumentException($"Tipo de IVA no reconocido: {tipoIVA}")
+            };
         }
 
         /// <summary>

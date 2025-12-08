@@ -86,7 +86,7 @@ namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
                 {
                     Subtotal0 += detalle.BaseImponible;
                 }
-                else if (detalle.CodigoPorcentajeIVA == 15) // 15% IVA
+                else if (detalle.CodigoPorcentajeIVA == 4) // 15% IVA (código SRI: 4)
                 {
                     Subtotal15 += detalle.BaseImponible;
                     TotalIVA += detalle.ValorIVA;
@@ -106,7 +106,7 @@ namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
             {
                 Cantidad = 1,
                 Descuento = 0,
-                CodigoPorcentajeIVA = 15 // Por defecto 15%
+                CodigoPorcentajeIVA = 4 // Por defecto IVA 15% (código SRI: 4)
             });
         }
         

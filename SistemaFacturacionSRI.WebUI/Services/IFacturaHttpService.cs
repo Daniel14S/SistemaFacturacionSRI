@@ -35,6 +35,16 @@ public interface IFacturaHttpService
     /// T-105: Descarga el PDF RIDE de una factura
     /// </summary>
     Task<byte[]?> DescargarPdfAsync(int id);
+    
+    /// <summary>
+    /// Envía la factura por correo al cliente (sin importar estado SRI)
+    /// </summary>
+    Task<EnviarCorreoResponseDto?> EnviarCorreoClienteAsync(int id);
+    
+    /// <summary>
+    /// Cambia el estado de una factura DEVUELTA o NO_AUTORIZADA a PENDIENTE
+    /// </summary>
+    Task<CambiarEstadoPendienteResponseDto?> CambiarEstadoPendienteAsync(int id);
 }
 
 // ========== DTOs PARA RESPUESTAS (según tu API real) ==========
@@ -85,4 +95,32 @@ public class SiguientePasoDto
     public string? Accion { get; set; }
     public string? Endpoint { get; set; }
     public string? Descripcion { get; set; }
+}
+
+/// <summary>
+/// Respuesta del endpoint POST /api/factura/{id}/enviar-correo
+/// </summary>
+public class EnviarCorreoResponseDto
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public int FacturaId { get; set; }
+    public string? NumeroFactura { get; set; }
+    public string? Destinatario { get; set; }
+    public string? EstadoFactura { get; set; }
+    public string? Aviso { get; set; }
+}
+
+/// <summary>
+/// Respuesta del endpoint POST /api/factura/{id}/cambiar-estado-pendiente
+/// </summary>
+public class CambiarEstadoPendienteResponseDto
+{
+    public bool Success { get; set; }
+    public string? Message { get; set; }
+    public int FacturaId { get; set; }
+    public string? NumeroFactura { get; set; }
+    public string? EstadoAnterior { get; set; }
+    public string? EstadoActual { get; set; }
+    public string? Aviso { get; set; }
 }
