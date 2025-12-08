@@ -423,9 +423,26 @@
                             else
                             {
                                 <i class="bi bi-arrow-clockwise me-1"></i>
-                                <text>Reenviar al SRI</text>
+                                <text>Enviar Factura al SRI</text>
                             }
                         </button>
+                        
+                        @* Botón para enviar por correo cuando está pendiente *@
+                        @if (!string.IsNullOrEmpty(factura.Cliente?.Email))
+                        {
+                            <button class="btn btn-info" @onclick="EnviarCorreoCliente" disabled="@enviandoCorreo">
+                                @if (enviandoCorreo)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    <text>Enviando...</text>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-envelope-fill me-1"></i>
+                                    <text>Enviar a Cliente</text>
+                                }
+                            </button>
+                        }
                     }
 
                     <button class="btn btn-secondary" @onclick="Volver">
