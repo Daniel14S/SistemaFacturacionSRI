@@ -53,6 +53,10 @@ namespace SistemaFacturacionSRI.Domain.Entities
         public string? XmlFirmadoPath { get; set; }
         public string? PdfPath { get; set; }
         
+        // Control de envío de correo
+        public bool CorreoEnviado { get; set; } = false;
+        public DateTime? FechaEnvioCorreo { get; set; }
+        
         // Guía de Remisión asociada (opcional, formato: 000-000-000000000)
         public string? GuiaRemision { get; set; }
         

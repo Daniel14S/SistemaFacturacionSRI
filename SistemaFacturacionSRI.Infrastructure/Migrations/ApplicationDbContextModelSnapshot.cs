@@ -589,6 +589,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                     b.Property<int>("ClienteId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("CorreoEnviado")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("Descuento")
                         .HasPrecision(18, 2)
                         .HasColumnType("DECIMAL(18,2)");
@@ -607,6 +610,9 @@ namespace SistemaFacturacionSRI.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEnvioCorreo")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaHoraAutorizacion")

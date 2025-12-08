@@ -6,6 +6,7 @@ using SistemaFacturacionSRI.Domain.Interfaces.Services;
 using SistemaFacturacionSRI.Domain.Enums;
 using SistemaFacturacionSRI.WebUI.Authorization;
 using SistemaFacturacionSRI.Domain.Interfaces;
+using SistemaFacturacionSRI.Domain.Interfaces.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 
@@ -30,6 +31,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         private readonly IEmailFacturaService _emailFacturaService;
         private readonly ILogger<FacturaController> _logger;
         private readonly IXmlGeneratorService _xmlGeneratorService;
+        private readonly ILoteService _loteService;
+        private readonly IFacturaRepository _facturaRepository;
 
         public FacturaController(
             IFacturaService facturaService,
@@ -38,7 +41,9 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             ISriIntegracionService sriIntegracionService,
             IEmailFacturaService emailFacturaService,
             ILogger<FacturaController> logger,
-            IXmlGeneratorService xmlGeneratorService)
+            IXmlGeneratorService xmlGeneratorService,
+            ILoteService loteService,
+            IFacturaRepository facturaRepository)
         {
             _facturaService = facturaService;
             _pdfGeneratorService = pdfGeneratorService;
@@ -47,7 +52,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             _emailFacturaService = emailFacturaService;
             _logger = logger;
             _xmlGeneratorService = xmlGeneratorService;
-
+            _loteService = loteService;
+            _facturaRepository = facturaRepository;
         }
 
         // ==================== MÉTODOS AUXILIARES ====================
@@ -1149,26 +1155,93 @@ public async Task<IActionResult> EnviarAlSri(int id)
                 });
             }
 
-            // 4. Enviar correo usando el servicio existente
+            // 4. Verificar si el correo ya fue enviado previamente
+            bool esPrimerEnvio = !factura.CorreoEnviado;
+            
+            if (factura.CorreoEnviado)
+            {
+                _logger.LogInformation("⚠️ Factura {FacturaId} ya fue enviada previamente el {FechaEnvio}. Reenviando...", 
+                    id, factura.FechaEnvioCorreo);
+            }
+
+            // 5. Enviar correo usando el servicio existente
             await _emailFacturaService.EnviarFacturaAsync(id);
 
             _logger.LogInformation("✅ Correo enviado exitosamente para factura {FacturaId} a {Email}", 
                 id, factura.Cliente.Email);
 
-            // 5. Construir respuesta
+            // 6. Reducir stock SOLO la primera vez que se envía el correo
+            bool stockReducido = false;
+            if (esPrimerEnvio)
+            {
+                _logger.LogInformation("📦 Iniciando reducción de stock para factura {FacturaId} (primer envío)", id);
+                
+                foreach (var detalle in factura.Detalles)
+                {
+                    if (detalle.ProductoId > 0 && detalle.Cantidad > 0)
+                    {
+                        try
+                        {
+                            await _loteService.ReducirStockProductoAsync(detalle.ProductoId, detalle.Cantidad);
+                            _logger.LogInformation(
+                                "✅ Stock reducido: Producto {ProductoId}, Cantidad: {Cantidad}",
+                                detalle.ProductoId, detalle.Cantidad);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(
+                                ex,
+                                "⚠️ No se pudo reducir stock para producto {ProductoId} en factura {FacturaId}: {Error}",
+                                detalle.ProductoId, id, ex.Message);
+                            // Continuar con los demás productos aunque uno falle
+                        }
+                    }
+                }
+
+                _logger.LogInformation("✅ Proceso de reducción de stock completado para factura {FacturaId}", id);
+                stockReducido = true;
+
+                // 7. Marcar la factura como enviada por correo en la base de datos
+                var facturaEntidad = await _facturaRepository.ObtenerPorIdAsync(id);
+                if (facturaEntidad != null)
+                {
+                    facturaEntidad.CorreoEnviado = true;
+                    facturaEntidad.FechaEnvioCorreo = DateTime.Now;
+                    await _facturaRepository.ActualizarAsync(facturaEntidad);
+                    
+                    // Actualizar también el DTO para la respuesta
+                    factura.CorreoEnviado = true;
+                    factura.FechaEnvioCorreo = facturaEntidad.FechaEnvioCorreo;
+                    
+                    _logger.LogInformation("✅ Factura {FacturaId} marcada como enviada por correo", id);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("ℹ️ Stock NO reducido porque el correo ya fue enviado previamente");
+            }
+
+            // 8. Construir respuesta
             var avisoEstado = factura.Estado != "AUTORIZADA" 
                 ? "⚠️ NOTA: Esta factura NO está autorizada por el SRI. Se envió para registro interno del cliente."
                 : "✅ Factura autorizada enviada al cliente.";
 
+            var mensajeEnvio = esPrimerEnvio
+                ? $"Correo enviado exitosamente a {factura.Cliente.Email}"
+                : $"Correo reenviado exitosamente a {factura.Cliente.Email} (ya fue enviado el {factura.FechaEnvioCorreo:dd/MM/yyyy HH:mm})";
+
             return Ok(new
             {
                 success = true,
-                message = $"Correo enviado exitosamente a {factura.Cliente.Email}",
+                message = mensajeEnvio,
                 facturaId = id,
                 numeroFactura = factura.NumeroFactura,
                 destinatario = factura.Cliente.Email,
                 estadoFactura = factura.Estado,
-                aviso = avisoEstado
+                aviso = avisoEstado,
+                esPrimerEnvio = esPrimerEnvio,
+                stockActualizado = stockReducido,
+                fechaEnvio = factura.FechaEnvioCorreo
             });
         }
         catch (KeyNotFoundException ex)
