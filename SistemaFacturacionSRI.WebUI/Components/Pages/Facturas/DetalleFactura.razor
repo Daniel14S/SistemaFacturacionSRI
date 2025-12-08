@@ -170,39 +170,43 @@
                     <div class="card-body">
                         @if (factura.Cliente != null)
                         {
-                            <div class="row mb-2">
-                                <div class="col-5 fw-bold">Razón Social:</div>
-                                <div class="col-7">@factura.Cliente.RazonSocial</div>
-                            </div>
-                            <div class="row mb-2">
-                                <div class="col-5 fw-bold">Identificación:</div>
-                                <div class="col-7">@factura.Cliente.Identificacion</div>
-                            </div>
-                            <div class="row mb-2">
-                                <div class="col-5 fw-bold">Tipo:</div>
-                                <div class="col-7">@factura.Cliente.TipoIdentificacion</div>
-                            </div>
-                            @if (!string.IsNullOrEmpty(factura.Cliente.Direccion))
-                            {
-                                <div class="row mb-2">
-                                    <div class="col-5 fw-bold">Dirección:</div>
-                                    <div class="col-7">@factura.Cliente.Direccion</div>
-                                </div>
-                            }
-                            @if (!string.IsNullOrEmpty(factura.Cliente.Telefono))
-                            {
-                                <div class="row mb-2">
-                                    <div class="col-5 fw-bold">Teléfono:</div>
-                                    <div class="col-7">@factura.Cliente.Telefono</div>
-                                </div>
-                            }
-                            @if (!string.IsNullOrEmpty(factura.Cliente.Email))
-                            {
-                                <div class="row">
-                                    <div class="col-5 fw-bold">Email:</div>
-                                    <div class="col-7">@factura.Cliente.Email</div>
-                                </div>
-                            }
+                            <table class="table table-borderless mb-0">
+                                <tbody>
+                                    <tr>
+                                        <th class="fw-bold text-dark"><i class="bi bi-person-badge me-2"></i>Razón Social</th>
+                                        <td>@factura.Cliente.RazonSocial</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="fw-bold text-dark"><i class="bi bi-credit-card-2-front me-2"></i>Identificación</th>
+                                        <td>@factura.Cliente.Identificacion</td>
+                                    </tr>
+                                    <tr>
+                                        <th class="fw-bold text-dark"><i class="bi bi-card-list me-2"></i>Tipo</th>
+                                        <td>@factura.Cliente.TipoIdentificacion</td>
+                                    </tr>
+                                    @if (!string.IsNullOrEmpty(factura.Cliente.Direccion))
+                                    {
+                                        <tr>
+                                            <th class="fw-bold text-dark"><i class="bi bi-geo-alt me-2"></i>Dirección</th>
+                                            <td>@factura.Cliente.Direccion</td>
+                                        </tr>
+                                    }
+                                    @if (!string.IsNullOrEmpty(factura.Cliente.Telefono))
+                                    {
+                                        <tr>
+                                            <th class="fw-bold text-dark"><i class="bi bi-telephone me-2"></i>Teléfono</th>
+                                            <td>@factura.Cliente.Telefono</td>
+                                        </tr>
+                                    }
+                                    @if (!string.IsNullOrEmpty(factura.Cliente.Email))
+                                    {
+                                        <tr>
+                                            <th class="fw-bold text-dark"><i class="bi bi-envelope me-2"></i>Email</th>
+                                            <td>@factura.Cliente.Email</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
                         }
                     </div>
                 </div>
