@@ -130,5 +130,27 @@ public async Task ActualizarPVPDeLotesPorProductoAsync(int productoId, decimal n
 
     await query.ExecuteUpdateAsync(s => s.SetProperty(l => l.PVP, nuevoPVP));
 }
+
+        /// <summary>
+        /// Reduce la cantidad disponible de un lote específico.
+        /// Valida que haya suficiente stock antes de reducir.
+        /// </summary>
+        public async Task ReducirStockAsync(int loteId, decimal cantidad)
+        {
+            var lote = await _context.Lotes.FindAsync(loteId);
+            
+            if (lote == null)
+                throw new KeyNotFoundException($"No se encontró el lote con ID {loteId}");
+            
+            // Convertir decimal a int (redondear al entero más cercano)
+            var cantidadInt = (int)Math.Round(cantidad);
+            
+            if (lote.CantidadDisponible < cantidadInt)
+                throw new InvalidOperationException(
+                    $"Stock insuficiente en el lote #{loteId}. Disponible: {lote.CantidadDisponible}, Requerido: {cantidadInt}");
+            
+            lote.CantidadDisponible -= cantidadInt;
+            await _context.SaveChangesAsync();
+        }
     }
 }

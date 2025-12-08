@@ -30,6 +30,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
         private readonly IEmailFacturaService _emailFacturaService;
         private readonly ILogger<FacturaController> _logger;
         private readonly IXmlGeneratorService _xmlGeneratorService;
+        private readonly ILoteService _loteService;
 
         public FacturaController(
             IFacturaService facturaService,
@@ -38,7 +39,8 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             ISriIntegracionService sriIntegracionService,
             IEmailFacturaService emailFacturaService,
             ILogger<FacturaController> logger,
-            IXmlGeneratorService xmlGeneratorService)
+            IXmlGeneratorService xmlGeneratorService,
+            ILoteService loteService)
         {
             _facturaService = facturaService;
             _pdfGeneratorService = pdfGeneratorService;
@@ -47,6 +49,7 @@ namespace SistemaFacturacionSRI.WebUI.Controllers
             _emailFacturaService = emailFacturaService;
             _logger = logger;
             _xmlGeneratorService = xmlGeneratorService;
+            _loteService = loteService;
 
         }
 
@@ -1155,7 +1158,34 @@ public async Task<IActionResult> EnviarAlSri(int id)
             _logger.LogInformation("✅ Correo enviado exitosamente para factura {FacturaId} a {Email}", 
                 id, factura.Cliente.Email);
 
-            // 5. Construir respuesta
+            // 5. Reducir stock de los productos después de enviar el correo exitosamente
+            _logger.LogInformation("📦 Iniciando reducción de stock para factura {FacturaId}", id);
+            
+            foreach (var detalle in factura.Detalles)
+            {
+                if (detalle.ProductoId > 0 && detalle.Cantidad > 0)
+                {
+                    try
+                    {
+                        await _loteService.ReducirStockProductoAsync(detalle.ProductoId, detalle.Cantidad);
+                        _logger.LogInformation(
+                            "✅ Stock reducido: Producto {ProductoId}, Cantidad: {Cantidad}",
+                            detalle.ProductoId, detalle.Cantidad);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "⚠️ No se pudo reducir stock para producto {ProductoId} en factura {FacturaId}: {Error}",
+                            detalle.ProductoId, id, ex.Message);
+                        // Continuar con los demás productos aunque uno falle
+                    }
+                }
+            }
+
+            _logger.LogInformation("✅ Proceso de reducción de stock completado para factura {FacturaId}", id);
+
+            // 6. Construir respuesta
             var avisoEstado = factura.Estado != "AUTORIZADA" 
                 ? "⚠️ NOTA: Esta factura NO está autorizada por el SRI. Se envió para registro interno del cliente."
                 : "✅ Factura autorizada enviada al cliente.";
@@ -1168,7 +1198,8 @@ public async Task<IActionResult> EnviarAlSri(int id)
                 numeroFactura = factura.NumeroFactura,
                 destinatario = factura.Cliente.Email,
                 estadoFactura = factura.Estado,
-                aviso = avisoEstado
+                aviso = avisoEstado,
+                stockActualizado = true
             });
         }
         catch (KeyNotFoundException ex)

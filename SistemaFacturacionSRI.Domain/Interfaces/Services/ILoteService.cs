@@ -17,5 +17,11 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Services
         Task<LoteDto> ActualizarAsync(ActualizarLoteDto dto);
         Task EliminarAsync(int loteId);
         
+        /// <summary>
+        /// Reduce el stock de un producto usando el método FIFO (primero el lote más próximo a expirar).
+        /// </summary>
+        /// <param name="productoId">ID del producto</param>
+        /// <param name="cantidad">Cantidad a reducir</param>
+        Task ReducirStockProductoAsync(int productoId, decimal cantidad);
     }
 }

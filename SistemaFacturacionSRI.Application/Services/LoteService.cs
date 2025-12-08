@@ -173,6 +173,46 @@ namespace SistemaFacturacionSRI.Application.Services
             return _mapper.Map<LoteDto>(lote);
         }
 
+        /// <summary>
+        /// Reduce el stock de un producto usando el método FIFO (First In, First Out).
+        /// Prioriza los lotes más próximos a expirar para reducir el desperdicio.
+        /// </summary>
+        /// <param name="productoId">ID del producto</param>
+        /// <param name="cantidad">Cantidad a reducir del stock</param>
+        public async Task ReducirStockProductoAsync(int productoId, decimal cantidad)
+        {
+            if (cantidad <= 0)
+                throw new ArgumentException("La cantidad a reducir debe ser mayor a cero.", nameof(cantidad));
+
+            // Obtener todos los lotes del producto con stock disponible, ordenados por fecha de expiración
+            var lotes = await _loteRepository.ObtenerLotesPorProductoAsync(productoId);
+            var lotesConStock = lotes
+                .Where(l => l.CantidadDisponible > 0)
+                .OrderBy(l => l.FechaExpiracion ?? DateTime.MaxValue) // Primero los que expiran antes
+                .ToList();
+
+            if (!lotesConStock.Any())
+                throw new InvalidOperationException($"No hay stock disponible para el producto con ID {productoId}.");
+
+            // Calcular el stock total disponible
+            var stockTotal = lotesConStock.Sum(l => l.CantidadDisponible);
+            if (stockTotal < cantidad)
+                throw new InvalidOperationException(
+                    $"Stock insuficiente para el producto {productoId}. Disponible: {stockTotal}, Requerido: {cantidad}");
+
+            // Reducir el stock de los lotes usando FIFO
+            var cantidadRestante = cantidad;
+            foreach (var lote in lotesConStock)
+            {
+                if (cantidadRestante <= 0)
+                    break;
+
+                var cantidadAReducir = Math.Min(lote.CantidadDisponible, cantidadRestante);
+                await _loteRepository.ReducirStockAsync(lote.LoteId, cantidadAReducir);
+                cantidadRestante -= cantidadAReducir;
+            }
+        }
+
     }
     
 }

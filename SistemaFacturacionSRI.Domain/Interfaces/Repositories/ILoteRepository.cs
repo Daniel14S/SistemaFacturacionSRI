@@ -17,5 +17,12 @@ namespace SistemaFacturacionSRI.Domain.Interfaces.Repositories
         Task ActualizarAsync(Lote lote);
         Task EliminarAsync(int loteId);
         Task ActualizarPVPDeLotesPorProductoAsync(int productoId, decimal nuevoPVP, int? loteExcluidoId = null);
+        
+        /// <summary>
+        /// Reduce la cantidad disponible de un lote específico.
+        /// </summary>
+        /// <param name="loteId">ID del lote</param>
+        /// <param name="cantidad">Cantidad a reducir</param>
+        Task ReducirStockAsync(int loteId, decimal cantidad);
     }
 }
