@@ -53,7 +53,7 @@ namespace SistemaFacturacionSRI.WebUI.Models.Facturacion
         
         [Required(ErrorMessage = "Debe especificar el código de IVA")]
         [Display(Name = "IVA")]
-        public int CodigoPorcentajeIVA { get; set; } = 15; // Por defecto 15%
+        public int CodigoPorcentajeIVA { get; set; } = 4; // Por defecto IVA 15% (código SRI: 4)
         
         [Display(Name = "Tarifa IVA")]
         public decimal TarifaIVA => CodigoPorcentajeIVA switch

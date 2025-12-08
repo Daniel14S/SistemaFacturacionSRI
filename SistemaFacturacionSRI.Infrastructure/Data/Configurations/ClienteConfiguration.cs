@@ -29,7 +29,8 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict)
                 .HasConstraintName("FK_Cliente_TipoIdentificacion");
 
-            builder.HasData(
+            // Seed de clientes eliminado - se crearán manualmente
+            /* builder.HasData(
                 new Cliente
                 {
                     ClienteId = 1,
@@ -270,7 +271,7 @@ namespace SistemaFacturacionSRI.Infrastructure.Data.Configurations
                     Email = "silvia.penafiel@example.com",
                     Estado = true
                 }
-            );
+            ); */
         }
     }
 }

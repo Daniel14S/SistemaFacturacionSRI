@@ -361,7 +361,7 @@ else
                                         <select class="form-select form-select-sm"
                                                 disabled="@(detalle.ProductoId == 0)"
                                                 value="@detalle.CodigoPorcentajeIVA"
-                                                @onchange="@(e => { detalle.CodigoPorcentajeIVA = int.Parse(e.Value?.ToString() ?? "15"); RecalcularDetalle(index); })">
+                                                @onchange="@(e => { detalle.CodigoPorcentajeIVA = int.Parse(e.Value?.ToString() ?? "4"); RecalcularDetalle(index); })">
                                             <option value="0">0%</option>
                                             <option value="15">15%</option>
                                         </select>
@@ -745,7 +745,7 @@ private void SeleccionarProducto(int index, int productoId)
     detalle.PrecioUnitario = producto.Precio ?? 0m;
     detalle.ProductoStock = producto.Stock;
     detalle.Cantidad = 1;
-    detalle.CodigoPorcentajeIVA = 15;
+    detalle.CodigoPorcentajeIVA = 4; // Código SRI para IVA 15%
 
     // 🆕 Limpia resultados para ocultar la lista
     detalle.ResultadosBusqueda.Clear();
